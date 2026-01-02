@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏中 - XJTU本科模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 主游戏界面 -->
+    <div id="game-screen" class="screen active">
+        <!-- 顶部状态栏 -->
+        <header class="game-header">
+            <div class="time-info">
+                <span id="current-year">大一</span>
+                <span id="current-month">9月</span>
+                <span id="current-semester">秋季学期</span>
+            </div>
+            <div class="location-info">
+                <span id="current-location">兴庆校区</span>
+            </div>
+            <button id="btn-menu" class="btn-icon">☰</button>
+        </header>
+
+        <!-- 属性面板 -->
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-label">GPA</div>
+                <div class="stat-value" id="stat-gpa">3.00/4.3</div>
+                <div class="stat-bar">
+                    <div class="stat-fill gpa" id="bar-gpa" style="width: 70%"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">SAN值</div>
+                <div class="stat-value" id="stat-san">80/100</div>
+                <div class="stat-bar">
+                    <div class="stat-fill san" id="bar-san" style="width: 80%"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">体力</div>
+                <div class="stat-value" id="stat-energy">10/10</div>
+                <div class="stat-bar">
+                    <div class="stat-fill energy" id="bar-energy" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">综测</div>
+                <div class="stat-value" id="stat-social">60</div>
+                <div class="stat-bar">
+                    <div class="stat-fill social" id="bar-social" style="width: 60%"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">金币</div>
+                <div class="stat-value" id="stat-money">💰 1000</div>
+            </div>
+        </div>
+
+        <!-- 课程掌握度面板 -->
+        <div class="course-panel" id="course-panel">
+            <h3>📖 当前课程</h3>
+            <div class="course-list" id="course-list">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 行动区域 -->
+        <div class="action-panel">
+            <h3>选择行动</h3>
+            <div class="action-grid" id="action-grid">
+                <button class="action-btn study" data-action="attend-class">
+                    <span class="action-icon">📚</span>
+                    <span class="action-name">去上课</span>
+                    <span class="action-cost">体力 -2</span>
+                </button>
+                <button class="action-btn study" data-action="self-study">
+                    <span class="action-icon">📖</span>
+                    <span class="action-name">去自习</span>
+                    <span class="action-cost">体力 -3, SAN -2</span>
+                </button>
+                <button class="action-btn social" data-action="club">
+                    <span class="action-icon">🎭</span>
+                    <span class="action-name">搞社团</span>
+                    <span class="action-cost">体力 -2, SAN +3</span>
+                </button>
+                <button class="action-btn social" data-action="volunteer">
+                    <span class="action-icon">🤝</span>
+                    <span class="action-name">做志愿</span>
+                    <span class="action-cost">体力 -2</span>
+                </button>
+                <button class="action-btn life" data-action="eat">
+                    <span class="action-icon">🍜</span>
+                    <span class="action-name">去食堂</span>
+                    <span class="action-cost">金币 -30, SAN +5</span>
+                </button>
+                <button class="action-btn life" data-action="entertainment">
+                    <span class="action-icon">🎮</span>
+                    <span class="action-name">娱乐放松</span>
+                    <span class="action-cost">金币 -50, SAN +10</span>
+                </button>
+                <button class="action-btn life" data-action="bath">
+                    <span class="action-icon">🚿</span>
+                    <span class="action-name">去洗澡</span>
+                    <span class="action-cost">SAN +8</span>
+                </button>
+                <button class="action-btn special" data-action="date" id="btn-date" style="display: none;">
+                    <span class="action-icon">💕</span>
+                    <span class="action-name">约会</span>
+                    <span class="action-cost">金币 -100, SAN +15</span>
+                </button>
+                <button class="action-btn special" data-action="rest">
+                    <span class="action-icon">😴</span>
+                    <span class="action-name">休息</span>
+                    <span class="action-cost">SAN +5</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 下一回合按钮 -->
+        <div class="turn-control">
+            <button id="btn-next-turn" class="btn btn-primary btn-large">
+                结束本月 ▶
+            </button>
+        </div>
+
+        <!-- 事件日志 -->
+        <div class="event-log" id="event-log">
+            <h3>📋 事件记录</h3>
+            <div class="log-content" id="log-content">
+                <p class="log-entry">欢迎来到西安交通大学！新的大学生活开始了...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用Modal弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">提示</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="btn btn-primary" id="modal-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 选择弹窗 -->
+    <div id="choice-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="choice-title">请选择</h3>
+                <button class="modal-close" id="choice-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="choice-options" id="choice-options"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成就解锁弹窗 -->
+    <div id="achievement-popup" class="achievement-popup">
+        <div class="achievement-popup-content">
+            <div class="achievement-icon">🏆</div>
+            <div class="achievement-text">
+                <span class="achievement-label">成就解锁！</span>
+                <span class="achievement-name" id="achievement-name"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏菜单 -->
+    <div id="game-menu" class="modal">
+        <div class="modal-content menu-content">
+            <h3>游戏菜单</h3>
+            <div class="menu-buttons">
+                <button id="btn-save" class="btn btn-secondary">💾 保存游戏</button>
+                <button id="btn-view-achievements" class="btn btn-secondary">🏆 查看成就</button>
+                <button id="btn-view-courses" class="btn btn-secondary">📚 课程详情</button>
+                <button id="btn-quit" class="btn btn-danger">🚪 退出游戏</button>
+            </div>
+            <button id="btn-close-menu" class="btn btn-primary">继续游戏</button>
+        </div>
+    </div>
+
+    <!-- 考试弹窗 -->
+    <div id="exam-modal" class="modal">
+        <div class="modal-content exam-content">
+            <div class="modal-header">
+                <h3 class="modal-title">📝 期末考试</h3>
+            </div>
+            <div class="modal-body">
+                <div class="exam-results" id="exam-results"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="exam-confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 小学期弹窗 -->
+    <div id="summer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">☀️ 小学期来临！</h3>
+            </div>
+            <div class="modal-body">
+                <p id="summer-desc">七月炎炎，小学期开始了！</p>
+                <div class="summer-options" id="summer-options"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 月末随机事件弹窗 -->
+    <div id="random-event-modal" class="modal">
+        <div class="modal-content random-event-content">
+            <div class="event-header">
+                <div class="event-icon-large" id="random-event-icon">📦</div>
+                <h3 class="event-title" id="random-event-title">事件标题</h3>
+            </div>
+            <div class="event-body">
+                <p class="event-description" id="random-event-desc">事件描述...</p>
+                <div class="event-options" id="random-event-options">
+                    <!-- 动态生成选项 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 事件结果弹窗 -->
+    <div id="event-result-modal" class="modal">
+        <div class="modal-content event-result-content">
+            <div class="result-icon" id="result-icon">✨</div>
+            <div class="result-message" id="result-message">结果消息</div>
+            <div class="result-effects" id="result-effects">
+                <!-- 效果变化 -->
+            </div>
+            <button class="btn btn-primary" id="result-confirm">确定</button>
+        </div>
+    </div>
+
+    <!-- 脚本引入 -->
+    <script src="js/data.js"></script>
+    <script src="js/achievements.js"></script>
+    <script src="js/events.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

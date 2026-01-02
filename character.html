@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建角色 - XJTU本科模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 角色创建界面 -->
+    <div id="character-screen" class="screen active">
+        <div class="character-container">
+            <h2>创建你的角色</h2>
+            
+            <!-- 出身背景选择 -->
+            <div class="selection-section">
+                <h3>选择出身背景</h3>
+                <div class="option-grid" id="background-options">
+                    <div class="option-card" data-value="normal">
+                        <div class="option-icon">🌱</div>
+                        <div class="option-name">萌新小白</div>
+                        <div class="option-desc">无修正，平衡开局</div>
+                    </div>
+                    <div class="option-card" data-value="prodigy">
+                        <div class="option-icon">🧒</div>
+                        <div class="option-name">少年班神童</div>
+                        <div class="option-desc">GPA 3.5起步，学习+20%，社交-10</div>
+                    </div>
+                    <div class="option-card" data-value="qianban">
+                        <div class="option-icon">📚</div>
+                        <div class="option-name">钱班大佬</div>
+                        <div class="option-desc">全属性+5，卷王模式（挂科阈值提高）</div>
+                    </div>
+                    <div class="option-card" data-value="rich">
+                        <div class="option-icon">💰</div>
+                        <div class="option-name">富家子弟</div>
+                        <div class="option-desc">金币+2000，每月生活费翻倍</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 书院选择 -->
+            <div class="selection-section">
+                <h3>选择书院</h3>
+                <div class="option-grid" id="college-options">
+                    <div class="option-card" data-value="pengkang">
+                        <div class="option-icon">🏛️</div>
+                        <div class="option-name">彭康书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【皇家地理】上课体力-1</span>
+                            <span class="debuff">【历史沉淀】夏季SAN下降+20%</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="wenzhi">
+                        <div class="option-icon">🏫</div>
+                        <div class="option-name">文治书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【一等文治】综测+10</span>
+                            <span class="buff">【澡堂特权】洗澡SAN×2</span>
+                            <span class="debuff">【西区遥远】5%迟到</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="zhongying">
+                        <div class="option-icon">🤝</div>
+                        <div class="option-name">仲英书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【英仔义工】志愿收益+100%</span>
+                            <span class="debuff">【工时地狱】每学期消耗3体力义工</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="nanyang">
+                        <div class="option-icon">🎯</div>
+                        <div class="option-name">南洋书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【硬核工科】GPA+15%</span>
+                            <span class="debuff">【13楼传说】深夜自习SAN-3</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="chongshi">
+                        <div class="option-icon">🎨</div>
+                        <div class="option-name">崇实书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【文法艺术】魅力+20</span>
+                            <span class="buff">【中楼沙龙】社交体力-1</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="lizhi">
+                        <div class="option-icon">🔬</div>
+                        <div class="option-name">励志书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【理学基石】学习成长+20%</span>
+                            <span class="buff">【星空间】讨论有概率+5Mastery</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="zonglian">
+                        <div class="option-icon">⚕️</div>
+                        <div class="option-name">宗濂书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【医学特权】生病秒复</span>
+                            <span class="debuff">【两岸四地】跨校区体力+2</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="qide">
+                        <div class="option-icon">💼</div>
+                        <div class="option-name">启德书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【商业头脑】金币收益+30%</span>
+                            <span class="debuff">【两岸四地】跨校区体力+2</span>
+                        </div>
+                    </div>
+                    <div class="option-card" data-value="qianxuesen">
+                        <div class="option-icon">🚀</div>
+                        <div class="option-name">钱学森书院</div>
+                        <div class="option-desc">
+                            <span class="buff">【顶天立地】初始Mastery+15</span>
+                            <span class="debuff">【极限内卷】GPA&lt;3.5会被谈话</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="character-actions">
+                <button id="btn-back-start" class="btn btn-secondary">返回</button>
+                <button id="btn-start-game" class="btn btn-primary" disabled>确认开始</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script>
+        let selectedBackground = null;
+        let selectedCollege = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 背景选择
+            document.querySelectorAll('#background-options .option-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('#background-options .option-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedBackground = this.dataset.value;
+                    checkCanStart();
+                });
+            });
+
+            // 书院选择
+            document.querySelectorAll('#college-options .option-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('#college-options .option-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedCollege = this.dataset.value;
+                    checkCanStart();
+                });
+            });
+
+            // 返回按钮
+            document.getElementById('btn-back-start').addEventListener('click', function() {
+                window.location.href = 'index.html';
+            });
+
+            // 确认开始
+            document.getElementById('btn-start-game').addEventListener('click', function() {
+                if (selectedBackground && selectedCollege) {
+                    // 保存选择到localStorage
+                    localStorage.setItem('xjtu_character', JSON.stringify({
+                        background: selectedBackground,
+                        college: selectedCollege
+                    }));
+                    window.location.href = 'game.html';
+                }
+            });
+        });
+
+        function checkCanStart() {
+            const canStart = selectedBackground && selectedCollege;
+            document.getElementById('btn-start-game').disabled = !canStart;
+        }
+    </script>
+</body>
+</html>

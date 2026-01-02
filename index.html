@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XJTU本科模拟器 - 西安交通大学生活体验</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div id="start-screen" class="screen active">
+        <div class="start-container">
+            <h1 class="game-title">🎓 XJTU本科模拟器</h1>
+            <p class="game-subtitle">西安交通大学本科生活体验</p>
+            <div class="start-buttons">
+                <button id="btn-new-game" class="btn btn-primary">开始新游戏</button>
+                <button id="btn-load-game" class="btn btn-secondary">继续游戏</button>
+                <button id="btn-achievements" class="btn btn-secondary">成就一览</button>
+            </div>
+            <p class="version">v1.0.0 | 2026</p>
+        </div>
+    </div>
+
+    <!-- 通用Modal弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">提示</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="btn btn-primary" id="modal-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 开始新游戏
+            document.getElementById('btn-new-game').addEventListener('click', function() {
+                localStorage.removeItem('xjtu_game_state');
+                window.location.href = 'character.html';
+            });
+
+            // 继续游戏
+            document.getElementById('btn-load-game').addEventListener('click', function() {
+                const savedState = localStorage.getItem('xjtu_game_state');
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    if (state.year === 4 && state.month >= 9) {
+                        window.location.href = 'thesis.html';
+                    } else {
+                        window.location.href = 'game.html';
+                    }
+                } else {
+                    showModal('没有存档', '还没有保存的游戏存档，请开始新游戏。');
+                }
+            });
+
+            // 查看成就
+            document.getElementById('btn-achievements').addEventListener('click', function() {
+                window.location.href = 'achievements.html';
+            });
+
+            // Modal相关
+            document.getElementById('modal-close').addEventListener('click', hideModal);
+            document.getElementById('modal-confirm').addEventListener('click', hideModal);
+
+            function showModal(title, content) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-body').innerHTML = '<p>' + content + '</p>';
+                document.getElementById('modal').classList.add('active');
+            }
+
+            function hideModal() {
+                document.getElementById('modal').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

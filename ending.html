@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结局 - XJTU本科模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 结局界面 -->
+    <div id="ending-screen" class="screen active">
+        <div class="ending-container">
+            <div class="ending-icon" id="ending-icon">🎓</div>
+            <h2 class="ending-title" id="ending-title">毕业了！</h2>
+            <p class="ending-desc" id="ending-desc">恭喜你完成了四年的大学生活</p>
+            <div class="ending-stats" id="ending-stats">
+                <!-- 动态生成 -->
+            </div>
+            <div class="ending-achievements" id="ending-achievements">
+                <!-- 动态生成 -->
+            </div>
+            <div class="ending-actions">
+                <button id="btn-restart" class="btn btn-primary">重新开始</button>
+                <button id="btn-view-achievements" class="btn btn-secondary">查看成就</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/achievements.js"></script>
+    <script>
+        const endings = {
+            dropout: {
+                icon: '😢',
+                title: '肄业结局',
+                desc: '很遗憾，你没能完成学业。但这不是结束，人生还有很多可能性...',
+                color: '#f44336'
+            },
+            normal: {
+                icon: '🎓',
+                title: '普通毕业',
+                desc: '你顺利完成了四年大学生活，拿到了毕业证。平凡而珍贵的青春。',
+                color: '#4CAF50'
+            },
+            postgraduate: {
+                icon: '📚',
+                title: '保研成功',
+                desc: '优异的成绩让你获得了保研资格，继续在学术道路上前进！',
+                color: '#2196F3'
+            },
+            excellent: {
+                icon: '🏆',
+                title: '优秀毕业生',
+                desc: '你是年级的佼佼者，获得了优秀毕业生称号，前途无量！',
+                color: '#FF9800'
+            },
+            westward: {
+                icon: '🚀',
+                title: '西迁精神传承者',
+                desc: '你深刻理解了西迁精神，选择去西部建设祖国，成为新时代的西迁人！',
+                color: '#9C27B0'
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取结局类型
+            const urlParams = new URLSearchParams(window.location.search);
+            const endingType = urlParams.get('type') || 'normal';
+            const ending = endings[endingType] || endings.normal;
+
+            // 更新界面
+            document.getElementById('ending-icon').textContent = ending.icon;
+            document.getElementById('ending-title').textContent = ending.title;
+            document.getElementById('ending-title').style.color = ending.color;
+            document.getElementById('ending-desc').textContent = ending.desc;
+
+            // 获取游戏状态显示统计
+            const savedState = localStorage.getItem('xjtu_game_state');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                const statsDiv = document.getElementById('ending-stats');
+                statsDiv.innerHTML = `
+                    <div class="ending-stat-item">
+                        <span class="stat-label">最终GPA</span>
+                        <span class="stat-value">${state.gpa ? state.gpa.toFixed(2) : '0.00'}</span>
+                    </div>
+                    <div class="ending-stat-item">
+                        <span class="stat-label">综测分数</span>
+                        <span class="stat-value">${state.social || 0}</span>
+                    </div>
+                    <div class="ending-stat-item">
+                        <span class="stat-label">挂科次数</span>
+                        <span class="stat-value">${state.failedCourses || 0}</span>
+                    </div>
+                    <div class="ending-stat-item">
+                        <span class="stat-label">剩余金币</span>
+                        <span class="stat-value">💰 ${state.money || 0}</span>
+                    </div>
+                `;
+            }
+
+            // 显示解锁的成就
+            const achievementList = AchievementSystem.getAchievementList();
+            const unlockedAchievements = achievementList.filter(a => a.unlocked);
+            const achievementsDiv = document.getElementById('ending-achievements');
+            
+            if (unlockedAchievements.length > 0) {
+                achievementsDiv.innerHTML = `
+                    <h3>🏆 本次解锁成就 (${unlockedAchievements.length}/${achievementList.length})</h3>
+                    <div class="ending-achievements-list">
+                        ${unlockedAchievements.slice(0, 6).map(a => `
+                            <div class="ending-achievement-item">
+                                <span class="icon">${a.icon}</span>
+                                <span class="name">${a.name}</span>
+                            </div>
+                        `).join('')}
+                        ${unlockedAchievements.length > 6 ? `<div class="ending-achievement-more">还有 ${unlockedAchievements.length - 6} 个...</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // 解锁毕业成就
+            if (endingType !== 'dropout') {
+                AchievementSystem.unlock('graduation');
+            }
+
+            // 按钮事件
+            document.getElementById('btn-restart').addEventListener('click', function() {
+                localStorage.removeItem('xjtu_game_state');
+                window.location.href = 'index.html';
+            });
+
+            document.getElementById('btn-view-achievements').addEventListener('click', function() {
+                window.location.href = 'achievements.html';
+            });
+        });
+    </script>
+</body>
+</html>

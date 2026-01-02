@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>毕业设计 - XJTU本科模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 大四毕设界面 -->
+    <div id="thesis-screen" class="screen active">
+        <header class="game-header">
+            <div class="time-info">
+                <span id="thesis-year">大四</span>
+                <span id="thesis-month">9月</span>
+            </div>
+            <div class="location-info">
+                <span>🏗️ 创新港校区</span>
+            </div>
+            <button id="btn-thesis-menu" class="btn-icon">☰</button>
+        </header>
+
+        <div class="thesis-container">
+            <h2>🎓 毕业设计模式</h2>
+            <div class="thesis-progress">
+                <div class="progress-label">毕设进度</div>
+                <div class="progress-bar-large">
+                    <div class="progress-fill" id="thesis-progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="progress-value" id="thesis-progress-value">0%</div>
+            </div>
+
+            <div class="thesis-stats">
+                <div class="thesis-stat">
+                    <span>SAN值</span>
+                    <span id="thesis-san">80/100</span>
+                </div>
+                <div class="thesis-stat">
+                    <span>金币</span>
+                    <span id="thesis-money">💰 1000</span>
+                </div>
+            </div>
+
+            <div class="thesis-actions">
+                <button class="action-btn study" data-action="thesis-work">
+                    <span class="action-icon">💻</span>
+                    <span class="action-name">做毕设</span>
+                    <span class="action-cost">进度+10%, SAN-5</span>
+                </button>
+                <button class="action-btn study" data-action="thesis-meeting">
+                    <span class="action-icon">👨‍🏫</span>
+                    <span class="action-name">见导师</span>
+                    <span class="action-cost">进度+5%, SAN-3</span>
+                </button>
+                <button class="action-btn life" data-action="thesis-rest">
+                    <span class="action-icon">☕</span>
+                    <span class="action-name">休息放松</span>
+                    <span class="action-cost">金币-50, SAN+10</span>
+                </button>
+                <button class="action-btn special" data-action="thesis-city">
+                    <span class="action-icon">🚌</span>
+                    <span class="action-name">进城</span>
+                    <span class="action-cost">金币-80, SAN+15</span>
+                </button>
+            </div>
+
+            <div class="thesis-warning" id="thesis-warning">
+                <p>⚠️ 【二次西迁】创新港距离市区较远，进城消耗增加！</p>
+            </div>
+
+            <!-- 下一回合按钮 -->
+            <div class="turn-control">
+                <button id="btn-thesis-next" class="btn btn-primary btn-large">
+                    结束本月 ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用Modal弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">提示</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer">
+                <button class="btn btn-primary" id="modal-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏菜单 -->
+    <div id="game-menu" class="modal">
+        <div class="modal-content menu-content">
+            <h3>游戏菜单</h3>
+            <div class="menu-buttons">
+                <button id="btn-save" class="btn btn-secondary">💾 保存游戏</button>
+                <button id="btn-view-achievements" class="btn btn-secondary">🏆 查看成就</button>
+                <button id="btn-quit" class="btn btn-danger">🚪 退出游戏</button>
+            </div>
+            <button id="btn-close-menu" class="btn btn-primary">继续游戏</button>
+        </div>
+    </div>
+
+    <!-- 成就解锁弹窗 -->
+    <div id="achievement-popup" class="achievement-popup">
+        <div class="achievement-popup-content">
+            <div class="achievement-icon">🏆</div>
+            <div class="achievement-text">
+                <span class="achievement-label">成就解锁！</span>
+                <span class="achievement-name" id="achievement-name"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/achievements.js"></script>
+    <script src="js/events.js"></script>
+    <script>
+        // 毕设模式游戏逻辑
+        class ThesisMode {
+            constructor() {
+                this.state = null;
+                this.loadState();
+                this.bindEvents();
+                this.updateUI();
+            }
+
+            loadState() {
+                const saved = localStorage.getItem('xjtu_game_state');
+                if (saved) {
+                    this.state = JSON.parse(saved);
+                } else {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // 初始化毕设状态
+                if (!this.state.thesisProgress) {
+                    this.state.thesisProgress = 0;
+                }
+            }
+
+            saveState() {
+                localStorage.setItem('xjtu_game_state', JSON.stringify(this.state));
+            }
+
+            bindEvents() {
+                // 行动按钮
+                document.querySelectorAll('.thesis-actions .action-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.doAction(btn.dataset.action));
+                });
+
+                // 下一回合
+                document.getElementById('btn-thesis-next').addEventListener('click', () => this.nextTurn());
+
+                // 菜单
+                document.getElementById('btn-thesis-menu').addEventListener('click', () => {
+                    document.getElementById('game-menu').classList.add('active');
+                });
+                document.getElementById('btn-close-menu').addEventListener('click', () => {
+                    document.getElementById('game-menu').classList.remove('active');
+                });
+                document.getElementById('btn-save').addEventListener('click', () => {
+                    this.saveState();
+                    this.showMessage('保存成功', '游戏已保存！');
+                });
+                document.getElementById('btn-view-achievements').addEventListener('click', () => {
+                    window.location.href = 'achievements.html?from=thesis';
+                });
+                document.getElementById('btn-quit').addEventListener('click', () => {
+                    window.location.href = 'index.html';
+                });
+
+                // Modal
+                document.getElementById('modal-close').addEventListener('click', () => this.hideModal());
+                document.getElementById('modal-confirm').addEventListener('click', () => this.hideModal());
+            }
+
+            doAction(action) {
+                switch(action) {
+                    case 'thesis-work':
+                        this.state.thesisProgress = Math.min(100, this.state.thesisProgress + 10);
+                        this.state.san = Math.max(0, this.state.san - 5);
+                        break;
+                    case 'thesis-meeting':
+                        this.state.thesisProgress = Math.min(100, this.state.thesisProgress + 5);
+                        this.state.san = Math.max(0, this.state.san - 3);
+                        break;
+                    case 'thesis-rest':
+                        this.state.money -= 50;
+                        this.state.san = Math.min(100, this.state.san + 10);
+                        break;
+                    case 'thesis-city':
+                        this.state.money -= 80;
+                        this.state.san = Math.min(100, this.state.san + 15);
+                        AchievementSystem.unlock('secondWestward');
+                        break;
+                }
+                this.updateUI();
+            }
+
+            nextTurn() {
+                this.state.month++;
+                if (this.state.month > 12) {
+                    this.state.month = 1;
+                }
+
+                // 检查毕业
+                if (this.state.month === 6 && this.state.year === 4) {
+                    this.checkGraduation();
+                    return;
+                }
+
+                // 检查SAN值
+                if (this.state.san <= 0) {
+                    this.showMessage('精神崩溃', '你的精神状态崩溃了...', () => {
+                        window.location.href = 'ending.html?type=dropout';
+                    });
+                    return;
+                }
+
+                this.saveState();
+                this.updateUI();
+            }
+
+            checkGraduation() {
+                if (this.state.thesisProgress >= 100) {
+                    // 根据GPA决定结局
+                    let endingType = 'normal';
+                    if (this.state.gpa >= 3.8) {
+                        endingType = 'excellent';
+                    } else if (this.state.gpa >= 3.2) {
+                        endingType = 'postgraduate';
+                    }
+                    window.location.href = 'ending.html?type=' + endingType;
+                } else {
+                    this.showMessage('毕设未完成', '你的毕设进度不足，无法毕业...', () => {
+                        window.location.href = 'ending.html?type=dropout';
+                    });
+                }
+            }
+
+            updateUI() {
+                document.getElementById('thesis-month').textContent = this.state.month + '月';
+                document.getElementById('thesis-san').textContent = this.state.san + '/100';
+                document.getElementById('thesis-money').textContent = '💰 ' + this.state.money;
+                document.getElementById('thesis-progress-bar').style.width = this.state.thesisProgress + '%';
+                document.getElementById('thesis-progress-value').textContent = this.state.thesisProgress + '%';
+            }
+
+            showMessage(title, content, callback) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-body').innerHTML = '<p>' + content + '</p>';
+                document.getElementById('modal').classList.add('active');
+                if (callback) {
+                    document.getElementById('modal-confirm').onclick = callback;
+                }
+            }
+
+            hideModal() {
+                document.getElementById('modal').classList.remove('active');
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            new ThesisMode();
+        });
+    </script>
+</body>
+</html>

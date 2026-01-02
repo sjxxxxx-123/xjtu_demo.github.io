@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成就一览 - XJTU本科模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 成就查看界面 -->
+    <div id="achievements-screen" class="screen active">
+        <div class="achievements-container">
+            <h2>🏆 成就一览</h2>
+            
+            <div class="achievements-stats">
+                <span id="achievement-count">0/111</span>
+                <span id="achievement-percent">0%</span>
+            </div>
+
+            <div class="achievements-categories" id="achievements-categories">
+                <!-- 动态生成分类标签 -->
+            </div>
+            
+            <div class="achievements-grid" id="achievements-grid">
+                <!-- 动态生成 -->
+            </div>
+            
+            <button id="btn-back-achievements" class="btn btn-secondary">返回</button>
+        </div>
+    </div>
+
+    <script src="js/achievements.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('achievements-grid');
+            const categories = document.getElementById('achievements-categories');
+            
+            // 获取成就列表
+            const achievementList = AchievementSystem.getAchievementList();
+            const unlockedCount = achievementList.filter(a => a.unlocked).length;
+            const totalCount = achievementList.length;
+            
+            // 更新统计
+            document.getElementById('achievement-count').textContent = unlockedCount + '/' + totalCount;
+            document.getElementById('achievement-percent').textContent = Math.round(unlockedCount / totalCount * 100) + '%';
+
+            // 获取所有分类
+            const categorySet = new Set();
+            achievementList.forEach(a => categorySet.add(a.category || '其他'));
+            const categoryList = Array.from(categorySet);
+
+            // 创建分类标签
+            const allBtn = document.createElement('button');
+            allBtn.className = 'category-btn active';
+            allBtn.textContent = '全部';
+            allBtn.addEventListener('click', () => filterByCategory(null));
+            categories.appendChild(allBtn);
+
+            categoryList.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'category-btn';
+                btn.textContent = cat;
+                btn.addEventListener('click', () => filterByCategory(cat));
+                categories.appendChild(btn);
+            });
+
+            // 渲染成就
+            function renderAchievements(filterCat) {
+                grid.innerHTML = '';
+                
+                const filtered = filterCat 
+                    ? achievementList.filter(a => (a.category || '其他') === filterCat)
+                    : achievementList;
+
+                filtered.forEach(achievement => {
+                    const card = document.createElement('div');
+                    card.className = 'achievement-card' + (achievement.unlocked ? ' unlocked' : ' locked');
+                    
+                    card.innerHTML = `
+                        <div class="achievement-card-icon">${achievement.unlocked ? achievement.icon : '❓'}</div>
+                        <div class="achievement-card-info">
+                            <div class="achievement-card-name">${achievement.unlocked ? achievement.name : '???'}</div>
+                            <div class="achievement-card-desc">${achievement.unlocked ? achievement.description : achievement.hint || '继续探索以解锁'}</div>
+                        </div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            }
+
+            function filterByCategory(cat) {
+                // 更新按钮状态
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if ((cat === null && btn.textContent === '全部') || btn.textContent === cat) {
+                        btn.classList.add('active');
+                    }
+                });
+                renderAchievements(cat);
+            }
+
+            // 初始渲染
+            renderAchievements(null);
+
+            // 返回按钮
+            document.getElementById('btn-back-achievements').addEventListener('click', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const from = urlParams.get('from');
+                if (from === 'thesis') {
+                    window.location.href = 'thesis.html';
+                } else if (from === 'game') {
+                    window.location.href = 'game.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
