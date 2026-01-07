@@ -481,6 +481,8 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    min-height: 150px;
+    justify-content: center;
 }
 
 .action-btn:hover:not(:disabled) {
@@ -507,17 +509,22 @@ body {
 
 .action-icon {
     font-size: 1.8rem;
+    line-height: 1;
 }
 
 .action-name {
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.95rem;
     color: var(--text-primary);
+    text-align: center;
+    display: block;
 }
 
 .action-cost {
     font-size: 0.75rem;
     color: var(--text-light);
+    text-align: center;
+    display: block;
 }
 
 /* 回合控制 */
@@ -748,6 +755,17 @@ body {
     padding: 10px 0;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     color: #fff;
+}
+
+.ending-stat-item .stat-label {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.95rem;
+}
+
+.ending-stat-item .stat-value {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
 }
 
 .ending-stat-item:last-child {
@@ -985,6 +1003,109 @@ body {
     color: var(--text-secondary);
 }
 
+/* 课程详情弹窗 */
+.course-detail-list h4 {
+    color: var(--xjtu-blue);
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+
+.course-detail-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 12px 15px;
+    margin-bottom: 10px;
+}
+
+.course-detail-item.retake {
+    border-color: #F44336;
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.course-header strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.course-tags {
+    display: flex;
+    gap: 6px;
+}
+
+.course-tags .tag {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.course-info {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.mastery-bar {
+    margin-top: 8px;
+}
+
+.mastery-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.mastery-progress {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.mastery-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.course-summary {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.summary-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--xjtu-blue);
+}
+
 /* 考试结果 */
 .exam-results {
     max-height: 400px;
@@ -1125,9 +1246,134 @@ body {
     margin-top: 15px;
 }
 
+/* 课程选择按钮样式增强 */
+.choice-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 15px;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.choice-btn:hover {
+    border-color: var(--xjtu-blue);
+    background: rgba(0, 48, 87, 0.05);
+    transform: translateY(-2px);
+}
+
+.choice-btn-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.choice-btn-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.choice-btn.retake {
+    border-color: rgba(244, 67, 54, 0.3);
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.choice-btn.retake:hover {
+    border-color: #F44336;
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.course-type-tag {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.choice-section-header {
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    margin-top: 10px;
+    padding-top: 5px;
+}
+
+/* 课程特殊属性标签 */
+.special-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-right: 4px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.special-tag.lab {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.special-tag.calc {
+    background: #FFF3E0;
+    color: #EF6C00;
+}
+
+.special-tag.memo {
+    background: #FCE4EC;
+    color: #C2185B;
+}
+
+.special-tag.team {
+    background: #E8F5E9;
+    color: #388E3C;
+}
+
+.special-tag.logic {
+    background: #EDE7F6;
+    color: #512DA8;
+}
+
+.special-tag.time {
+    background: #FFEBEE;
+    color: #D32F2F;
+}
+
+/* 书院核心课程高亮 */
+.choice-btn.college-core {
+    border-color: #9C27B0;
+    background: rgba(156, 39, 176, 0.05);
+}
+
+.choice-btn.college-core:hover {
+    background: rgba(156, 39, 176, 0.1);
+    border-color: #7B1FA2;
+}
+
+/* 小学期书院标签 */
+.summer-course-info {
+    margin-bottom: 10px;
+}
+
+.summer-college-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--xjtu-blue), var(--xjtu-blue-light));
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
 /* ========================================
    响应式布局
-   ======================================== */
+   ======================================== */ */
 @media (max-width: 768px) {
     .game-title {
         font-size: 2rem;
@@ -1191,8 +1437,255 @@ body {
 }
 
 /* ========================================
-   滚动条美化
+   BBS舆论滚动条
    ======================================== */
+.bbs-ticker {
+    background: linear-gradient(90deg, var(--xjtu-blue-dark), var(--xjtu-blue));
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+}
+
+.bbs-label {
+    color: var(--xjtu-gold);
+    font-weight: 600;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.bbs-scroll {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.bbs-item {
+    color: #fff;
+    font-size: 0.85rem;
+    display: inline-block;
+    white-space: nowrap;
+    animation: bbs-scroll 15s linear infinite;
+}
+
+@keyframes bbs-scroll {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+/* ========================================
+   长远规划面板
+   ======================================== */
+.career-panel {
+    background: var(--bg-card);
+    margin: 10px 15px;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--xjtu-gold);
+}
+
+.career-panel h3 {
+    color: var(--xjtu-blue);
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.career-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.career-path {
+    font-weight: 600;
+    color: var(--xjtu-blue);
+}
+
+.career-progress {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.career-progress-item {
+    background: var(--bg-primary);
+    padding: 5px 10px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+}
+
+/* ========================================
+   选课博弈系统
+   ======================================== */
+.bidding-desc {
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+}
+
+.bidding-pools {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.bidding-pool {
+    background: var(--bg-primary);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+}
+
+.pool-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.pool-icon {
+    font-size: 1.2rem;
+}
+
+.pool-name {
+    font-weight: 600;
+    color: var(--xjtu-blue);
+}
+
+.pool-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.weight-slider {
+    width: 100%;
+    height: 8px;
+    -webkit-appearance: none;
+    background: #ddd;
+    border-radius: 4px;
+    outline: none;
+}
+
+.weight-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--xjtu-blue);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.weight-value {
+    display: inline-block;
+    width: 40px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--xjtu-blue);
+}
+
+.weight-total {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 600;
+    color: var(--danger);
+}
+
+/* ========================================
+   体测系统
+   ======================================== */
+.physical-test-status {
+    background: var(--bg-primary);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+    margin: 15px 0;
+}
+
+.test-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.test-item:last-child {
+    border-bottom: none;
+}
+
+.test-label {
+    color: var(--text-secondary);
+}
+
+.test-value {
+    font-weight: 600;
+}
+
+.test-result {
+    font-size: 1.2rem;
+}
+
+.test-warning {
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--danger);
+    padding: 10px 15px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+}
+
+/* ========================================
+   长远规划选择
+   ======================================== */
+.career-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.career-choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+}
+
+.career-choice-btn:hover {
+    border-color: var(--xjtu-blue);
+    background: rgba(0, 62, 126, 0.05);
+    transform: translateX(5px);
+}
+
+.career-icon {
+    font-size: 2rem;
+}
+
+.career-name {
+    font-weight: 600;
+    color: var(--xjtu-blue);
+    margin-bottom: 3px;
+}
+
+.career-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* 声望条 */
+.stat-fill.reputation {
+    background: linear-gradient(90deg, var(--xjtu-gold), #FFD700);
+}
+
+/* ========================================
+   滚动条美化
+   ======================================== */ */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -1366,27 +1859,48 @@ body {
     border-bottom: none;
 }
 
+.ending-achievements h3 {
+    color: var(--xjtu-gold);
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
 .ending-achievements-list {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 10px;
+    justify-content: center;
 }
 
 .ending-achievement-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-sm);
+    gap: 8px;
+    padding: 8px 15px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
     font-size: 0.9rem;
+    color: #fff;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.ending-achievement-item .icon {
+    font-size: 1.2rem;
+}
+
+.ending-achievement-item .name {
+    color: rgba(255,255,255,0.95);
+    font-weight: 500;
 }
 
 .ending-achievement-more {
-    padding: 5px 10px;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    padding: 8px 15px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 /* ========================================
@@ -1620,4 +2134,201 @@ body {
         height: 40px;
         font-size: 1.4rem;
     }
+}
+
+/* ========================================
+   补考/缓考系统样式
+   ======================================== */
+.makeup-hint {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid #FF9800;
+    line-height: 1.6;
+}
+
+.makeup-hint strong {
+    color: var(--text-primary);
+}
+
+.makeup-courses {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.makeup-section-header {
+    margin: 15px 0 10px 0;
+}
+
+.makeup-section-header h4 {
+    color: var(--xjtu-blue);
+    font-size: 1rem;
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.makeup-course-item {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.makeup-course-item.retake-only {
+    background: rgba(244, 67, 54, 0.05);
+    border-color: rgba(244, 67, 54, 0.2);
+}
+
+.makeup-course-info {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.makeup-course-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.makeup-course-score {
+    font-size: 0.9rem;
+    color: #F44336;
+    margin-top: 4px;
+}
+
+.makeup-course-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.makeup-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.makeup-option:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.makeup-option input[type="radio"] {
+    margin-top: 3px;
+    accent-color: var(--xjtu-blue);
+}
+
+.makeup-option .option-text {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.makeup-option .option-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 2px;
+}
+
+.makeup-hint-box {
+    background: rgba(255, 152, 0, 0.1);
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    margin-top: 10px;
+}
+
+.makeup-course-status {
+    margin-top: 10px;
+}
+
+.status-tag {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(244, 67, 54, 0.1);
+    color: #F44336;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* 新行动按钮样式 */
+.action-btn[data-action="parttime"] {
+    border-color: #4CAF50;
+}
+
+.action-btn[data-action="competition"] {
+    border-color: #FF9800;
+}
+
+.action-btn[data-action="research"] {
+    border-color: #9C27B0;
+}
+
+/* 恋爱按钮 Tooltip */
+.action-btn[data-action="love"] {
+    position: relative;
+}
+
+.love-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    margin-bottom: -10px;
+    min-width: 200px;
+    white-space: normal;
+    max-width: 280px;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.action-btn[data-action="love"]:hover .love-tooltip {
+    opacity: 1;
+    visibility: visible;
+    margin-bottom: 5px;
+}
+
+.tooltip-content {
+    line-height: 1.4;
+}
+
+.tooltip-progress {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 0.8rem;
+}
+
+.progress-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 4px 0 2px 0;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF1493, #FF69B4);
+    transition: width 0.3s ease;
 }

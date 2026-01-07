@@ -23,6 +23,14 @@
             <button id="btn-menu" class="btn-icon">☰</button>
         </header>
 
+        <!-- BBS舆论滚动条 -->
+        <div class="bbs-ticker" id="bbs-ticker">
+            <div class="bbs-label">📢 交大BBS</div>
+            <div class="bbs-scroll" id="bbs-scroll">
+                <span class="bbs-item">欢迎来到西安交通大学！</span>
+            </div>
+        </div>
+
         <!-- 属性面板 -->
         <div class="stats-panel">
             <div class="stat-item">
@@ -53,10 +61,26 @@
                     <div class="stat-fill social" id="bar-social" style="width: 60%"></div>
                 </div>
             </div>
+             <div class="stat-item">
+                <div class="stat-label">声望</div>
+                <div class="stat-value" id="stat-reputation">⭐ 50</div>
+                <div class="stat-bar">
+                    <div class="stat-fill reputation" id="bar-reputation" style="width: 50%"></div>
+                </div>
+            </div>
             <div class="stat-item">
                 <div class="stat-label">金币</div>
                 <div class="stat-value" id="stat-money">💰 1000</div>
             </div>
+        </div>
+
+        <!-- 长远规划面板（大三下开启） -->
+        <div class="career-panel" id="career-panel" style="display: none;">
+            <h3>🎯 长远规划</h3>
+            <div class="career-info" id="career-info">
+                <span class="career-path">未选择方向</span>
+            </div>
+            <div class="career-progress" id="career-progress"></div>
         </div>
 
         <!-- 课程掌握度面板 -->
@@ -81,6 +105,11 @@
                     <span class="action-name">去自习</span>
                     <span class="action-cost">体力 -3, SAN -2</span>
                 </button>
+                <button class="action-btn life" data-action="run" id="btn-run">
+                    <span class="action-icon">🏃</span>
+                    <span class="action-name">操场跑步</span>
+                    <span class="action-cost">体力 -1, 体力上限+</span>
+                </button>
                 <button class="action-btn social" data-action="club">
                     <span class="action-icon">🎭</span>
                     <span class="action-name">搞社团</span>
@@ -90,6 +119,26 @@
                     <span class="action-icon">🤝</span>
                     <span class="action-name">做志愿</span>
                     <span class="action-cost">体力 -2</span>
+                </button>
+                <button class="action-btn study" data-action="parttime">
+                    <span class="action-icon">💼</span>
+                    <span class="action-name">去兼职</span>
+                    <span class="action-cost">体力 -3, 金币 +100~200</span>
+                </button>
+                <button class="action-btn study" data-action="competition">
+                    <span class="action-icon">🏆</span>
+                    <span class="action-name">参加竞赛</span>
+                    <span class="action-cost">体力 -4, SAN -5</span>
+                </button>
+                <button class="action-btn study" data-action="research">
+                    <span class="action-icon">🔬</span>
+                    <span class="action-name">科研实习</span>
+                    <span class="action-cost">体力 -3, SAN -3</span>
+                </button>
+                <button class="action-btn special" data-action="career" id="btn-career" style="display: none;">
+                    <span class="action-icon">🎯</span>
+                    <span class="action-name">长远规划</span>
+                    <span class="action-cost">规划未来方向</span>
                 </button>
                 <button class="action-btn life" data-action="eat">
                     <span class="action-icon">🍜</span>
@@ -105,6 +154,11 @@
                     <span class="action-icon">🚿</span>
                     <span class="action-name">去洗澡</span>
                     <span class="action-cost">SAN +8</span>
+                </button>
+                <button class="action-btn special" data-action="love" id="btn-love" title="恋爱模块">
+                    <span class="action-icon">❤️</span>
+                    <span class="action-name">恋爱</span>
+                    <span class="action-cost">解锁条件</span>
                 </button>
                 <button class="action-btn special" data-action="date" id="btn-date" style="display: none;">
                     <span class="action-icon">💕</span>
@@ -198,6 +252,144 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="exam-confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 补考选择弹窗 -->
+    <div id="makeup-exam-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">📋 挂科处理</h3>
+            </div>
+            <div class="modal-body">
+                <p class="makeup-hint">
+                    <strong>补考规则：</strong>只有专业课可以申请补考，补考通过按60分计入成绩。<br>
+                    通识课、体育课及补考不通过的课程需要下学期重修。
+                </p>
+                <div class="makeup-courses" id="makeup-courses"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="makeup-confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 补考进行弹窗 -->
+    <div id="makeup-exam-result-modal" class="modal">
+        <div class="modal-content exam-content">
+            <div class="modal-header">
+                <h3 class="modal-title">📝 补考结果</h3>
+            </div>
+            <div class="modal-body">
+                <div class="exam-results" id="makeup-exam-results"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="makeup-result-confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 选课博弈弹窗 -->
+    <div id="course-bidding-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">📋 选课系统开放</h3>
+            </div>
+            <div class="modal-body">
+                <p class="bidding-desc">新学期选课开始！你有 <strong>100</strong> 权重分需要分配给三类课程。</p>
+                <div class="bidding-pools">
+                    <div class="bidding-pool">
+                        <div class="pool-header">
+                            <span class="pool-icon">🌊</span>
+                            <span class="pool-name">水课池</span>
+                        </div>
+                        <div class="pool-desc">难度低，GPA提升快</div>
+                        <input type="range" id="weight-easy" min="0" max="100" value="34" class="weight-slider" oninput="game.updateBiddingTotal()">
+                        <span class="weight-value">34</span>
+                    </div>
+                    <div class="bidding-pool">
+                        <div class="pool-header">
+                            <span class="pool-icon">💪</span>
+                            <span class="pool-name">硬课池</span>
+                        </div>
+                        <div class="pool-desc">难度高，科研/技能提升多</div>
+                        <input type="range" id="weight-hard" min="0" max="100" value="33" class="weight-slider" oninput="game.updateBiddingTotal()">
+                        <span class="weight-value">33</span>
+                    </div>
+                    <div class="bidding-pool">
+                        <div class="pool-header">
+                            <span class="pool-icon">🎨</span>
+                            <span class="pool-name">兴趣课池</span>
+                        </div>
+                        <div class="pool-desc">SAN值恢复快，轻松愉快</div>
+                        <input type="range" id="weight-interest" min="0" max="100" value="33" class="weight-slider" oninput="game.updateBiddingTotal()">
+                        <span class="weight-value">33</span>
+                    </div>
+                </div>
+                <div class="weight-total">当前总权重: <span id="total-weight">100</span>/100</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="confirm-bidding">确认选课</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 体测弹窗 -->
+    <div id="physical-test-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🏃 体测月来临！</h3>
+            </div>
+            <div class="modal-body">
+                <p id="physical-test-desc">又到了体测的时候...</p>
+                <div class="physical-test-status" id="physical-test-status">
+                    <div class="test-item">
+                        <span class="test-label">体力上限</span>
+                        <span class="test-value" id="test-stamina-value">10/12</span>
+                        <span class="test-result" id="test-stamina-result">❌</span>
+                    </div>
+                    <div class="test-item">
+                        <span class="test-label">本月跑步次数</span>
+                        <span class="test-value" id="test-run-value">0/3</span>
+                        <span class="test-result" id="test-run-result">❌</span>
+                    </div>
+                </div>
+                <div class="test-warning" id="test-warning" style="display: none;">
+                    ⚠️ 体测不达标将扣除综测分并影响SAN值！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="physical-test-confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 长远规划选择弹窗 -->
+    <div id="career-choice-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🎯 选择你的未来方向</h3>
+            </div>
+            <div class="modal-body">
+                <p>大三下学期了，是时候规划未来了。请选择一个方向：</p>
+                <div class="career-choices">
+                    <button class="career-choice-btn" data-career="postgrad">
+                        <div class="career-icon">🎓</div>
+                        <div class="career-name">保研深造</div>
+                        <div class="career-desc">找导师、大创项目、竞赛加分</div>
+                    </button>
+                    <button class="career-choice-btn" data-career="abroad">
+                        <div class="career-icon">✈️</div>
+                        <div class="career-name">出国留学</div>
+                        <div class="career-desc">托福/GRE、申请材料、金币消耗翻倍</div>
+                    </button>
+                    <button class="career-choice-btn" data-career="job">
+                        <div class="career-icon">💼</div>
+                        <div class="career-name">就业工作</div>
+                        <div class="career-desc">实习、面试、金币增加、Mastery变慢</div>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

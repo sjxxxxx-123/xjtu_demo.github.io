@@ -239,59 +239,433 @@ const GameData = {
     courses: {
         year1: {
             fall: [
-                { id: 'math1', name: '高等数学(上)', credits: 5, difficulty: 0.8 },
-                { id: 'english1', name: '大学英语(一)', credits: 3, difficulty: 0.5 },
-                { id: 'physics1', name: '大学物理(上)', credits: 4, difficulty: 0.7 },
-                { id: 'programming', name: 'C语言程序设计', credits: 3, difficulty: 0.6 },
-                { id: 'pe1', name: '体育(一)', credits: 1, difficulty: 0.3 }
+                { id: 'math1', name: '高等数学(上)', credits: 5, difficulty: 0.8, type: 'major' },
+                { id: 'english1', name: '大学英语(一)', credits: 3, difficulty: 0.5, type: 'general' },
+                { id: 'physics1', name: '大学物理(上)', credits: 4, difficulty: 0.7, type: 'major' },
+                { id: 'programming', name: 'C语言程序设计', credits: 3, difficulty: 0.6, type: 'major' },
+                { id: 'pe1', name: '体育(一)', credits: 1, difficulty: 0.3, type: 'pe' }
             ],
             spring: [
-                { id: 'math2', name: '高等数学(下)', credits: 5, difficulty: 0.85 },
-                { id: 'english2', name: '大学英语(二)', credits: 3, difficulty: 0.5 },
-                { id: 'physics2', name: '大学物理(下)', credits: 4, difficulty: 0.75 },
-                { id: 'linear', name: '线性代数', credits: 3, difficulty: 0.7 },
-                { id: 'pe2', name: '体育(二)', credits: 1, difficulty: 0.3 }
+                { id: 'math2', name: '高等数学(下)', credits: 5, difficulty: 0.85, type: 'major' },
+                { id: 'english2', name: '大学英语(二)', credits: 3, difficulty: 0.5, type: 'general' },
+                { id: 'physics2', name: '大学物理(下)', credits: 4, difficulty: 0.75, type: 'major' },
+                { id: 'linear', name: '线性代数', credits: 3, difficulty: 0.7, type: 'major' },
+                { id: 'pe2', name: '体育(二)', credits: 1, difficulty: 0.3, type: 'pe' }
             ]
         },
         year2: {
             fall: [
-                { id: 'probability', name: '概率论与数理统计', credits: 3, difficulty: 0.75 },
-                { id: 'english3', name: '大学英语(三)', credits: 3, difficulty: 0.55 },
-                { id: 'datastructure', name: '数据结构', credits: 4, difficulty: 0.8 },
-                { id: 'circuit', name: '电路原理', credits: 4, difficulty: 0.85 },
-                { id: 'pe3', name: '体育(三)', credits: 1, difficulty: 0.3 }
+                { id: 'probability', name: '概率论与数理统计', credits: 3, difficulty: 0.75, type: 'major' },
+                { id: 'english3', name: '大学英语(三)', credits: 3, difficulty: 0.55, type: 'general' },
+                { id: 'datastructure', name: '数据结构', credits: 4, difficulty: 0.8, type: 'major' },
+                { id: 'circuit', name: '电路原理', credits: 4, difficulty: 0.85, type: 'major' },
+                { id: 'pe3', name: '体育(三)', credits: 1, difficulty: 0.3, type: 'pe' }
             ],
             spring: [
-                { id: 'signals', name: '信号与系统', credits: 4, difficulty: 0.85 },
-                { id: 'english4', name: '大学英语(四)', credits: 3, difficulty: 0.6 },
-                { id: 'digital', name: '数字电路', credits: 3, difficulty: 0.75 },
-                { id: 'os', name: '操作系统', credits: 3, difficulty: 0.8 },
-                { id: 'pe4', name: '体育(四)', credits: 1, difficulty: 0.3 }
+                { id: 'signals', name: '信号与系统', credits: 4, difficulty: 0.85, type: 'major' },
+                { id: 'english4', name: '大学英语(四)', credits: 3, difficulty: 0.6, type: 'general' },
+                { id: 'digital', name: '数字电路', credits: 3, difficulty: 0.75, type: 'major' },
+                { id: 'os', name: '操作系统', credits: 3, difficulty: 0.8, type: 'major' },
+                { id: 'pe4', name: '体育(四)', credits: 1, difficulty: 0.3, type: 'pe' }
             ]
         },
         year3: {
             fall: [
-                { id: 'network', name: '计算机网络', credits: 3, difficulty: 0.75 },
-                { id: 'database', name: '数据库原理', credits: 3, difficulty: 0.7 },
-                { id: 'microcomputer', name: '微机原理', credits: 3, difficulty: 0.8 },
-                { id: 'algorithm', name: '算法设计与分析', credits: 3, difficulty: 0.85 },
-                { id: 'elective1', name: '专业选修课(一)', credits: 2, difficulty: 0.6 }
+                { id: 'network', name: '计算机网络', credits: 3, difficulty: 0.75, type: 'major' },
+                { id: 'database', name: '数据库原理', credits: 3, difficulty: 0.7, type: 'major' },
+                { id: 'microcomputer', name: '微机原理', credits: 3, difficulty: 0.8, type: 'major' },
+                { id: 'algorithm', name: '算法设计与分析', credits: 3, difficulty: 0.85, type: 'major' },
+                { id: 'elective1', name: '专业选修课(一)', credits: 2, difficulty: 0.6, type: 'elective' }
             ],
             spring: [
-                { id: 'software', name: '软件工程', credits: 3, difficulty: 0.65 },
-                { id: 'ai', name: '人工智能导论', credits: 3, difficulty: 0.75 },
-                { id: 'embedded', name: '嵌入式系统', credits: 3, difficulty: 0.8 },
-                { id: 'elective2', name: '专业选修课(二)', credits: 2, difficulty: 0.6 },
-                { id: 'elective3', name: '专业选修课(三)', credits: 2, difficulty: 0.6 }
+                { id: 'software', name: '软件工程', credits: 3, difficulty: 0.65, type: 'major' },
+                { id: 'ai', name: '人工智能导论', credits: 3, difficulty: 0.75, type: 'major' },
+                { id: 'embedded', name: '嵌入式系统', credits: 3, difficulty: 0.8, type: 'major' },
+                { id: 'elective2', name: '专业选修课(二)', credits: 2, difficulty: 0.6, type: 'elective' },
+                { id: 'elective3', name: '专业选修课(三)', credits: 2, difficulty: 0.6, type: 'elective' }
             ]
         }
     },
 
-    // 小学期课程
+    // 小学期课程 - 通用
     summerCourses: {
         year1: { id: 'metalwork', name: '金工实习', credits: 2, energyCost: 8, sanLoss: 10 },
         year2: { id: 'electronics', name: '电子实习', credits: 2, energyCost: 8, sanLoss: 10 },
         year3: { id: 'production', name: '生产实习', credits: 3, energyCost: 10, sanLoss: 12 }
+    },
+
+    // 书院个性化小学期课程
+    collegeSummerCourses: {
+        pengkang: {
+            year1: { id: 'metalwork_pk', name: '金工实习(打小锤子)', credits: 2, energyCost: 10, sanLoss: 15, description: '彭康传统，打小锤子打到手疼' },
+            year2: { id: 'thermlab', name: '热力学实验周', credits: 2, energyCost: 8, sanLoss: 12 },
+            year3: { id: 'production', name: '生产实习', credits: 3, energyCost: 10, sanLoss: 12 }
+        },
+        wenzhi: {
+            year1: { id: 'metalwork_wz', name: '金工实习(打小锤子)', credits: 2, energyCost: 10, sanLoss: 15, description: '机械学子必经之路' },
+            year2: { id: 'cadweek', name: '机械制图周', credits: 2, energyCost: 8, sanLoss: 15, description: '画图画到颈椎疼' },
+            year3: { id: 'production', name: '生产实习', credits: 3, energyCost: 10, sanLoss: 12 }
+        },
+        nanyang: {
+            year1: { id: 'programming_week', name: '程序设计周', credits: 2, energyCost: 8, sanLoss: 12, description: '写代码写到眼花' },
+            year2: { id: 'circuit_week', name: '电路实验周', credits: 2, energyCost: 10, sanLoss: 18, description: '深夜调电路' },
+            year3: { id: 'production', name: '生产实习', credits: 3, energyCost: 10, sanLoss: 12 }
+        },
+        zhongying: {
+            year1: { id: 'programming_week_zy', name: '程序设计周', credits: 2, energyCost: 8, sanLoss: 12, description: 'Teamwork写代码' },
+            year2: { id: 'management_practice', name: '管理实践周', credits: 2, energyCost: 6, sanLoss: 8, description: '小组合作项目' },
+            year3: { id: 'social_practice', name: '社会实践', credits: 3, energyCost: 8, sanLoss: 10, description: '调研与实习' }
+        },
+        chongshi: {
+            year1: { id: 'social_practice_cs', name: '社会实践', credits: 2, energyCost: 6, sanLoss: 8, description: '田野调研' },
+            year2: { id: 'design_week', name: '设计周', credits: 2, energyCost: 8, sanLoss: 15, description: '熬夜画图赶稿' },
+            year3: { id: 'art_practice', name: '艺术实践', credits: 3, energyCost: 8, sanLoss: 12 }
+        },
+        lizhi: {
+            year1: { id: 'math_seminar', name: '数学研讨班', credits: 2, energyCost: 6, sanLoss: 10, description: '纯逻辑挑战' },
+            year2: { id: 'physics_exp', name: '物理实验强化', credits: 2, energyCost: 8, sanLoss: 12 },
+            year3: { id: 'research_training', name: '科研训练', credits: 3, energyCost: 10, sanLoss: 15 }
+        },
+        zonglian: {
+            year1: { id: 'anatomy_practice', name: '解剖实习', credits: 2, energyCost: 8, sanLoss: 15, description: '背诵地狱开始' },
+            year2: { id: 'clinical_practice', name: '临床见习', credits: 2, energyCost: 10, sanLoss: 12 },
+            year3: { id: 'hospital_intern', name: '医院实习', credits: 3, energyCost: 12, sanLoss: 15 }
+        },
+        qide: {
+            year1: { id: 'social_practice_qd', name: '社会实践', credits: 2, energyCost: 6, sanLoss: 8, description: '商业调研' },
+            year2: { id: 'business_simulation', name: '商业模拟', credits: 2, energyCost: 6, sanLoss: 8, description: '模拟经营' },
+            year3: { id: 'internship', name: '企业实习', credits: 3, energyCost: 8, sanLoss: 10 }
+        },
+        qianxuesen: {
+            year1: { id: 'research_intro', name: '科研训练(基础)', credits: 2, energyCost: 10, sanLoss: 15, description: '提前进实验室' },
+            year2: { id: 'research_advanced', name: '科研训练(进阶)', credits: 2, energyCost: 10, sanLoss: 18, description: '论文与项目' },
+            year3: { id: 'research_project', name: '科研创新项目', credits: 3, energyCost: 12, sanLoss: 20 }
+        }
+    },
+
+    // 书院专属核心课程
+    collegeCourses: {
+        // 钱学森书院 - 困难模式
+        qianxuesen: {
+            year1: {
+                fall: [
+                    { id: 'qxs_engmath1', name: '工程数学集群(上)', credits: 5, difficulty: 0.95, type: 'college_core', decayRate: 1.5, description: '难度A+，掌握度衰减快' },
+                    { id: 'qxs_mechanics', name: '力学分析基础', credits: 4, difficulty: 0.9, type: 'college_core', decayRate: 1.3 }
+                ],
+                spring: [
+                    { id: 'qxs_engmath2', name: '工程数学集群(下)', credits: 5, difficulty: 0.95, type: 'college_core', decayRate: 1.5 },
+                    { id: 'qxs_quantum', name: '量子物理初步', credits: 4, difficulty: 0.95, type: 'college_core', decayRate: 1.4 }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'qxs_thermo', name: '工程热力学', credits: 4, difficulty: 0.9, type: 'college_core', decayRate: 1.3 },
+                    { id: 'qxs_materials', name: '材料力学', credits: 4, difficulty: 0.85, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'qxs_control', name: '自动控制原理', credits: 4, difficulty: 0.9, type: 'college_core', decayRate: 1.3 },
+                    { id: 'qxs_electromagnetic', name: '电磁场理论', credits: 4, difficulty: 0.9, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'qxs_aerospace', name: '航空航天概论', credits: 3, difficulty: 0.8, type: 'college_core' },
+                    { id: 'qxs_numerical', name: '数值分析', credits: 3, difficulty: 0.85, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'qxs_system', name: '系统工程', credits: 3, difficulty: 0.8, type: 'college_core' },
+                    { id: 'qxs_optimization', name: '最优化方法', credits: 3, difficulty: 0.85, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 南洋书院 - 电信/电气/计算机
+        nanyang: {
+            year1: {
+                fall: [
+                    { id: 'ny_circuit1', name: '电路分析基础(上)', credits: 4, difficulty: 0.85, type: 'college_core', labIntensive: true },
+                    { id: 'ny_cpp', name: 'C++程序设计', credits: 3, difficulty: 0.7, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'ny_circuit2', name: '电路分析基础(下)', credits: 4, difficulty: 0.9, type: 'college_core', labIntensive: true },
+                    { id: 'ny_digital', name: '数字逻辑', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'ny_signals', name: '信号与系统', credits: 4, difficulty: 0.9, type: 'college_core', labIntensive: true },
+                    { id: 'ny_analog', name: '模拟电子技术', credits: 4, difficulty: 0.85, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'ny_microcomputer', name: '微机原理与接口', credits: 4, difficulty: 0.85, type: 'college_core', labIntensive: true },
+                    { id: 'ny_electromagnetic', name: '电磁场与电磁波', credits: 3, difficulty: 0.85, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'ny_dsp', name: '数字信号处理', credits: 3, difficulty: 0.85, type: 'college_core' },
+                    { id: 'ny_communication', name: '通信原理', credits: 4, difficulty: 0.8, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'ny_embedded', name: '嵌入式系统设计', credits: 3, difficulty: 0.8, type: 'college_core', labIntensive: true },
+                    { id: 'ny_vlsi', name: 'VLSI设计基础', credits: 3, difficulty: 0.85, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 彭康书院 - 能源/动力/理学
+        pengkang: {
+            year1: {
+                fall: [
+                    { id: 'pk_mechanics1', name: '理论力学(上)', credits: 4, difficulty: 0.8, type: 'college_core', calcIntensive: true },
+                    { id: 'pk_drawing', name: '工程制图', credits: 3, difficulty: 0.65, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'pk_mechanics2', name: '理论力学(下)', credits: 4, difficulty: 0.85, type: 'college_core', calcIntensive: true },
+                    { id: 'pk_materials', name: '材料力学', credits: 4, difficulty: 0.8, type: 'college_core' }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'pk_thermo', name: '工程热力学', credits: 4, difficulty: 0.9, type: 'college_core', calcIntensive: true, isMountain: true },
+                    { id: 'pk_fluid', name: '流体力学', credits: 4, difficulty: 0.85, type: 'college_core', calcIntensive: true, isMountain: true }
+                ],
+                spring: [
+                    { id: 'pk_heat', name: '传热学', credits: 4, difficulty: 0.9, type: 'college_core', calcIntensive: true, isMountain: true },
+                    { id: 'pk_machine', name: '机械设计基础', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'pk_turbine', name: '汽轮机原理', credits: 3, difficulty: 0.8, type: 'college_core' },
+                    { id: 'pk_boiler', name: '锅炉原理', credits: 3, difficulty: 0.8, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'pk_power', name: '热力发电厂', credits: 3, difficulty: 0.75, type: 'college_core' },
+                    { id: 'pk_nuclear', name: '核能概论', credits: 3, difficulty: 0.8, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 文治书院 - 机械/材料
+        wenzhi: {
+            year1: {
+                fall: [
+                    { id: 'wz_drawing1', name: '机械制图(上)', credits: 4, difficulty: 0.7, type: 'college_core', tiring: true, neckStrain: true },
+                    { id: 'wz_mechanics1', name: '理论力学(上)', credits: 4, difficulty: 0.8, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'wz_drawing2', name: '机械制图(下)', credits: 4, difficulty: 0.75, type: 'college_core', tiring: true, neckStrain: true },
+                    { id: 'wz_mechanics2', name: '理论力学(下)', credits: 4, difficulty: 0.85, type: 'college_core' }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'wz_materials_science', name: '材料科学基础', credits: 4, difficulty: 0.8, type: 'college_core' },
+                    { id: 'wz_matmechanics', name: '材料力学', credits: 4, difficulty: 0.85, type: 'college_core', calcIntensive: true }
+                ],
+                spring: [
+                    { id: 'wz_machinedesign', name: '机械设计', credits: 4, difficulty: 0.8, type: 'college_core', tiring: true },
+                    { id: 'wz_manufacture', name: '机械制造基础', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'wz_control', name: '机械控制工程', credits: 3, difficulty: 0.8, type: 'college_core' },
+                    { id: 'wz_cad', name: 'CAD/CAM技术', credits: 3, difficulty: 0.7, type: 'college_core', tiring: true }
+                ],
+                spring: [
+                    { id: 'wz_robot', name: '机器人技术', credits: 3, difficulty: 0.75, type: 'college_core' },
+                    { id: 'wz_auto', name: '自动化制造系统', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 仲英书院 - 软件/化生/管理
+        zhongying: {
+            year1: {
+                fall: [
+                    { id: 'zy_datastructure', name: '数据结构', credits: 4, difficulty: 0.8, type: 'college_core', teamwork: true },
+                    { id: 'zy_java', name: 'Java程序设计', credits: 3, difficulty: 0.7, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'zy_management', name: '管理学原理', credits: 3, difficulty: 0.6, type: 'college_core', teamwork: true },
+                    { id: 'zy_database', name: '数据库原理', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'zy_organic', name: '有机化学实验', credits: 4, difficulty: 0.75, type: 'college_core', teamwork: true, labIntensive: true },
+                    { id: 'zy_software', name: '软件工程', credits: 3, difficulty: 0.7, type: 'college_core', teamwork: true }
+                ],
+                spring: [
+                    { id: 'zy_accounting', name: '会计学基础', credits: 3, difficulty: 0.65, type: 'college_core' },
+                    { id: 'zy_biochem', name: '生物化学', credits: 4, difficulty: 0.8, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'zy_project', name: '项目管理', credits: 3, difficulty: 0.65, type: 'college_core', teamwork: true },
+                    { id: 'zy_ai', name: '人工智能导论', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'zy_marketing', name: '市场营销', credits: 3, difficulty: 0.6, type: 'college_core', teamwork: true },
+                    { id: 'zy_bigdata', name: '大数据分析', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 励志书院 - 数学/物理
+        lizhi: {
+            year1: {
+                fall: [
+                    { id: 'lz_analysis1', name: '数学分析(上)', credits: 5, difficulty: 0.9, type: 'college_core', logicBased: true },
+                    { id: 'lz_algebra1', name: '高等代数(上)', credits: 4, difficulty: 0.85, type: 'college_core', logicBased: true }
+                ],
+                spring: [
+                    { id: 'lz_analysis2', name: '数学分析(下)', credits: 5, difficulty: 0.95, type: 'college_core', logicBased: true },
+                    { id: 'lz_algebra2', name: '高等代数(下)', credits: 4, difficulty: 0.9, type: 'college_core', logicBased: true }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'lz_analysis3', name: '数学分析(续)', credits: 4, difficulty: 0.95, type: 'college_core', logicBased: true },
+                    { id: 'lz_abstract', name: '抽象代数', credits: 4, difficulty: 0.95, type: 'college_core', logicBased: true }
+                ],
+                spring: [
+                    { id: 'lz_topology', name: '点集拓扑', credits: 3, difficulty: 0.9, type: 'college_core', logicBased: true },
+                    { id: 'lz_ode', name: '常微分方程', credits: 3, difficulty: 0.85, type: 'college_core', logicBased: true }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'lz_pde', name: '偏微分方程', credits: 3, difficulty: 0.9, type: 'college_core', logicBased: true },
+                    { id: 'lz_functional', name: '泛函分析', credits: 3, difficulty: 0.95, type: 'college_core', logicBased: true }
+                ],
+                spring: [
+                    { id: 'lz_probability', name: '概率论', credits: 3, difficulty: 0.85, type: 'college_core', logicBased: true },
+                    { id: 'lz_numanalysis', name: '数值分析', credits: 3, difficulty: 0.8, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 崇实书院 - 文法/建筑/设计
+        chongshi: {
+            year1: {
+                fall: [
+                    { id: 'cs_arch1', name: '建筑设计初步', credits: 4, difficulty: 0.65, type: 'college_core', timeConsuming: true, allNighter: true },
+                    { id: 'cs_law', name: '法理学', credits: 3, difficulty: 0.6, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'cs_arthistory', name: '中外艺术史', credits: 3, difficulty: 0.55, type: 'college_core' },
+                    { id: 'cs_sketch', name: '设计素描', credits: 3, difficulty: 0.6, type: 'college_core', timeConsuming: true }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'cs_arch2', name: '建筑设计(一)', credits: 4, difficulty: 0.7, type: 'college_core', timeConsuming: true, allNighter: true },
+                    { id: 'cs_civil', name: '民法学', credits: 3, difficulty: 0.65, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'cs_urban', name: '城市规划原理', credits: 3, difficulty: 0.65, type: 'college_core' },
+                    { id: 'cs_design', name: '视觉传达设计', credits: 3, difficulty: 0.6, type: 'college_core', timeConsuming: true }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'cs_arch3', name: '建筑设计(二)', credits: 4, difficulty: 0.75, type: 'college_core', timeConsuming: true, allNighter: true },
+                    { id: 'cs_criminal', name: '刑法学', credits: 3, difficulty: 0.7, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'cs_interior', name: '室内设计', credits: 3, difficulty: 0.65, type: 'college_core', timeConsuming: true },
+                    { id: 'cs_landscape', name: '景观设计', credits: 3, difficulty: 0.65, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 宗濂书院 - 基础医学/临床
+        zonglian: {
+            year1: {
+                fall: [
+                    { id: 'zl_anatomy', name: '系统解剖学', credits: 5, difficulty: 0.8, type: 'college_core', memorize: true, examWeekDouble: true },
+                    { id: 'zl_histology', name: '组织学与胚胎学', credits: 3, difficulty: 0.75, type: 'college_core', memorize: true }
+                ],
+                spring: [
+                    { id: 'zl_physiology', name: '生理学', credits: 4, difficulty: 0.85, type: 'college_core', memorize: true, examWeekDouble: true },
+                    { id: 'zl_cellbio', name: '细胞生物学', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'zl_biochem', name: '生物化学', credits: 5, difficulty: 0.9, type: 'college_core', memorize: true, examWeekDouble: true },
+                    { id: 'zl_pathology', name: '病理学', credits: 4, difficulty: 0.85, type: 'college_core', memorize: true }
+                ],
+                spring: [
+                    { id: 'zl_pharmacology', name: '药理学', credits: 4, difficulty: 0.85, type: 'college_core', memorize: true },
+                    { id: 'zl_immunology', name: '免疫学', credits: 3, difficulty: 0.8, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'zl_diagnostics', name: '诊断学', credits: 4, difficulty: 0.8, type: 'college_core', memorize: true },
+                    { id: 'zl_internal', name: '内科学', credits: 4, difficulty: 0.85, type: 'college_core', memorize: true }
+                ],
+                spring: [
+                    { id: 'zl_surgery', name: '外科学', credits: 4, difficulty: 0.85, type: 'college_core', memorize: true },
+                    { id: 'zl_pediatrics', name: '儿科学', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            }
+        },
+
+        // 启德书院 - 经管/口腔
+        qide: {
+            year1: {
+                fall: [
+                    { id: 'qd_accounting', name: '会计学', credits: 4, difficulty: 0.65, type: 'college_core', gpaMoneyBonus: true },
+                    { id: 'qd_microecon', name: '微观经济学', credits: 3, difficulty: 0.7, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'qd_macroecon', name: '宏观经济学', credits: 3, difficulty: 0.7, type: 'college_core' },
+                    { id: 'qd_oral_anatomy', name: '口腔解剖生理学', credits: 4, difficulty: 0.75, type: 'college_core', memorize: true }
+                ]
+            },
+            year2: {
+                fall: [
+                    { id: 'qd_finance', name: '财务管理', credits: 3, difficulty: 0.7, type: 'college_core', gpaMoneyBonus: true },
+                    { id: 'qd_oral_material', name: '口腔材料学', credits: 3, difficulty: 0.7, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'qd_statistics', name: '统计学', credits: 3, difficulty: 0.7, type: 'college_core' },
+                    { id: 'qd_oral_histo', name: '口腔组织病理学', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ]
+            },
+            year3: {
+                fall: [
+                    { id: 'qd_investment', name: '投资学', credits: 3, difficulty: 0.7, type: 'college_core', gpaMoneyBonus: true },
+                    { id: 'qd_oral_prosth', name: '口腔修复学', credits: 3, difficulty: 0.75, type: 'college_core' }
+                ],
+                spring: [
+                    { id: 'qd_corporate', name: '公司金融', credits: 3, difficulty: 0.7, type: 'college_core' },
+                    { id: 'qd_oral_surgery', name: '口腔颌面外科', credits: 3, difficulty: 0.8, type: 'college_core' }
+                ]
+            }
+        }
+    },
+
+    // 通识必修课（每学期1门）
+    generalCourses: {
+        year1: {
+            fall: { id: 'math_general1', name: '高等数学(上)', credits: 5, difficulty: 0.8, type: 'general_required' },
+            spring: { id: 'math_general2', name: '高等数学(下)', credits: 5, difficulty: 0.85, type: 'general_required' }
+        },
+        year2: {
+            fall: { id: 'physics_general1', name: '大学物理(上)', credits: 4, difficulty: 0.75, type: 'general_required' },
+            spring: { id: 'physics_general2', name: '大学物理(下)', credits: 4, difficulty: 0.8, type: 'general_required' }
+        },
+        year3: {
+            fall: { id: 'english_advanced', name: '学术英语', credits: 2, difficulty: 0.6, type: 'general_required' },
+            spring: { id: 'politics', name: '毛概', credits: 3, difficulty: 0.5, type: 'general_required' }
+        }
     },
 
     // 自习地点

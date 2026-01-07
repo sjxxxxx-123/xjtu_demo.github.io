@@ -253,6 +253,32 @@ class AchievementManager {
                 checkCondition: (stats, state) => false // 考试时检测
             },
             
+            offendTeacher2: {
+                id: 'offendTeacher2',
+                name: '你一定得罪过老师 2/2',
+                icon: '💀',
+                category: 'academic',
+                description: '挂掉书院核心专业课（如南洋挂电路，彭康挂热传）',
+                hint: '书院核心课是底线...',
+                unlocked: false,
+                hidden: true,
+                checkCondition: (stats, state) => {
+                    return state.failedCollegeCoreCourses && state.failedCollegeCoreCourses.length > 0;
+                }
+            },
+            
+            professionalExcellence: {
+                id: 'professionalExcellence',
+                name: '专业翘楚',
+                icon: '🏅',
+                category: 'academic',
+                description: '本学期所有书院核心课满绩（95分以上）',
+                hint: '成为专业领域的佼佼者',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => false // 考试时检测
+            },
+            
             teacherSave: {
                 id: 'teacherSave',
                 name: '老师一定拯救了你',
@@ -1314,6 +1340,137 @@ class AchievementManager {
                 unlocked: false,
                 hidden: false,
                 checkCondition: (stats, state) => false
+            },
+            
+            // ========== 高阶系统成就 ==========
+            marathonRunner: {
+                id: 'marathonRunner',
+                name: '操场常客',
+                icon: '🏃',
+                category: 'academic',
+                description: '累计跑步100次',
+                hint: '坚持锻炼，强健体魄',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.totalRunCount >= 100;
+                }
+            },
+            
+            physicalTestFail: {
+                id: 'physicalTestFail',
+                name: '体测困难户',
+                icon: '😫',
+                category: 'college',
+                description: '体测不及格',
+                hint: '平时要多锻炼啊！',
+                unlocked: false,
+                hidden: true,
+                checkCondition: (stats, state) => {
+                    return state.physicalTestFailedThisYear;
+                }
+            },
+            
+            campusStar: {
+                id: 'campusStar',
+                name: '校园明星',
+                icon: '⭐',
+                category: 'college',
+                description: '声望达到90以上',
+                hint: '成为校园名人',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.reputation >= 90;
+                }
+            },
+            
+            infamous: {
+                id: 'infamous',
+                name: '臭名远扬',
+                icon: '💀',
+                category: 'college',
+                description: '累计3次BBS丑闻',
+                hint: '网络一线牵...',
+                unlocked: false,
+                hidden: true,
+                checkCondition: (stats, state) => {
+                    return state.scandalCount >= 3;
+                }
+            },
+            
+            postgradSuccess: {
+                id: 'postgradSuccess',
+                name: '保研上岸',
+                icon: '🎓',
+                category: 'academic',
+                description: '成功获得保研资格',
+                hint: '努力学习，联系导师',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.careerPath === 'postgrad' && 
+                           state.careerProgress?.postgrad?.advisor;
+                }
+            },
+            
+            abroadOffer: {
+                id: 'abroadOffer',
+                name: '洋装出海',
+                icon: '✈️',
+                category: 'academic',
+                description: '拿到国外大学offer',
+                hint: '托福GRE准备好',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.careerPath === 'abroad' && 
+                           state.careerProgress?.abroad?.application >= 100;
+                }
+            },
+            
+            jobOffer: {
+                id: 'jobOffer',
+                name: '职场新人',
+                icon: '💼',
+                category: 'college',
+                description: '拿到正式工作offer',
+                hint: '实习和面试很重要',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.careerPath === 'job' && 
+                           state.careerProgress?.job?.offer;
+                }
+            },
+            
+            iHarbourSurvivor: {
+                id: 'iHarbourSurvivor',
+                name: '创新港生存者',
+                icon: '🚌',
+                category: 'location',
+                description: '在创新港完成毕业设计',
+                hint: '进城不易，且行且珍惜',
+                unlocked: false,
+                hidden: false,
+                checkCondition: (stats, state) => {
+                    return state.iHarbourDebuff && state.thesisProgress >= 100;
+                }
+            },
+            
+            offendTeacher2: {
+                id: 'offendTeacher2',
+                name: '你得罪过导师',
+                icon: '😱',
+                category: 'academic',
+                description: '书院核心课挂科',
+                hint: '核心课要认真对待...',
+                unlocked: false,
+                hidden: true,
+                checkCondition: (stats, state) => {
+                    return state.failedCollegeCoreCourses && 
+                           state.failedCollegeCoreCourses.length > 0;
+                }
             }
         };
     }
