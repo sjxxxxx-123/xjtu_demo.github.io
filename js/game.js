@@ -16,11 +16,24 @@ class XJTUSimulator {
 
     // 初始化游戏
     init() {
+        // 强制会话/刷新检查：必须从 index/character 跳转且是一次性令牌
+        if (!sessionStorage.getItem('valid_session')) {
+            console.warn('Illegal access or refresh detected. Redirecting to index.');
+            window.location.href = 'index.html';
+            return;
+        }
+        // 消费令牌，使得刷新页面后令牌失效，强制跳转
+        sessionStorage.removeItem('valid_session');
+
+        // 标记从game.html启动
+        sessionStorage.setItem('game_active', 'true');
+        
         // 检查是否有存档或新角色数据
         const savedState = localStorage.getItem('xjtu_game_state');
         const characterData = localStorage.getItem('xjtu_character');
 
-        if (savedState) {
+        // 如果是直接刷新页面（没有新角色数据），尝试读取存档
+        if (savedState && !characterData) {
             // 继续游戏
             this.state = JSON.parse(savedState);
             this.normalizeStateIntegers();
@@ -35,21 +48,29 @@ class XJTUSimulator {
             this.normalizeStateIntegers();
             localStorage.removeItem('xjtu_character');
         } else {
-            // 没有数据，返回首页
+            // 没有数据，说明既不是继续游戏也不是新游戏，可能是非法访问或数据丢失，返回首页
             window.location.href = 'index.html';
             return;
         }
-
+        
         this.bindEvents();
-        this.loadSemesterCourses();
+        
+        // 确保正确加载当前学期课程
+        if (!this.state.currentCourses || this.state.currentCourses.length === 0) {
+             this.loadSemesterCourses();
+        }
+
         this.updateUI();
     }
 
     // 绑定事件
     bindEvents() {
         // 游戏界面按钮
-        document.getElementById('btn-menu').addEventListener('click', () => this.showGameMenu());
-        document.getElementById('btn-next-turn').addEventListener('click', () => this.nextTurn());
+        const btnMenu = document.getElementById('btn-menu');
+        if (btnMenu) btnMenu.addEventListener('click', () => this.showGameMenu());
+        
+        const btnNextTurn = document.getElementById('btn-next-turn');
+        if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
 
         // 行动按钮
         document.querySelectorAll('.action-btn').forEach(btn => {
@@ -57,31 +78,109 @@ class XJTUSimulator {
         });
 
         // 菜单按钮
-        document.getElementById('btn-save').addEventListener('click', () => this.saveGame());
-        document.getElementById('btn-view-achievements').addEventListener('click', () => {
-            window.location.href = 'achievements.html?from=game';
+        const btnSave = document.getElementById('btn-save');
+        if (btnSave) btnSave.addEventListener('click', () => {
+             localStorage.setItem('xjtu_game_state', JSON.stringify(this.state));
+             this.hideModal('game-menu');
+             this.showMessage('保存成功', '游戏状态已更新');
         });
-        document.getElementById('btn-view-courses').addEventListener('click', () => this.showCoursesModal());
-        document.getElementById('btn-quit').addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-        document.getElementById('btn-close-menu').addEventListener('click', () => this.hideModal('game-menu'));
+        
+        // 设置按钮
+        const settingsBtn = document.getElementById('btn-settings');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                this.hideModal('game-menu');
+                this.showSettingsModal();
+            });
+        }
+        
+        // 个人经历按钮
+        const btnViewProfile = document.getElementById('btn-view-profile');
+        if (btnViewProfile) {
+            btnViewProfile.addEventListener('click', () => {
+                console.log('Button btn-view-profile clicked');
+                this.showProfileModal();
+            });
+        }
+
+        const btnViewAchievements = document.getElementById('btn-view-achievements');
+        if (btnViewAchievements) {
+            btnViewAchievements.addEventListener('click', () => {
+                 window.location.href = 'achievements.html?from=game';
+            });
+        }
+            
+        const btnQuit = document.getElementById('btn-quit');
+        if (btnQuit) {
+            btnQuit.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        
+        const btnCloseMenu = document.getElementById('btn-close-menu');
+        if (btnCloseMenu) btnCloseMenu.addEventListener('click', () => this.hideModal('game-menu'));
 
         // Modal关闭按钮
-        document.getElementById('modal-close').addEventListener('click', () => this.hideModal('modal'));
-        document.getElementById('modal-confirm').addEventListener('click', () => this.hideModal('modal'));
-        document.getElementById('choice-close').addEventListener('click', () => this.hideModal('choice-modal'));
-        document.getElementById('exam-confirm').addEventListener('click', () => this.handleExamConfirm());
+        // 绑定所有 modal-close 类的按钮
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 查找最近的 modal 父元素
+                const modal = this.closest('.modal');
+                if (modal) modal.classList.remove('active');
+            });
+        });
+        
+        // 绑定 specific modal confirm butons
+        const modalConfirm = document.getElementById('modal-confirm');
+        if (modalConfirm) modalConfirm.addEventListener('click', () => this.hideModal('modal'));
+        
+        const choiceClose = document.getElementById('choice-close');
+        if (choiceClose) choiceClose.addEventListener('click', () => this.hideModal('choice-modal'));
+        
+        // 设置 Modal 相关
+        const settingsClose = document.getElementById('settings-close');
+        if (settingsClose) settingsClose.addEventListener('click', () => this.hideModal('settings-modal'));
+        
+        const settingsSave = document.getElementById('settings-save');
+        if (settingsSave) {
+            settingsSave.addEventListener('click', () => {
+                // 移除 provider 选择
+                const keyElem = document.getElementById('setting-api-key');
+                const endpointElem = document.getElementById('setting-endpoint');
+                
+                const key = keyElem ? keyElem.value : '';
+                const endpoint = endpointElem ? endpointElem.value : '';
+                
+                if (key) {
+                    // 保存到 AI 模块，provider 固定为 deepseek
+                    AIModule.saveUserConfig(key, 'deepseek', endpoint);
+                    // 显示提示
+                    this.showMessage('设置已保存', '配置已更新，将在下次请求时生效。');
+                    this.hideModal('settings-modal');
+                } else {
+                    alert('请输入 API Key');
+                }
+            });
+        }
+
+        const examConfirm = document.getElementById('exam-confirm');
+        if (examConfirm) examConfirm.addEventListener('click', () => this.handleExamConfirm());
         
         // 补考相关按钮
-        document.getElementById('makeup-confirm').addEventListener('click', () => this.confirmMakeupExam());
-        document.getElementById('makeup-result-confirm').addEventListener('click', () => this.hideModal('makeup-exam-result-modal'));
+        const makeupConfirm = document.getElementById('makeup-confirm');
+        if (makeupConfirm) makeupConfirm.addEventListener('click', () => this.confirmMakeupExam());
+        
+        const makeupResultConfirm = document.getElementById('makeup-result-confirm');
+        if (makeupResultConfirm) makeupResultConfirm.addEventListener('click', () => this.hideModal('makeup-exam-result-modal'));
         
         // 事件结果确认按钮
-        document.getElementById('result-confirm').addEventListener('click', () => {
-            this.hideModal('event-result-modal');
-            this.updateUI();
-        });
+        const resultConfirm = document.getElementById('result-confirm');
+        if (resultConfirm) {
+            resultConfirm.addEventListener('click', () => {
+                this.hideModal('event-result-modal');
+                this.updateUI();
+            });
+        }
         
         // ========== 新系统事件绑定 ==========
         // 选课确认按钮
@@ -113,6 +212,17 @@ class XJTUSimulator {
     // 隐藏Modal
     hideModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
+    }
+
+    // 显示设置弹窗
+    showSettingsModal() {
+        // 读取当前配置回显
+        const config = AIModule.getCurrentConfig();
+        // 移除 provider 回显
+        document.getElementById('setting-api-key').value = config.key || '';
+        document.getElementById('setting-endpoint').value = config.endpoint || '';
+        
+        this.showModal('settings-modal');
     }
 
     // 初始化游戏状态
@@ -2006,175 +2116,7 @@ class XJTUSimulator {
         this.updateUI();
     }
 
-    // ========== 体测系统 ==========
-    checkPhysicalTest() {
-        // 只在5月和10月检查体测
-        if (this.state.month !== 5 && this.state.month !== 10) return;
-        
-        const staminaRequired = 12;
-        const runRequired = 3;
-        
-        const staminaOk = this.state.maxEnergy >= staminaRequired;
-        const runOk = this.state.runCountThisMonth >= runRequired;
-        
-        // 显示体测弹窗
-        document.getElementById('test-stamina-value').textContent = `${this.state.maxEnergy} / ${staminaRequired}`;
-        document.getElementById('test-stamina-result').textContent = staminaOk ? '✅' : '❌';
-        document.getElementById('test-run-value').textContent = `${this.state.runCountThisMonth || 0} / ${runRequired}`;
-        document.getElementById('test-run-result').textContent = runOk ? '✅' : '❌';
-        
-        const warning = document.querySelector('.test-warning');
-        const testPassed = staminaOk && runOk;
-        
-        if (testPassed) {
-            warning.style.display = 'none';
-            this.state.physicalTestPassed = true;
-            this.addLog('✅ 体测通过！继续保持锻炼', 'success');
-        } else {
-            warning.style.display = 'block';
-            this.state.physicalTestPassed = false;
-            this.state.physicalTestFailedThisYear = true;
-            
-            // 体测不过惩罚
-            this.state.social = Math.max(0, this.state.social - 10);
-            this.state.san -= 5;
-            this.addLog('❌ 体测不合格！综测-10，SAN-5', 'danger');
-            
-            // 检查成就
-            AchievementSystem.unlock('physicalTestFail');
-        }
-        
-        this.showModal('physical-test-modal');
-        
-        // 重置月度跑步计数
-        this.state.runCountThisMonth = 0;
-    }
 
-    // ========== 长远规划系统 ==========
-    showCareerChoice() {
-        // 大三下学期才能选择
-        if (this.state.year < 3 || (this.state.year === 3 && this.state.month < 2)) {
-            this.showMessage('时机未到', '长远规划将在大三下学期开启');
-            return;
-        }
-        
-        // 已经选择过
-        if (this.state.careerPath) {
-            this.showCareerProgress();
-            return;
-        }
-        
-        this.showModal('career-choice-modal');
-    }
-    
-    selectCareerPath(path) {
-        this.state.careerPath = path;
-        this.hideModal('career-choice-modal');
-        
-        const pathNames = {
-            postgrad: '保研',
-            abroad: '出国',
-            job: '就业'
-        };
-        
-        this.addLog(`🎯 确定了${pathNames[path]}的方向，开始规划未来！`, 'important');
-        
-        // 显示规划面板
-        document.getElementById('career-panel').style.display = 'block';
-        document.getElementById('btn-career').style.display = 'block';
-        
-        this.updateCareerPanel();
-        this.updateUI();
-    }
-    
-    showCareerProgress() {
-        // 显示当前进度
-        const progress = this.state.careerProgress[this.state.careerPath];
-        let message = '';
-        
-        switch (this.state.careerPath) {
-            case 'postgrad':
-                message = `保研进度:\n- 导师关系: ${progress.advisor ? '已确定' : '待联系'}\n- 大创经验: ${progress.dachuang}次\n- 竞赛获奖: ${progress.competition}次`;
-                break;
-            case 'abroad':
-                message = `出国进度:\n- 托福/雅思: ${progress.toefl >= 100 ? '达标' : `${progress.toefl}/100`}\n- GRE: ${progress.gre >= 320 ? '达标' : `${progress.gre}/320`}\n- 申请材料: ${progress.application}%`;
-                break;
-            case 'job':
-                message = `就业进度:\n- 实习经历: ${progress.internship}次\n- 面试经验: ${progress.interview}次\n- Offer状态: ${progress.offer ? '已获得' : '待获取'}`;
-                break;
-        }
-        
-        this.showMessage('📊 规划进度', message);
-    }
-    
-    updateCareerPanel() {
-        const panel = document.getElementById('career-panel');
-        if (!this.state.careerPath || !panel) return;
-        
-        const pathNames = {
-            postgrad: '🎓 保研',
-            abroad: '🌏 出国',
-            job: '💼 就业'
-        };
-        
-        panel.querySelector('.career-path').textContent = pathNames[this.state.careerPath] || '';
-        
-        const progressDiv = panel.querySelector('.career-progress');
-        progressDiv.innerHTML = '';
-        
-        const progress = this.state.careerProgress[this.state.careerPath];
-        
-        switch (this.state.careerPath) {
-            case 'postgrad':
-                progressDiv.innerHTML = `
-                    <span class="career-progress-item">导师: ${progress.advisor ? '✅' : '❌'}</span>
-                    <span class="career-progress-item">大创: ${progress.dachuang}次</span>
-                    <span class="career-progress-item">竞赛: ${progress.competition}次</span>
-                `;
-                break;
-            case 'abroad':
-                progressDiv.innerHTML = `
-                    <span class="career-progress-item">托福: ${progress.toefl}/100</span>
-                    <span class="career-progress-item">GRE: ${progress.gre}/320</span>
-                    <span class="career-progress-item">申请: ${progress.application}%</span>
-                `;
-                break;
-            case 'job':
-                progressDiv.innerHTML = `
-                    <span class="career-progress-item">实习: ${progress.internship}次</span>
-                    <span class="career-progress-item">面试: ${progress.interview}次</span>
-                    <span class="career-progress-item">Offer: ${progress.offer ? '✅' : '❌'}</span>
-                `;
-                break;
-        }
-    }
-
-    // ========== BBS舆论系统 ==========
-    addBBSEvent(type, text) {
-        this.state.bbsEvents.unshift({
-            type,
-            text,
-            time: `${this.state.year}年${this.state.month}月`
-        });
-        
-        // 保留最近10条
-        if (this.state.bbsEvents.length > 10) {
-            this.state.bbsEvents.pop();
-        }
-        
-        this.updateBBSScroll();
-    }
-    
-    updateBBSScroll() {
-        const scroll = document.getElementById('bbs-scroll');
-        if (!scroll || !this.state.bbsEvents || this.state.bbsEvents.length === 0) {
-            scroll.innerHTML = '<span class="bbs-item">暂无新消息...</span>';
-            return;
-        }
-        
-        const latestEvent = this.state.bbsEvents[0];
-        scroll.innerHTML = `<span class="bbs-item">${latestEvent.text}</span>`;
-    }
     
     // 声望变化
     changeReputation(amount, reason) {
@@ -2199,74 +2141,7 @@ class XJTUSimulator {
         }
     }
 
-    // ========== 抢课博弈系统 ==========
-    showCourseBidding() {
-        // 体力检查与状态规整
-        this.normalizeStateIntegers();
-        if (this.state.energy < 1) {
-            this.showMessage('体力不足', '你太累了，需要休息一下。');
-            return;
-        }
 
-        // 基础消耗与计数
-        this.state.energy -= 1;
-        this.state.runCountThisMonth = Math.max(0, (this.state.runCountThisMonth || 0) + 1);
-        this.state.totalRunCount = Math.max(0, (this.state.totalRunCount || 0) + 1);
-
-        // 简化随机事件，全部整数效果
-        const roll = Math.random();
-        if (roll < 0.1) {
-            // 没带卡：本次无效，体力已消耗
-            this.addLog('😅 跑步打卡发现没带校园卡...白跑了', 'warning');
-            this.state.runCountThisMonth = Math.max(0, this.state.runCountThisMonth - 1);
-            this.state.totalRunCount = Math.max(0, this.state.totalRunCount - 1);
-        } else if (roll < 0.15) {
-            this.addLog('💕 操场被表白气球堵路，顺便吃瓜', 'info');
-            this.state.san = Math.min(100, this.state.san + 2);
-        } else if (roll < 0.2) {
-            this.addLog('⭐ 偶遇运动达人，状态爆表', 'success');
-            if (this.state.maxEnergy < 15) {
-                this.state.maxEnergy += 1;
-                this.addLog('💪 体力上限+1！', 'success');
-            }
-        } else {
-            this.addLog('🏃 跑步打卡完成！身体更强健了');
-            this.state.san = Math.min(100, this.state.san + 2);
-        }
-
-        // 固定规则：每完成5次有效跑步（totalRunCount % 5 == 0）上限+1，封顶15
-        if (this.state.totalRunCount > 0 && this.state.totalRunCount % 5 === 0 && this.state.maxEnergy < 15) {
-            this.state.maxEnergy += 1;
-            this.addLog('💪 坚持锻炼，体力上限提升！', 'success');
-        }
-
-        // 最终取整与裁剪，彻底避免小数
-        this.state.maxEnergy = Math.min(15, Math.max(1, Math.floor(this.state.maxEnergy + 1e-6)));
-        this.state.energy = Math.min(this.state.maxEnergy, Math.max(0, Math.floor(this.state.energy + 1e-6)));
-        this.state.san = Math.min(100, Math.max(0, Math.floor(this.state.san + 1e-6)));
-
-        if (this.state.totalRunCount >= 100) {
-            AchievementSystem.unlock('marathonRunner');
-        }
-
-        this.updateUI();
-        
-        this.hideModal('course-bidding-modal');
-        this.showMessage('选课成功', resultMsg);
-        this.addLog('📝 完成了本学期选课', 'info');
-        
-        this.updateUI();
-    }
-
-    // ========== 情人节检查 ==========
-    checkValentineDay() {
-        if (this.state.month === 2 && !this.state.inRelationship) {
-            // 2月14日情人节单身惩罚
-            this.state.san = Math.max(0, this.state.san - 10);
-            this.addLog('💔 情人节又是一个人...SAN-10', 'warning');
-            this.addBBSEvent('neutral', '又到了朋友圈秀恩爱的季节...');
-        }
-    }
 
     // 兼职打工
     doParttime() {
@@ -2484,28 +2359,60 @@ class XJTUSimulator {
     }
 
     // 下一回合
-    nextTurn() {
+    async nextTurn() {
         // 检查体力是否耗尽
         if (this.state.energy <= 0) {
             AchievementSystem.recordExhaustion();
         }
 
-        // 随机事件（旧系统）
-        const randomEvent = EventSystem.rollEvent(this.state);
-        if (randomEvent) {
-            const changes = EventSystem.applyEventEffects(randomEvent, this.state);
-            const message = EventSystem.generateEventMessage(randomEvent, changes);
-            this.showEventModal(randomEvent, message);
-        }
-
-        // 月末结算事件
+        // 月末结算事件 (Month End Check)
         const monthEndEvents = EventSystem.checkMonthEndEvents(this.state);
         monthEndEvents.forEach(event => {
             EventSystem.applyEventEffects(event, this.state);
             this.addLog(`${event.icon} ${event.name}`);
         });
 
-        // === 新：月末随机事件系统 ===
+        // 尝试触发 AI 随机事件 (AI Event)
+        let aiEvent = null;
+        try {
+            const config = AIModule.getCurrentConfig();
+            // 只有当配置了 Key 且随机概率满足时(例如 30%) 尝试调用 AI
+            // 这里为了演示，只要有 Key 就尝试调，或者可以配合 RandomEventManager 混合使用
+            if (config.key && Math.random() < 0.4) { 
+                console.log('Attempting AI Event Generation...');
+                this.showMessage('AI正在思考...', '正在生成本月随机事件，请稍候...');
+                const aiResult = await AIModule.fetchAIEvent();
+                console.log('AI Result:', aiResult);
+                
+                if (aiResult) {
+                    // 构造符合游戏事件格式的对象
+                    aiEvent = {
+                        id: `ai_${Date.now()}`,
+                        name: '校园奇遇 (AI)',
+                        icon: '🤖',
+                        description: aiResult.event_text,
+                        options: [
+                            {
+                                text: '我知道了',
+                                effects: aiResult.effects
+                            }
+                        ]
+                    };
+                    // 关闭等待提示
+                    this.hideModal('modal'); 
+                }
+            }
+        } catch (e) {
+            console.warn('AI通过API生成事件失败，回退到本地事件库:', e);
+            this.hideModal('modal'); // 确保关闭等待提示
+        }
+
+        if (aiEvent) {
+            this.showRandomEventModal(aiEvent);
+            return;
+        }
+
+        // === 原有逻辑：本地随机事件系统 (Fallback) ===
         const monthlyEvent = RandomEventManager.rollMonthlyEvent(this.state);
         if (monthlyEvent) {
             this.showRandomEventModal(monthlyEvent);
@@ -2518,11 +2425,19 @@ class XJTUSimulator {
     
     // 显示月末随机事件弹窗
     showRandomEventModal(event) {
+        console.log('Showing Random Event:', event); // Debug infos
         this.currentRandomEvent = event;
         
         // 设置事件信息
-        document.getElementById('random-event-icon').textContent = event.icon;
-        document.getElementById('random-event-title').textContent = event.name;
+        const iconEl = document.getElementById('random-event-icon');
+        const titleEl = document.getElementById('random-event-title');
+        const descEl = document.getElementById('random-event-desc'); // ID from second modal
+        
+        if (iconEl) iconEl.textContent = event.icon;
+        if (titleEl) titleEl.textContent = event.name;
+        if (descEl) descEl.textContent = event.description;
+        
+        console.log('Event elements updated:', {icon: !!iconEl, title: !!titleEl, desc: !!descEl});
         document.getElementById('random-event-desc').textContent = event.description;
         
         // 生成选项按钮
@@ -2688,6 +2603,9 @@ class XJTUSimulator {
 
         // 更新SAN记录
         AchievementSystem.updateSanRecord(this.state.san);
+        
+        // 自动保存游戏状态 (静默保存，不弹窗)
+        this.saveGame(true);
 
         // 检查成就
         AchievementSystem.checkAchievements(this.state);
@@ -3843,13 +3761,63 @@ class XJTUSimulator {
     }
 
     // 显示课程详情
-    showCoursesModal() {
-        this.hideModal('game-menu');
+    // 显示个人经历/档案 Modal
+    showProfileModal() {
+        console.log('Opening Profile Modal...');
+        try {
+            this.hideModal('game-menu');
+            
+            if (!this.state) {
+                console.error('State is null');
+                return;
+            }
+
+            const collegeName = GameData.colleges[this.state.college] ? GameData.colleges[this.state.college].name : '未知书院';
+            const gpa = (this.state.gpa || 0).toFixed(2);
+            const san = Math.round(this.state.san || 0);
+            const energy = Math.round(this.state.energy || 0);
+            const money = this.state.money || 0;
+            
+            // 生成个人总结文案
+            let summaryText = `你现在是 <strong>${collegeName}</strong> 的大${['一','二','三','四'][this.state.year-1] || 'N'}学生。`;
+            
+            if (gpa >= 3.8) summaryText += ` 你的学业表现<strong>非常优异</strong> (GPA ${gpa})，是大家眼中的学霸。`;
+            else if (gpa >= 3.0) summaryText += ` 你的成绩<strong>中规中矩</strong> (GPA ${gpa})，保持着稳定的节奏。`;
+            else summaryText += ` 你的学业<strong>稍显吃力</strong> (GPA ${gpa})，需要加油了。`;
+            
+            if (this.state.inRelationship) summaryText += ` 生活上，你正在享受一段<strong>甜蜜的恋爱</strong>。`;
+            else summaryText += ` 生活上，你目前<strong>单身</strong>，专注于提升自我。`;
+            
+            if (san < 40) summaryText += ` 最近你的<strong>精神状态不太好</strong>，注意休息。`;
+            else if (energy < 3) summaryText += ` 你的<strong>体力透支</strong>严重，不要太拼了。`;
+            else summaryText += ` 你的状态看起来<strong>很不错</strong>。`;
+
+
+        // 构建弹窗内容
+        let content = `
+            <div class="profile-container" style="padding: 10px;">
+                <div class="profile-header" style="text-align:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                    <div style="font-size:3rem; margin-bottom:10px;">🎓</div>
+                    <h3 style="color:#003E7E; margin:0;">我的大学档案</h3>
+                    <p style="color:#666; font-size:0.9rem;">${this.state.year}年级 ${this.state.month}月</p>
+                </div>
+
+                <div class="profile-summary" style="background:#f0f7ff; padding:15px; border-radius:8px; margin-bottom:20px; line-height:1.6;">
+                    ${summaryText}
+                </div>
+
+                <ul class="nav nav-tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:15px; padding:0; list-style:none;">
+                    <li style="margin-right:5px;"><a href="#" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.style.display='none'); document.getElementById('tab-courses').style.display='block'; return false;" style="padding:8px 15px; display:block; text-decoration:none; color:#003E7E; border:1px solid #ddd; border-bottom:none; border-radius:4px 4px 0 0; background:#fff;">课程学业</a></li>
+                    <li><a href="#" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.style.display='none'); document.getElementById('tab-stats').style.display='block'; return false;" style="padding:8px 15px; display:block; text-decoration:none; color:#003E7E; border:1px solid #ddd; border-bottom:none; border-radius:4px 4px 0 0; background:#f9f9f9;">详细属性</a></li>
+                </ul>
+
+                <div id="tab-courses" class="tab-pane">
+                    <div class="course-detail-list">
+        `;
         
-        let content = '<div class="course-detail-list">';
-        
+        // 插入原有课程列表逻辑
         if (this.state.currentCourses.length > 0) {
-            content += '<h4>📚 当前课程</h4>';
+            content += '<h4>📚 当前学期课程</h4>';
             this.state.currentCourses.forEach(c => {
                 const difficultyText = c.difficulty >= 0.8 ? '困难' : c.difficulty >= 0.6 ? '中等' : '简单';
                 const difficultyColor = c.difficulty >= 0.8 ? '#F44336' : c.difficulty >= 0.6 ? '#FF9800' : '#4CAF50';
@@ -3879,11 +3847,14 @@ class XJTUSimulator {
                     </div>
                 `;
             });
+        } else {
+            content += '<p style="text-align:center; color:#999; padding:20px;">当前没有进行中的课程</p>';
         }
 
         if (this.state.retakeCourses && this.state.retakeCourses.length > 0) {
             content += '<h4 style="color: #F44336; margin-top: 15px;">🔄 重修课程</h4>';
             this.state.retakeCourses.forEach(c => {
+                // ...existing code for retake...
                 const masteryColor = c.mastery >= 60 ? '#4CAF50' : '#F44336';
                 content += `
                     <div class="course-detail-item retake">
@@ -3891,13 +3862,8 @@ class XJTUSimulator {
                             <strong>${c.name}</strong>
                             <span class="tag" style="background: #F4433620; color: #F44336">重修</span>
                         </div>
-                        <div class="course-info">
-                            <span>📖 ${c.credits}学分</span>
-                            <span>📝 上课${c.attendCount || 0}次</span>
-                            <span>✏️ 自习${c.studyCount || 0}次</span>
-                        </div>
                         <div class="mastery-bar">
-                            <div class="mastery-label">掌握度: <span style="color: ${masteryColor}">${Math.round(c.mastery)}%</span> (需≥60%通过)</div>
+                            <div class="mastery-label">掌握度: <span style="color: ${masteryColor}">${Math.round(c.mastery)}%</span></div>
                             <div class="mastery-progress">
                                 <div class="mastery-fill" style="width: ${c.mastery}%; background: ${masteryColor}"></div>
                             </div>
@@ -3908,26 +3874,59 @@ class XJTUSimulator {
         }
 
         content += `
-            <div class="course-summary">
-                <div class="summary-item">
-                    <span class="summary-label">📊 累计挂科</span>
-                    <span class="summary-value" style="color: ${this.state.failedCourses > 0 ? '#F44336' : '#4CAF50'}">${this.state.failedCourses}门</span>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <span class="summary-label">🎓 已获学分</span>
-                    <span class="summary-value">${this.state.totalCredits}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">📈 当前GPA</span>
-                    <span class="summary-value">${this.state.gpa.toFixed(2)}</span>
+
+                <div id="tab-stats" class="tab-pane" style="display:none;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
+                            <div style="font-size:2rem;">💰</div>
+                            <div style="font-weight:bold; color:#f0ad4e;">${money}</div>
+                            <div style="font-size:0.8rem; color:#666;">金币</div>
+                        </div>
+                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
+                            <div style="font-size:2rem;">🧠</div>
+                            <div style="font-weight:bold; color:#5cb85c;">${san}/100</div>
+                            <div style="font-size:0.8rem; color:#666;">SAN值</div>
+                        </div>
+                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
+                            <div style="font-size:2rem;">⚡</div>
+                            <div style="font-weight:bold; color:#0275d8;">${energy}/${this.state.maxEnergy}</div>
+                            <div style="font-size:0.8rem; color:#666;">体力</div>
+                        </div>
+                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
+                            <div style="font-size:2rem;">🤝</div>
+                            <div style="font-weight:bold; color:#d9534f;">${Math.round(this.state.social || 0)}</div>
+                            <div style="font-size:0.8rem; color:#666;">社交能力</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <h4>📊 综合统计</h4>
+                        <ul style="font-size:0.9rem; color:#555; line-height:1.8;">
+                            <li>已修总学分: ${this.state.totalCredits || 0}</li>
+                            <li>挂科数量: ${this.state.failedCourses || 0}</li>
+                            <li>获得成就: ${AchievementSystem && AchievementSystem.achievements ? Object.values(AchievementSystem.achievements).filter(a => a.unlocked).length : 0} 个</li>
+                            <li>科研经历: ${this.state.researchExp || 0} 点</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
-        content += '</div>';
 
-        document.getElementById('modal-title').textContent = '📚 课程详情';
-        document.getElementById('modal-body').innerHTML = content;
-        this.showModal('modal');
+        // 使用通用Modal显示
+        const resultModal = document.getElementById('exam-modal'); // 复用一个大点的 modal
+        if (resultModal) {
+            resultModal.querySelector('.modal-title').innerText = '👤 个人经历';
+            resultModal.querySelector('.modal-body').innerHTML = content;
+            resultModal.querySelector('.modal-footer').innerHTML = '<button class="btn btn-primary" onclick="document.getElementById(\'exam-modal\').classList.remove(\'active\')">关闭</button>';
+            this.showModal('exam-modal');
+        } else {
+            console.error('Modal template not found');
+        }
+        } catch (error) {
+            console.error('Error showing profile modal:', error);
+            this.showMessage('错误', '无法打开个人经历页面，请重试或刷新游戏。');
+        }
     }
     
     // ========== 新增高阶系统函数 ==========
@@ -4276,21 +4275,25 @@ class XJTUSimulator {
     
     // 情人节检查（2月）
     checkValentineDay() {
-        if (this.state.month === 2 && !this.state.inRelationship) {
-            this.state.san = Math.max(0, this.state.san - 10);
-            this.addLog('💔 情人节单身狗受到暴击，SAN -10', 'warning');
-            this.addBBSEvent('单身狗哀嚎', false);
-        } else if (this.state.month === 2 && this.state.inRelationship) {
-            this.state.san = Math.min(100, this.state.san + 10);
-            this.addLog('💕 情人节和对象甜蜜度过，SAN +10', 'success');
+        if (this.state.month === 2) {
+            if (!this.state.inRelationship) {
+                this.state.san = Math.max(0, this.state.san - 10);
+                this.addLog('💔 情人节单身狗受到暴击，SAN -10', 'warning');
+                this.addBBSEvent('单身狗哀嚎', false);
+            } else {
+                this.state.san = Math.min(100, this.state.san + 10);
+                this.addLog('💕 情人节和对象甜蜜度过，SAN +10', 'success');
+            }
         }
     }
 
     // 保存游戏
-    saveGame() {
+    saveGame(silent = false) {
         localStorage.setItem('xjtu_game_state', JSON.stringify(this.state));
-        this.hideModal('game-menu');
-        this.showMessage('保存成功', '游戏进度已保存！');
+        if (!silent) {
+            this.hideModal('game-menu');
+            this.showMessage('保存成功', '游戏进度已保存！');
+        }
     }
 }
 

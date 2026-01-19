@@ -1154,29 +1154,71 @@ body {
 /* 菜单弹窗 */
 .menu-content {
     text-align: center;
+    padding-bottom: 20px;
 }
 
 .menu-content h3 {
     color: var(--xjtu-blue);
-    margin-bottom: 20px;
-    padding: 20px 20px 0;
+    margin-bottom: 25px;
+    padding: 25px 20px 0;
+    font-size: 1.5rem;
+    font-weight: bold;
 }
 
 .menu-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 0 20px 20px;
+    gap: 15px;
+    padding: 0 30px 10px;
 }
 
 .menu-buttons .btn {
     width: 100%;
-    justify-content: flex-start;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* 居中对齐更美观 */
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
 }
 
-.menu-content > .btn {
-    margin: 0 20px 20px;
-    width: calc(100% - 40px);
+/* 菜单中的次级按钮 (保存、成就等) */
+.menu-buttons .btn-secondary {
+    background: #ffffff;
+    color: var(--text-primary);
+    border: 2px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.menu-buttons .btn-secondary:hover {
+    background: #f0f7ff;
+    color: var(--xjtu-blue);
+    border-color: var(--xjtu-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 62, 126, 0.15);
+}
+
+/* 退出按钮特殊样式 */
+.menu-buttons .btn-danger {
+    background: #fff0f0;
+    color: var(--danger);
+    border: 2px solid #ffcdd2;
+}
+
+.menu-buttons .btn-danger:hover {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+}
+
+/* 底部的大按钮 */
+.menu-content > .btn-primary {
+    margin: 10px 30px 10px;
+    width: calc(100% - 60px);
+    padding: 14px 0;
+    font-size: 1.2rem;
+    border-radius: 50px; /* 圆角更大 */
 }
 
 /* 成就解锁弹窗 */
@@ -1787,7 +1829,7 @@ body {
     }
     
     .course-list {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
     }
     
@@ -1805,36 +1847,38 @@ body {
     
     /* 行动按钮 */
     .action-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
     }
     
     .action-btn {
-        padding: 15px 12px;
-        min-height: 110px;
-        flex-direction: row;
-        justify-content: flex-start;
-        gap: 15px;
+        padding: 12px 8px;
+        min-height: 100px;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
     }
     
     .action-icon {
-        font-size: 2rem;
-        min-width: 50px;
+        font-size: 1.8rem;
+        min-width: auto;
+        margin-bottom: 0;
     }
     
     .action-btn > div {
-        text-align: left;
-        flex: 1;
+        text-align: center;
+        width: 100%;
     }
     
     .action-name {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
     
     .action-cost {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         display: block;
     }
     
@@ -1879,7 +1923,7 @@ body {
     }
     
     .option-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
     
@@ -1940,7 +1984,7 @@ body {
     }
     
     .thesis-actions {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
     
@@ -2032,21 +2076,25 @@ body {
     }
     
     .achievements-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
         margin-bottom: 20px;
     }
     
     .achievement-card {
-        padding: 12px;
-        flex-direction: row;
-        gap: 12px;
-        text-align: left;
+        padding: 10px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100%;
     }
     
     .achievement-card-icon {
-        font-size: 2rem;
-        width: 45px;
+        font-size: 1.8rem;
+        width: auto;
+        margin-bottom: 5px;
     }
     
     .achievement-card-info {

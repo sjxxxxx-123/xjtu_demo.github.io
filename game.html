@@ -189,20 +189,6 @@
         </div>
     </div>
 
-    <!-- 通用Modal弹窗 -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modal-title">提示</h3>
-                <button class="modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="modal-body" id="modal-body"></div>
-            <div class="modal-footer" id="modal-footer">
-                <button class="btn btn-primary" id="modal-confirm">确定</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 选择弹窗 -->
     <div id="choice-modal" class="modal">
         <div class="modal-content">
@@ -234,7 +220,8 @@
             <div class="menu-buttons">
                 <button id="btn-save" class="btn btn-secondary">💾 保存游戏</button>
                 <button id="btn-view-achievements" class="btn btn-secondary">🏆 查看成就</button>
-                <button id="btn-view-courses" class="btn btn-secondary">📚 课程详情</button>
+                <button id="btn-view-profile" class="btn btn-secondary">👤 个人经历</button>
+                <button id="btn-settings" class="btn btn-secondary">⚙️ 游戏设置</button>
                 <button id="btn-quit" class="btn btn-danger">🚪 退出游戏</button>
             </div>
             <button id="btn-close-menu" class="btn btn-primary">继续游戏</button>
@@ -436,7 +423,65 @@
     </div>
 
     <!-- 脚本引入 -->
+    <!-- 设置 Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">AI 设置</h3>
+                <button class="modal-close" id="settings-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">API 接入</label>
+                    <div style="padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #003E7E; font-size: 0.9rem; margin-bottom: 15px;">
+                        当前使用: <strong>XJTU AI Proxy</strong><br>
+                        无需翻墙，支持 DeepSeek 模型。
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">API Key</label>
+                    <input type="password" id="setting-api-key" placeholder="请输入你的 API Key" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                    <p style="font-size:0.8rem; color:#666; margin-top:5px;">
+                        * Key 仅存储在本地浏览器中，不会上传服务器。<br>
+                        * 可以在本地 config.js 中配置，也可以在此处输入。
+                    </p>
+                </div>
+                <!-- 隐藏的高级设置（折叠） -->
+                <div style="margin-bottom: 10px;">
+                    <a href="#" onclick="document.getElementById('advanced-settings').style.display = document.getElementById('advanced-settings').style.display === 'none' ? 'block' : 'none'; return false;" style="font-size: 0.85rem; color: #666; text-decoration: underline;">
+                        高级设置（自定义 Endpoint）
+                    </a>
+                </div>
+                <div id="advanced-settings" style="display:none;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">API Endpoint</label>
+                        <input type="text" id="setting-endpoint" placeholder="https://ai.xjtu.edu.cn/api/proxy/api/v1" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="settings-save">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用信息弹窗 (用于 showMessage) -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">提示</h3>
+                <button class="modal-close" onclick="document.getElementById('modal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="modal-confirm" onclick="document.getElementById('modal').classList.remove('active')">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/data.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/ai_module.js"></script>
     <script src="js/achievements.js"></script>
     <script src="js/events.js"></script>
     <script src="js/game.js"></script>

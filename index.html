@@ -50,8 +50,10 @@
                 if (savedState) {
                     const state = JSON.parse(savedState);
                     if (state.year === 4 && state.month >= 9) {
+                        sessionStorage.setItem('valid_session', 'true');
                         window.location.href = 'thesis.html';
                     } else {
+                        sessionStorage.setItem('valid_session', 'true');
                         window.location.href = 'game.html';
                     }
                 } else {
