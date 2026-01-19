@@ -1,0 +1,131 @@
+
+/* ========================================
+   移动端优化与底部导航
+   ======================================== */
+.bottom-nav {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 隐藏原有的底部控制栏 */
+    .turn-control {
+        display: none !important;
+    }
+    
+    /* 底部导航栏 */
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        padding: 5px 0 15px 0; /* 适配全面屏底部 */
+        z-index: 1000;
+        height: auto;
+        min-height: 65px;
+    }
+    
+    .nav-item {
+        background: none;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: var(--text-light);
+        font-size: 0.7rem;
+        cursor: pointer;
+        padding: 5px 10px;
+        transition: all 0.2s;
+        flex: 1;
+    }
+    
+    .nav-item.active {
+        color: var(--xjtu-blue);
+        transform: translateY(-2px);
+    }
+    
+    .nav-icon {
+        font-size: 1.4rem;
+        margin-bottom: 3px;
+    }
+    
+    /* 中间的大按钮 */
+    .nav-special {
+        position: relative;
+        top: -25px;
+        flex: 0 0 autp;
+        margin: 0 10px;
+    }
+    
+    .btn-fab {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--xjtu-blue), var(--xjtu-blue-dark));
+        border: 4px solid var(--bg-primary);
+        color: #fff;
+        font-size: 1.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px rgba(0, 62, 126, 0.3);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .btn-fab:active {
+        transform: scale(0.95);
+    }
+    
+    /* Tab内容显示控制 */
+    .tab-content {
+        display: none;
+        padding-bottom: 250px; /* 留出底部空间，防止被遮挡 */
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    /* 移动端排版优化 */
+    .stats-panel {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .action-btn {
+        min-height: 110px;
+        padding: 12px;
+    }
+    
+    .game-header {
+        position: sticky;
+        top: 0;
+        padding: 10px 15px;
+    }
+    
+    .time-info span {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+    
+    /* 优化弹窗在移动端的显示 */
+    .modal-content {
+        width: 90%;
+        max-height: 85vh;
+        margin: 20px auto;
+    }
+}

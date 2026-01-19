@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>游戏中 - XJTU本科模拟器</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/mobile.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -23,6 +24,8 @@
             <button id="btn-menu" class="btn-icon">☰</button>
         </header>
 
+        <!-- 游戏内容Tabs容器 -->
+        <div id="tab-dashboard" class="tab-content active">
         <!-- BBS舆论滚动条 -->
         <div class="bbs-ticker" id="bbs-ticker">
             <div class="bbs-label">📢 交大BBS</div>
@@ -74,6 +77,9 @@
             </div>
         </div>
 
+        </div>
+        
+        <div id="tab-campus" class="tab-content">
         <!-- 长远规划面板（大三下开启） -->
         <div class="career-panel" id="career-panel" style="display: none;">
             <h3>🎯 长远规划</h3>
@@ -91,6 +97,9 @@
             </div>
         </div>
 
+        </div>
+
+        <div id="tab-actions" class="tab-content">
         <!-- 行动区域 -->
         <div class="action-panel">
             <h3>选择行动</h3>
@@ -173,6 +182,8 @@
             </div>
         </div>
 
+        </div>
+        
         <!-- 下一回合按钮 -->
         <div class="turn-control">
             <button id="btn-next-turn" class="btn btn-primary btn-large">
@@ -180,6 +191,7 @@
             </button>
         </div>
 
+        <div id="tab-log" class="tab-content">
         <!-- 事件日志 -->
         <div class="event-log" id="event-log">
             <h3>📋 事件记录</h3>
@@ -187,6 +199,30 @@
                 <p class="log-entry">欢迎来到西安交通大学！新的大学生活开始了...</p>
             </div>
         </div>
+        </div>
+        
+        <!-- 移动端底部导航栏 -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="tab-dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">状态</span>
+            </button>
+            <button class="nav-item" data-tab="tab-campus">
+                <span class="nav-icon">🏫</span>
+                <span class="nav-label">学业</span>
+            </button>
+            <div class="nav-special">
+                <button id="btn-next-turn-mobile" class="btn-fab">▶</button>
+            </div>
+            <button class="nav-item" data-tab="tab-actions">
+                <span class="nav-icon">⚡</span>
+                <span class="nav-label">行动</span>
+            </button>
+            <button class="nav-item" data-tab="tab-log">
+                <span class="nav-icon">📜</span>
+                <span class="nav-label">日志</span>
+            </button>
+        </nav>
     </div>
 
     <!-- 选择弹窗 -->

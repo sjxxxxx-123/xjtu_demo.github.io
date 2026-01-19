@@ -79,6 +79,32 @@ class XJTUSimulator {
         const btnNextTurn = document.getElementById('btn-next-turn');
         if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
 
+        // 移动端下一回合浮动按钮
+        const btnNextTurnMobile = document.getElementById('btn-next-turn-mobile');
+        if (btnNextTurnMobile) btnNextTurnMobile.addEventListener('click', () => this.nextTurn());
+
+        // 移动端底部导航Tab切换
+        const navItems = document.querySelectorAll('.nav-item');
+        if (navItems.length > 0) {
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                   // 移除所有激活状态
+                   navItems.forEach(nav => nav.classList.remove('active'));
+                   // 激活当前按钮
+                   item.classList.add('active');
+                   
+                   // 隐藏所有内容Tab
+                   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                   // 显示目标Tab
+                   const targetId = item.dataset.tab;
+                   if(targetId) {
+                       const targetTab = document.getElementById(targetId);
+                       if(targetTab) targetTab.classList.add('active');
+                   }
+                });
+            });
+        }
+
         // 行动按钮
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', () => this.performAction(btn.dataset.action));
