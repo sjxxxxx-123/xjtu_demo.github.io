@@ -110,6 +110,8 @@
                 if (from === 'thesis') {
                     window.location.href = 'thesis.html';
                 } else if (from === 'game') {
+                    sessionStorage.setItem('valid_session', 'true');
+                    localStorage.setItem('xjtu_session_token', 'true');
                     window.location.href = 'game.html';
                 } else {
                     window.location.href = 'index.html';

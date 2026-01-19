@@ -167,6 +167,7 @@
                         college: selectedCollege
                     }));
                     sessionStorage.setItem('valid_session', 'true');
+                    localStorage.setItem('xjtu_session_token', 'true'); // 手机端兼容性备份
                     window.location.href = 'game.html';
                 }
             });

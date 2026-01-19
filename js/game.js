@@ -16,14 +16,21 @@ class XJTUSimulator {
 
     // 初始化游戏
     init() {
-        // 强制会话/刷新检查：必须从 index/character 跳转且是一次性令牌
-        if (!sessionStorage.getItem('valid_session')) {
+        // 检查一次性令牌 (sessionStorage) 或 新角色数据 (localStorage) 或 备用令牌 (localStorage)
+        // 手机端部分浏览器可能丢失 sessionStorage，增加 fallback 机制
+        const hasSessionToken = sessionStorage.getItem('valid_session');
+        const hasNewCharacterData = localStorage.getItem('xjtu_character');
+        const hasBackupToken = localStorage.getItem('xjtu_session_token');
+
+        if (!hasSessionToken && !hasNewCharacterData && !hasBackupToken) {
             console.warn('Illegal access or refresh detected. Redirecting to index.');
             window.location.href = 'index.html';
             return;
         }
-        // 消费令牌，使得刷新页面后令牌失效，强制跳转
-        sessionStorage.removeItem('valid_session');
+        
+        // 消费令牌
+        if (hasSessionToken) sessionStorage.removeItem('valid_session');
+        if (hasBackupToken) localStorage.removeItem('xjtu_session_token');
 
         // 标记从game.html启动
         sessionStorage.setItem('game_active', 'true');
