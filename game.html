@@ -24,6 +24,13 @@
             <button id="btn-menu" class="btn-icon">☰</button>
         </header>
 
+        <!-- 移动端顶部状态条 (仅在移动端显示) -->
+        <div class="mobile-stats-bar">
+            <div class="mobile-stat-item"><span class="icon">⚡</span><span id="m-stat-energy">--/--</span></div>
+            <div class="mobile-stat-item"><span class="icon">🧠</span><span id="m-stat-san">--</span></div>
+            <div class="mobile-stat-item"><span class="icon">💰</span><span id="m-stat-money">--</span></div>
+        </div>
+
         <!-- 游戏内容Tabs容器 -->
         <div id="tab-dashboard" class="tab-content active">
         <!-- BBS舆论滚动条 -->
@@ -100,6 +107,10 @@
         </div>
 
         <div id="tab-actions" class="tab-content">
+            <!-- 移动端行动反馈区 -->
+            <div id="mobile-action-feedback" class="mobile-feedback-area">
+                <span id="mobile-feedback-text" class="feedback-text">选择你的行动...</span>
+            </div>
         <!-- 行动区域 -->
         <div class="action-panel">
             <h3>选择行动</h3>

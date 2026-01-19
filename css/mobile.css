@@ -110,6 +110,95 @@
         min-height: 110px;
         padding: 12px;
     }
+
+    /* 移动端反馈优化 */
+    .mobile-feedback-area {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 15px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 10px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: left;
+    }
+
+    .feedback-text {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: color 0.3s;
+    }
+    
+    .feedback-text.highlight {
+        color: var(--xjtu-blue);
+        font-weight: bold;
+    }
+
+    /* 移动端顶部状态条 */
+    .mobile-stats-bar {
+        display: flex;
+        justify-content: space-around;
+        background: #fff;
+        padding: 8px 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 2px;
+        position: sticky;
+        top: 45px; /* Adjust based on header height */
+        z-index: 99;
+    }
+
+    .mobile-stat-item {
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-primary);
+    }
+    
+    /* Toast 通知 */
+    .toast-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .toast-message {
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        animation: toastPopup 2s forwards;
+        white-space: nowrap;
+    }
+    
+    .toast-message.positive {
+        background: rgba(76, 175, 80, 0.9);
+    } 
+    
+    .toast-message.negative {
+        background: rgba(244, 67, 54, 0.9);
+    }
+
+    @keyframes toastPopup {
+        0% { opacity: 0; transform: translateY(20px); }
+        10% { opacity: 1; transform: translateY(0); }
+        80% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
+    }
     
     .game-header {
         position: sticky;
