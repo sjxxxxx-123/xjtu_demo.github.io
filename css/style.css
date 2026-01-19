@@ -1372,67 +1372,1230 @@ body {
 }
 
 /* ========================================
-   响应式布局
-   ======================================== */ */
+   响应式布局 - 平板和手机适配
+   ======================================== */
+
+/* 平板横屏 (1024px及以下) */
+@media (max-width: 1024px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .start-container {
+        padding: 30px 20px;
+    }
+    
+    .game-title {
+        font-size: 2.5rem;
+    }
+    
+    .character-container,
+    .achievements-container {
+        padding: 15px;
+    }
+    
+    .achievement-popup {
+        top: 10px;
+        right: 10px;
+    }
+}
+
+/* 平板竖屏和大屏手机 (768px及以下) */
 @media (max-width: 768px) {
+    /* 开始界面 */
     .game-title {
         font-size: 2rem;
     }
     
-    .stats-panel {
-        grid-template-columns: repeat(2, 1fr);
+    .game-subtitle {
+        font-size: 1rem;
     }
     
-    .action-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .start-buttons {
+        gap: 12px;
+        max-width: 100%;
+        padding: 0 20px;
     }
     
-    .thesis-actions {
-        grid-template-columns: 1fr;
+    .start-buttons .btn {
+        padding: 12px 24px;
+        font-size: 0.95rem;
+    }
+    
+    /* 游戏头部 */
+    .game-header {
+        padding: 12px 15px;
+        flex-wrap: wrap;
     }
     
     .time-info {
         flex-wrap: wrap;
         gap: 8px;
+        order: 2;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
     }
     
     .time-info span {
-        padding: 3px 8px;
+        padding: 4px 10px;
         font-size: 0.8rem;
+    }
+    
+    .location-info {
+        font-size: 0.85rem;
+    }
+    
+    /* BBS滚动条 */
+    .bbs-ticker {
+        padding: 6px 12px;
+    }
+    
+    .bbs-label {
+        font-size: 0.75rem;
+    }
+    
+    .bbs-item {
+        font-size: 0.75rem;
+    }
+    
+    /* 属性面板 */
+    .stats-panel {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin: 12px;
+        padding: 15px;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+    }
+    
+    /* 课程面板 */
+    .course-panel,
+    .action-panel,
+    .event-log,
+    .career-panel {
+        margin: 12px;
+        padding: 15px;
+    }
+    
+    .course-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    /* 行动面板 */
+    .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .action-btn {
+        padding: 12px 8px;
+        min-height: 130px;
+    }
+    
+    .action-icon {
+        font-size: 1.5rem;
+    }
+    
+    .action-name {
+        font-size: 0.9rem;
+    }
+    
+    .action-cost {
+        font-size: 0.7rem;
+    }
+    
+    /* 回合控制 */
+    .turn-control {
+        padding: 12px 15px;
+    }
+    
+    .turn-control .btn {
+        padding: 12px 24px;
+    }
+    
+    /* 角色创建 */
+    .character-container {
+        padding: 15px;
+    }
+    
+    .character-container h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .selection-section {
+        margin-bottom: 25px;
     }
     
     .option-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .option-card {
+        padding: 15px;
+    }
+    
+    .option-icon {
+        font-size: 2rem;
+    }
+    
+    .option-name {
+        font-size: 0.9rem;
+    }
+    
+    .option-desc {
+        font-size: 0.8rem;
+    }
+    
+    /* 毕设界面 */
+    .thesis-container {
+        padding: 15px;
+    }
+    
+    .thesis-container h2 {
+        font-size: 1.5rem;
+    }
+    
+    .thesis-actions {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    /* 结局界面 */
+    .ending-container {
+        padding: 30px 15px;
+    }
+    
+    .ending-icon {
+        font-size: 4rem;
     }
     
     .ending-title {
-        font-size: 1.8rem;
+        font-size: 2rem;
+    }
+    
+    .ending-desc {
+        font-size: 1rem;
     }
     
     .ending-actions {
         flex-direction: column;
+        gap: 12px;
+    }
+    
+    .ending-actions .btn {
+        width: 100%;
+    }
+    
+    /* 成就界面 */
+    .achievements-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .achievement-card {
+        padding: 15px;
+    }
+    
+    .ach-icon {
+        font-size: 2rem;
+    }
+    
+    .achievements-categories {
+        gap: 8px;
+    }
+    
+    .category-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* Modal弹窗 */
+    .modal {
+        padding: 15px;
+    }
+    
+    .modal-content {
+        max-width: 100%;
+    }
+    
+    .modal-header {
+        padding: 15px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .modal-footer {
+        padding: 12px 15px;
+    }
+    
+    /* 事件弹窗 */
+    .random-event-content {
+        max-width: 90%;
+    }
+    
+    .event-header {
+        padding: 25px 15px;
+    }
+    
+    .event-icon-large {
+        font-size: 3.5rem;
+    }
+    
+    .event-title {
+        font-size: 1.3rem;
+    }
+    
+    .event-body {
+        padding: 20px 15px;
+    }
+    
+    .event-option-btn {
+        padding: 12px 15px;
+        gap: 12px;
+    }
+    
+    .event-option-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.5rem;
+    }
+    
+    /* 成就弹窗 */
+    .achievement-popup {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .achievement-popup-content {
+        padding: 12px 20px;
+        gap: 12px;
     }
 }
 
+/* 手机屏幕 (480px及以下) */
 @media (max-width: 480px) {
+    /* 基础布局 */
+    body {
+        font-size: 13px;
+    }
+    
+    /* 开始界面 */
+    .start-container {
+        padding: 20px 15px;
+    }
+    
+    .game-title {
+        font-size: 1.6rem;
+    }
+    
+    .game-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 30px;
+    }
+    
+    .start-buttons {
+        gap: 10px;
+        padding: 0 15px;
+    }
+    
+    .start-buttons .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+    
+    .version {
+        font-size: 0.8rem;
+        margin-top: 30px;
+    }
+    
+    /* 游戏头部 */
+    .game-header {
+        padding: 10px 12px;
+    }
+    
+    .time-info span {
+        padding: 3px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .location-info {
+        font-size: 0.8rem;
+    }
+    
+    .btn-icon {
+        font-size: 1.3rem;
+        padding: 6px;
+    }
+    
+    /* 属性面板 */
     .stats-panel {
         grid-template-columns: 1fr;
+        gap: 10px;
+        margin: 10px;
+        padding: 12px;
     }
     
-    .action-grid {
-        grid-template-columns: 1fr;
+    .stat-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-align: left;
     }
     
-    .option-grid {
-        grid-template-columns: 1fr;
+    .stat-item > div {
+        flex: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+        margin-bottom: 5px;
+    }
+    
+    .stat-bar {
+        height: 6px;
+    }
+    
+    /* 课程和行动面板 */
+    .course-panel,
+    .action-panel,
+    .event-log,
+    .career-panel {
+        margin: 10px;
+        padding: 12px;
+    }
+    
+    .course-panel h3,
+    .action-panel h3,
+    .event-log h3,
+    .career-panel h3 {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
     }
     
     .course-list {
         grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .course-item {
+        padding: 10px;
+    }
+    
+    .course-name {
+        font-size: 0.85rem;
+    }
+    
+    .course-mastery {
+        font-size: 0.75rem;
+    }
+    
+    /* 行动按钮 */
+    .action-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .action-btn {
+        padding: 15px 12px;
+        min-height: 110px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 15px;
+    }
+    
+    .action-icon {
+        font-size: 2rem;
+        min-width: 50px;
+    }
+    
+    .action-btn > div {
+        text-align: left;
+        flex: 1;
+    }
+    
+    .action-name {
+        font-size: 0.95rem;
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    .action-cost {
+        font-size: 0.75rem;
+        display: block;
+    }
+    
+    /* 回合控制 */
+    .turn-control {
+        padding: 10px 12px;
+    }
+    
+    .turn-control .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+    
+    /* 事件日志 */
+    .event-log {
+        max-height: 150px;
+    }
+    
+    .log-content {
+        max-height: 100px;
+    }
+    
+    .log-entry {
+        font-size: 0.85rem;
+        padding: 6px 0;
+    }
+    
+    /* 角色创建 */
+    .character-container {
+        padding: 12px;
+    }
+    
+    .character-container h2 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+    
+    .selection-section h3 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+    
+    .option-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .option-card {
+        padding: 15px;
+    }
+    
+    .option-icon {
+        font-size: 2rem;
+    }
+    
+    .option-name {
+        font-size: 0.95rem;
+    }
+    
+    .option-desc {
+        font-size: 0.8rem;
+    }
+    
+    .character-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .character-actions .btn {
+        width: 100%;
+    }
+    
+    /* 毕设界面 */
+    .thesis-container {
+        padding: 12px;
+    }
+    
+    .thesis-container h2 {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+    }
+    
+    .thesis-progress {
+        padding: 20px 15px;
+    }
+    
+    .progress-label {
+        font-size: 0.9rem;
+    }
+    
+    .progress-bar-large {
+        height: 25px;
+    }
+    
+    .progress-value {
+        font-size: 1.3rem;
     }
     
     .thesis-stats {
         flex-direction: column;
+        gap: 12px;
+    }
+    
+    .thesis-actions {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .thesis-warning {
+        padding: 12px;
+    }
+    
+    .thesis-warning p {
+        font-size: 0.85rem;
+    }
+    
+    /* 结局界面 */
+    .ending-container {
+        padding: 25px 12px;
+        max-width: 100%;
+    }
+    
+    .ending-icon {
+        font-size: 3.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .ending-title {
+        font-size: 1.6rem;
+        margin-bottom: 12px;
+    }
+    
+    .ending-desc {
+        font-size: 0.95rem;
+        margin-bottom: 25px;
+    }
+    
+    .ending-stats {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .ending-stat-item {
+        padding: 8px 0;
+        font-size: 0.9rem;
+    }
+    
+    .ending-achievements h4 {
+        font-size: 1rem;
+    }
+    
+    .ending-achievement-list {
+        gap: 8px;
+    }
+    
+    .ending-achievement-badge {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .ending-actions {
+        gap: 10px;
+    }
+    
+    .ending-actions .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+    
+    /* 成就界面 */
+    .achievements-container {
+        padding: 12px;
+    }
+    
+    .achievements-container h2 {
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+    }
+    
+    .achievements-stats {
+        font-size: 1rem;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .achievements-categories {
+        gap: 6px;
+        margin-bottom: 15px;
+    }
+    
+    .category-btn {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .achievements-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .achievement-card {
+        padding: 12px;
+        flex-direction: row;
+        gap: 12px;
+        text-align: left;
+    }
+    
+    .achievement-card-icon {
+        font-size: 2rem;
+        width: 45px;
+    }
+    
+    .achievement-card-info {
+        flex: 1;
+    }
+    
+    .achievement-card-name {
+        font-size: 0.95rem;
+    }
+    
+    .achievement-card-desc {
+        font-size: 0.8rem;
+    }
+    
+    .ach-icon {
+        font-size: 2rem;
+    }
+    
+    .ach-name {
+        font-size: 0.95rem;
+    }
+    
+    .ach-desc {
+        font-size: 0.8rem;
+    }
+    
+    #achievements-screen .btn-secondary {
+        padding: 10px 20px;
+    }
+    
+    /* Modal弹窗 */
+    .modal {
+        padding: 10px;
+    }
+    
+    .modal-content {
+        border-radius: var(--border-radius-sm);
+    }
+    
+    .modal-header {
+        padding: 12px 15px;
+    }
+    
+    .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    .modal-close {
+        font-size: 1.3rem;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .modal-footer {
+        padding: 10px 15px;
+        flex-wrap: wrap;
+    }
+    
+    .modal-footer .btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    /* 选择弹窗 */
+    .choice-options {
+        gap: 8px;
+    }
+    
+    .choice-btn {
+        padding: 12px;
+    }
+    
+    .choice-btn-name {
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+    }
+    
+    .choice-btn-desc {
+        font-size: 0.8rem;
+    }
+    
+    .course-type-tag {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+    
+    /* 课程详情弹窗 */
+    .course-detail-item {
+        padding: 10px 12px;
+    }
+    
+    .course-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .course-header strong {
+        font-size: 0.95rem;
+    }
+    
+    .course-info {
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 0.8rem;
+    }
+    
+    .course-summary {
+        gap: 8px;
+    }
+    
+    .summary-label {
+        font-size: 0.75rem;
+    }
+    
+    .summary-value {
+        font-size: 1.1rem;
+    }
+    
+    /* 考试结果 */
+    .exam-results {
+        max-height: 300px;
+    }
+    
+    .exam-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+    }
+    
+    .exam-course {
+        font-size: 0.95rem;
+    }
+    
+    .exam-result {
+        padding: 4px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* 事件弹窗 */
+    .random-event-content {
+        max-width: 100%;
+        margin: 0 10px;
+        border-radius: 12px;
+    }
+    
+    .event-header {
+        padding: 20px 15px;
+    }
+    
+    .event-icon-large {
+        font-size: 3rem;
+        margin-bottom: 12px;
+    }
+    
+    .event-title {
+        font-size: 1.2rem;
+    }
+    
+    .event-body {
+        padding: 15px 12px;
+    }
+    
+    .event-description {
+        font-size: 0.9rem;
+        padding: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .event-options {
+        gap: 10px;
+    }
+    
+    .event-option-btn {
+        padding: 12px 15px;
+        gap: 12px;
+        flex-direction: row;
+    }
+    
+    .event-option-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+    
+    .event-option-text {
+        font-size: 0.95rem;
+    }
+    
+    .event-option-hint {
+        font-size: 0.75rem;
+    }
+    
+    /* 事件结果弹窗 */
+    .event-result-content {
+        max-width: 100%;
+        margin: 0 10px;
+        padding: 25px 15px;
+    }
+    
+    .result-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .result-message {
+        font-size: 1rem;
+        margin-bottom: 15px;
+    }
+    
+    .result-effects {
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .effect-tag {
+        padding: 5px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .result-achievement {
+        padding: 10px 15px;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .result-achievement-icon {
+        font-size: 1.3rem;
+    }
+    
+    .result-achievement-text {
+        font-size: 0.9rem;
+    }
+    
+    /* 成就弹窗 */
+    .achievement-popup {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .achievement-popup-content {
+        padding: 10px 15px;
+        gap: 10px;
+        flex-direction: row;
+    }
+    
+    .achievement-popup .achievement-icon {
+        font-size: 1.6rem;
+    }
+    
+    .achievement-popup .achievement-label {
+        font-size: 0.75rem;
+    }
+    
+    .achievement-popup .achievement-name {
+        font-size: 1rem;
+    }
+    
+    /* 补考系统 */
+    .makeup-hint {
+        font-size: 0.85rem;
+        padding: 10px;
+    }
+    
+    .makeup-courses {
+        max-height: 350px;
+    }
+    
+    .makeup-course-item {
+        padding: 12px;
+    }
+    
+    .makeup-course-name {
+        font-size: 1rem;
+    }
+    
+    .makeup-course-score {
+        font-size: 0.85rem;
+    }
+    
+    .makeup-option {
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .makeup-option .option-text {
+        font-size: 0.9rem;
+    }
+    
+    .makeup-option .option-desc {
+        font-size: 0.75rem;
+    }
+    
+    /* 长远规划 */
+    .career-choices {
+        gap: 8px;
+    }
+    
+    .career-choice-btn {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .career-icon {
+        font-size: 1.8rem;
+    }
+    
+    .career-name {
+        font-size: 0.95rem;
+    }
+    
+    .career-desc {
+        font-size: 0.8rem;
+    }
+    
+    .career-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .career-progress {
+        gap: 6px;
+    }
+    
+    .career-progress-item {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+    
+    /* 选课博弈 */
+    .bidding-pools {
+        gap: 12px;
+    }
+    
+    .bidding-pool {
+        padding: 12px;
+    }
+    
+    .pool-header {
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    
+    .pool-icon {
+        font-size: 1.1rem;
+    }
+    
+    .pool-name {
+        font-size: 0.95rem;
+    }
+    
+    .pool-desc {
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+    }
+    
+    .weight-value {
+        width: 35px;
+        font-size: 0.9rem;
+    }
+    
+    .weight-total {
+        font-size: 0.9rem;
+        margin-top: 12px;
+    }
+    
+    /* 体测系统 */
+    .physical-test-status {
+        padding: 12px;
+    }
+    
+    .test-item {
+        padding: 8px 0;
+    }
+    
+    .test-label {
+        font-size: 0.85rem;
+    }
+    
+    .test-value {
+        font-size: 0.95rem;
+    }
+    
+    .test-result {
+        font-size: 1.1rem;
+    }
+    
+    .test-warning {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* BBS滚动条 */
+    .bbs-ticker {
+        padding: 6px 10px;
+    }
+    
+    .bbs-label {
+        font-size: 0.7rem;
+    }
+    
+    .bbs-item {
+        font-size: 0.7rem;
+    }
+    
+    /* 特殊标签 */
+    .special-tag {
+        font-size: 0.65rem;
+        padding: 2px 5px;
+        margin-right: 3px;
+        margin-top: 3px;
+    }
+    
+    .summer-college-tag {
+        padding: 3px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .status-tag {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+    }
+    
+    /* 爱情Tooltip */
+    .love-tooltip {
+        display: none !important;
+    }
+    
+    .action-btn[data-action="love"]:active .love-tooltip {
+        display: block !important;
+        position: fixed;
+        bottom: 50%;
+        left: 50%;
+        transform: translate(-50%, 50%);
+        max-width: 90%;
+        white-space: normal;
+        z-index: 10000;
+    }
+}
+
+/* 超小屏幕 (360px及以下) */
+@media (max-width: 360px) {
+    .game-title {
+        font-size: 1.4rem;
+    }
+    
+    .start-buttons .btn {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+    
+    .time-info span {
+        padding: 2px 6px;
+        font-size: 0.7rem;
+    }
+    
+    .stats-panel {
+        margin: 8px;
+        padding: 10px;
+    }
+    
+    .action-btn {
+        padding: 12px 10px;
+        min-height: 100px;
+    }
+    
+    .action-icon {
+        font-size: 1.8rem;
+        min-width: 45px;
+    }
+    
+    .modal-content {
+        max-width: 100%;
+    }
+    
+    .event-icon-large {
+        font-size: 2.5rem;
+    }
+    
+    .ending-icon {
+        font-size: 3rem;
+    }
+}
+
+/* 横屏模式优化 */
+@media (max-height: 600px) and (orientation: landscape) {
+    .start-container {
+        padding: 15px 20px;
+    }
+    
+    .game-title {
+        font-size: 1.8rem;
+        margin-bottom: 5px;
+    }
+    
+    .game-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+    
+    .start-buttons {
+        gap: 8px;
+    }
+    
+    .version {
+        margin-top: 20px;
+    }
+    
+    .ending-container {
+        padding: 20px 15px;
+    }
+    
+    .ending-icon {
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
+    
+    .ending-title {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+    
+    .ending-desc {
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+    
+    .ending-stats {
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+    
+    .modal-content {
+        max-height: 90vh;
+    }
+    
+    .event-header {
+        padding: 15px;
+    }
+    
+    .event-icon-large {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
     }
 }
 
