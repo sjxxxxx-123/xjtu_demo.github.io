@@ -3752,59 +3752,6 @@ class XJTUSimulator {
             void miniLog.offsetWidth; // 触发重绘
             miniLog.classList.add('highlight');
         }
-
-        // 尝试解析并显示 Toast
-        // 例如 "体力 -2", "金币 +100" 等
-        this.parseAndShowToast(message);
-    }
-    
-    // 解析日志消息并显示 Toast (针对移动端优化)
-    parseAndShowToast(message) {
-        // 简单正则匹配常见的资源变更模式
-        // 如：体力 -2, SAN +5, 金币 -30
-        const patterns = [
-            /(体力|SAN|金币|GPA|声望|综测)\s*([\+\-]\d+(\.\d+)?)/g,
-            /(体力|SAN|金币|GPA|声望|综测)(增加|减少)(\d+)/g
-        ];
-        
-        let found = false;
-        
-        // 模式1: "体力 -2"
-        let match;
-        while ((match = patterns[0].exec(message)) !== null) {
-            this.showToast(match[0], match[2].startsWith('-') ? 'negative' : 'positive');
-            found = true;
-        }
-
-        // 如果没有匹配到标准格式，但是日志是重要类型 (warning/success)，显示部分文本
-        if (!found && message.length < 20) {
-             // this.showToast(message, 'info'); 
-        }
-    }
-
-    // 显示 Toast 提示
-    showToast(text, type = 'info') {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'toast-container';
-            document.body.appendChild(container); // Append to body to ensure visibility
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `toast-message ${type}`;
-        toast.textContent = text;
-        
-        container.appendChild(toast);
-        
-        // 动画并在结束后移除
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            setTimeout(() => {
-                if(toast.parentNode) toast.parentNode.removeChild(toast);
-            }, 300);
-        }, 2000);
     }
 
     // 显示消息弹窗
