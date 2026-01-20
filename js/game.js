@@ -79,30 +79,58 @@ class XJTUSimulator {
         const btnNextTurn = document.getElementById('btn-next-turn');
         if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
 
-        // 移动端下一回合浮动按钮
-        const btnNextTurnMobile = document.getElementById('btn-next-turn-mobile');
-        if (btnNextTurnMobile) btnNextTurnMobile.addEventListener('click', () => this.nextTurn());
+        // 移动端底部宽按钮
+        const btnNextTurnMobileText = document.getElementById('btn-next-turn-mobile-text');
+        if (btnNextTurnMobileText) btnNextTurnMobileText.addEventListener('click', () => this.nextTurn());
 
-        // 移动端底部导航Tab切换
-        const navItems = document.querySelectorAll('.nav-item');
-        if (navItems.length > 0) {
-            navItems.forEach(item => {
-                item.addEventListener('click', () => {
-                   // 移除所有激活状态
-                   navItems.forEach(nav => nav.classList.remove('active'));
-                   // 激活当前按钮
-                   item.classList.add('active');
-                   
-                   // 隐藏所有内容Tab
-                   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-                   // 显示目标Tab
-                   const targetId = item.dataset.tab;
-                   if(targetId) {
-                       const targetTab = document.getElementById(targetId);
-                       if(targetTab) targetTab.classList.add('active');
-                   }
+        // 移动端课程面板折叠
+        const btnToggleCourse = document.getElementById('btn-toggle-course');
+        const courseList = document.getElementById('course-list');
+        if (btnToggleCourse && courseList) {
+            btnToggleCourse.addEventListener('click', () => {
+                courseList.classList.toggle('visible');
+                btnToggleCourse.textContent = courseList.classList.contains('visible') ? '折叠 ▲' : '展开 ▼';
+            });
+        }
+
+        // 移动端行动分类过滤
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        if (filterBtns.length > 0) {
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 激活状态切换
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const filter = btn.dataset.filter;
+                    this.filterActions(filter);
                 });
             });
+        }
+        
+        // 确保移动端默认显示全部或第一次过滤
+        this.filterActions('all'); // 或者 'all'
+
+        // Log Modal (Mobile)
+        const mobileLogPreview = document.getElementById('mobile-log-preview');
+        const mobileLogModal = document.getElementById('mobile-log-modal');
+        const mobileLogBody = document.getElementById('mobile-log-body');
+        
+        if (mobileLogPreview && mobileLogModal) {
+            mobileLogPreview.addEventListener('click', () => {
+                const logContent = document.getElementById('log-content');
+                if (logContent && mobileLogBody) {
+                    mobileLogBody.innerHTML = logContent.innerHTML;
+                    mobileLogModal.classList.add('active');
+                }
+            });
+            
+            const closeBtn = mobileLogModal.querySelector('.mobile-log-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                     mobileLogModal.classList.remove('active');
+                });
+            }
         }
 
         // 行动按钮
@@ -234,6 +262,18 @@ class XJTUSimulator {
                 const career = btn.dataset.career;
                 this.selectCareerPath(career);
             });
+        });
+    }
+
+    // 移动端行动按钮过滤
+    filterActions(category) {
+        const actions = document.querySelectorAll('.action-btn');
+        actions.forEach(btn => {
+            if (category === 'all' || btn.classList.contains(category)) {
+                btn.classList.remove('filtered-out');
+            } else {
+                btn.classList.add('filtered-out');
+            }
         });
     }
 
@@ -475,7 +515,7 @@ class XJTUSimulator {
                     credits: 1,
                     difficulty: 0.3,
                     type: 'pe',
-                    mastery: 20,
+                    mastery: 0, // 初始掌握度归零
                     attendCount: 0,
                     studyCount: 0
                 });
@@ -653,15 +693,24 @@ class XJTUSimulator {
 
         document.getElementById('stat-money').textContent = `💰 ${Math.round(this.state.money)}`;
         
-        // 更新移动端顶部状态条
-        const mEnergy = document.getElementById('m-stat-energy');
+        // 更新移动端状态卡片 (Unified Mobile Status Card)
+        const mEnergy = document.getElementById('m-val-energy');
         if (mEnergy) mEnergy.textContent = `${this.state.energy}/${this.state.maxEnergy}`;
         
-        const mSan = document.getElementById('m-stat-san');
+        const mSan = document.getElementById('m-val-san');
         if (mSan) mSan.textContent = `${Math.round(this.state.san)}`;
         
-        const mMoney = document.getElementById('m-stat-money');
+        const mMoney = document.getElementById('m-val-money');
         if (mMoney) mMoney.textContent = `${Math.round(this.state.money)}`;
+        
+        const mGpa = document.getElementById('m-val-gpa');
+        if (mGpa) mGpa.textContent = this.state.gpa.toFixed(2);
+        
+        const mSocial = document.getElementById('m-val-social');
+        if (mSocial) mSocial.textContent = Math.round(this.state.social);
+
+        const mRep = document.getElementById('m-val-reputation');
+        if (mRep) mRep.textContent = Math.round(this.state.reputation || 50);
 
         // 更新声望显示
         const repEl = document.getElementById('stat-reputation');
@@ -784,10 +833,16 @@ class XJTUSimulator {
                     disabled = disabled || energy < 4;
                     break;
                 case 'research':
-                    disabled = disabled || energy < 3 || this.state.year < 2;
+                    // 科研实习大二解锁
+                    if (this.state.year < 2) {
+                        disabled = true;
+                        btn.title = '解锁条件：大二及以上年级';
+                        // 添加锁标志（可选，如果CSS支持）
+                    }
+                    disabled = disabled || energy < 3;
                     break;
                 case 'eat':
-                    disabled = disabled || money < 15;
+                    disabled = disabled || money < 80;
                     break;
                 case 'entertainment':
                     disabled = disabled || money < 50;
@@ -1473,15 +1528,16 @@ class XJTUSimulator {
         this.updateUI();
     }
 
-    // 显示吃饭选择
+    // 显示吃饭选择 (改为改善伙食)
     showEatChoice() {
         const options = document.getElementById('choice-options');
         options.innerHTML = '';
+        document.getElementById('choice-title').innerText = '选择改善伙食的方式';
 
         const eatOptions = [
-            { id: 'canteen', name: '去食堂', icon: '🍜', cost: 15, san: 3 },
-            { id: 'kangqiao', name: '康桥苑聚餐', icon: '🍖', cost: 50, san: 8 },
-            { id: 'takeout', name: '点外卖', icon: '📦', cost: 25, san: 2 }
+            { id: 'canteen_luxury', name: '食堂豪华套餐', icon: '🍱', cost: 80, san: 8 },
+            { id: 'southeast_gate', name: '东南门聚餐', icon: '🍖', cost: 120, san: 15 },
+            { id: 'north_gate_night', name: '北门夜摊', icon: '🍢', cost: 60, san: 6 }
         ];
 
         eatOptions.forEach(opt => {
@@ -2628,6 +2684,25 @@ class XJTUSimulator {
         // 前进一个月
         this.advanceMonth();
 
+        // 自动扣除生活费 (经济系统优化)
+        // 基础生活费 600 + 随机浮动
+        const baseCost = 600;
+        const randomCost = Math.floor(Math.random() * 200);
+        const totalLivingCost = baseCost + randomCost;
+        this.state.money -= totalLivingCost;
+        
+        let costMsg = `💸 扣除本月生活费 ${totalLivingCost}元 (食堂/水电/网费)`;
+        
+        // 恋爱额外消费
+        if (this.state.inRelationship) {
+            this.state.san = Math.min(100, this.state.san + 1);
+            const dateCost = 300; // 恋爱固定开销增加
+            this.state.money -= dateCost;
+            costMsg += `，恋爱开销 ${dateCost}元`;
+        }
+
+        this.addLog(costMsg);
+
         // 重置每回合状态
         this.state.energy = this.state.maxEnergy;
         this.state.attendedClassThisTurn = false;
@@ -2636,12 +2711,6 @@ class XJTUSimulator {
         // 清除临时加成
         if (this.state.tempStudyBoost) {
             delete this.state.tempStudyBoost;
-        }
-
-        // 恋爱加成
-        if (this.state.inRelationship) {
-            this.state.san = Math.min(100, this.state.san + 1);
-            this.state.money -= 50; // 恋爱消费
         }
 
         // 更新SAN记录

@@ -78,7 +78,7 @@ const GameData = {
             id: 'pengkang',
             name: '彭康书院',
             icon: '🏛️',
-            description: '皇家地理，历史沉淀',
+            description: '坐拥兴庆C位，出门即是康桥。当你挥起金工实习的小锤，才听懂这历史沉淀的回响。',
             campus: 'xingqing',
             // 直接作为collegeEffects的属性
             attendClassEnergy: -1, // 上课体力-1
@@ -96,7 +96,7 @@ const GameData = {
             id: 'wenzhi',
             name: '文治书院',
             icon: '🏫',
-            description: '一等文治，澡堂特权',
+            description: '号称一等文治，却需练就横穿东西区的腿力。在唐公园的晚风里，没人比你更懂距离产生美。',
             campus: 'xingqing',
             socialInit: 10, // 初始综测+10
             bathSanMultiplier: 2, // 洗澡SAN翻倍
@@ -114,7 +114,7 @@ const GameData = {
             id: 'zhongying',
             name: '仲英书院',
             icon: '🤝',
-            description: '英仔义工，品阁自习',
+            description: '品阁的咖啡香气，掩不住理工男的荷尔蒙。在为之光照耀下，只有兄弟情谊比综测分更坚固。',
             campus: 'xingqing',
             volunteerEfficiency: 2.0, // 志愿收益翻倍
             volunteerRequired: 3, // 每学期必须3次志愿
@@ -131,7 +131,7 @@ const GameData = {
             id: 'nanyang',
             name: '南洋书院',
             icon: '🎯',
-            description: '硬核工科，13楼传说',
+            description: '紧邻梧桐的碳水快乐，难挡东十三的保研诱惑。这里的灯光，见证过无数个凌晨四点的代码。',
             campus: 'xingqing',
             gpaEfficiency: 1.15, // GPA效率+15%
             nightStudySanLoss: 3, // 通宵自习额外SAN损失
@@ -148,7 +148,7 @@ const GameData = {
             id: 'chongshi',
             name: '崇实书院',
             icon: '🎨',
-            description: '文法艺术，中楼沙龙',
+            description: '以画笔重构世界的人文飞地。唯有通宵赶图的深夜，你才会思考发际线与艺术哪个更重要。',
             campus: 'xingqing',
             charmInit: 20, // 魅力+20
             socialEnergyCost: -1, // 社交体力-1
@@ -166,7 +166,7 @@ const GameData = {
             id: 'lizhi',
             name: '励志书院',
             icon: '🔬',
-            description: '理学基石，星空间',
+            description: '这里没有早睡，只有早起。在西工大隔壁仰望星空，用钢铁意志证明：不谈恋爱的大学生活更加硬核。',
             campus: 'xingqing',
             logicGrowth: 1.2, // 逻辑科目成绩+20%
             starspaceBonus: true, // 星空间加成
@@ -182,7 +182,7 @@ const GameData = {
             id: 'zonglian',
             name: '宗濂书院',
             icon: '⚕️',
-            description: '杏林春暖，医学特权',
+            description: '雁塔校区的最后倔强。在福尔马林与《系统解剖学》的夹击下，发量是衡量学术水平的唯一标准。',
             campus: 'yanta',
             sickImmunity: true, // 生病免疫
             crossCampusEnergy: 2, // 跨校区额外体力
@@ -199,7 +199,7 @@ const GameData = {
             id: 'qide',
             name: '启德书院',
             icon: '💼',
-            description: '经管天下，商业头脑',
+            description: '为了挤上早八的校车，你练就了短跑国家队的爆发力。在这里，每一张钞票和每一根血管都被解构得明明白白。',
             campus: 'yanta',
             moneyEfficiency: 1.3, // 金币收益+30%
             crossCampusEnergy: 2, // 跨校区额外体力
@@ -216,7 +216,7 @@ const GameData = {
             id: 'qianxuesen',
             name: '钱学森书院',
             icon: '🚀',
-            description: '顶天立地，极限内卷',
+            description: '如果GPA 3.8是普通人的天花板，那只是这里新生的起跑线。哪怕是做梦，梦里都在推导拉格朗日中值定理。',
             campus: 'xingqing',
             initialMastery: 15, // 初始掌握度+15
             gpaNoLimit: true, // GPA无上限

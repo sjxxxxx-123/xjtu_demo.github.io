@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>游戏中 - XJTU本科模拟器</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/mobile_v2.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -24,17 +24,54 @@
             <button id="btn-menu" class="btn-icon">☰</button>
         </header>
 
-        <!-- 移动端顶部状态条 (仅在移动端显示) -->
-        <div class="mobile-stats-bar">
-            <div class="mobile-stat-item"><span class="icon">⚡</span><span id="m-stat-energy">--/--</span></div>
-            <div class="mobile-stat-item"><span class="icon">🧠</span><span id="m-stat-san">--</span></div>
-            <div class="mobile-stat-item"><span class="icon">💰</span><span id="m-stat-money">--</span></div>
+        <!-- 移动端顶部状态条 (移除，合并到下方) -->
+        <!-- <div class="mobile-compact-header mobile-only-flex"> REMOVED </div> -->
+
+        <!-- 游戏内容容器 (扁平化结构，移除Tabs) -->
+        <!-- 移动端：上方反馈区域 -->
+        <div id="mobile-top-section" class="mobile-only-block" style="margin-top: 10px;">
+            <!-- 移动端动态反馈卡片 (合并版) -->
+            <div class="mobile-status-card">
+                <!-- 第一行：核心资源 (体力/SAN/金钱) -->
+                <div class="m-card-row resource-row">
+                    <div class="m-stat-compact">
+                         <span class="label">体力</span>
+                         <span class="value" id="m-val-energy">10/10</span>
+                    </div>
+                    <div class="m-stat-compact">
+                         <span class="label">SAN值</span>
+                         <span class="value" id="m-val-san">80</span>
+                    </div>
+                    <div class="m-stat-compact">
+                         <span class="label">金币</span>
+                         <span class="value" id="m-val-money">1000</span>
+                    </div>
+                </div>
+                <!-- 第二行：长期属性 (GPA/综测/声望) -->
+                <div class="m-card-row attribute-row">
+                    <div class="m-stat-compact">
+                        <span class="label">GPA</span>
+                        <span class="value" id="m-val-gpa">3.00</span>
+                    </div>
+                    <div class="m-stat-compact">
+                        <span class="label">综测</span>
+                        <span class="value" id="m-val-social">60</span>
+                    </div>
+                    <div class="m-stat-compact">
+                        <span class="label">声望</span>
+                        <span class="value" id="m-val-reputation">50</span>
+                    </div>
+                </div>
+                <!-- 日志预览 -->
+                <div class="m-log-preview" id="mobile-log-preview">
+                    <span class="m-log-icon">📢</span>
+                    <span id="m-log-text">欢迎来到西安交通大学！</span>
+                </div>
+            </div>
         </div>
 
-        <!-- 游戏内容Tabs容器 -->
-        <div id="tab-dashboard" class="tab-content active">
         <!-- BBS舆论滚动条 -->
-        <div class="bbs-ticker" id="bbs-ticker">
+        <div class="bbs-ticker desktop-only" id="bbs-ticker">
             <div class="bbs-label">📢 交大BBS</div>
             <div class="bbs-scroll" id="bbs-scroll">
                 <span class="bbs-item">欢迎来到西安交通大学！</span>
@@ -42,7 +79,7 @@
         </div>
 
         <!-- 属性面板 -->
-        <div class="stats-panel">
+        <div class="stats-panel desktop-only">
             <div class="stat-item">
                 <div class="stat-label">GPA</div>
                 <div class="stat-value" id="stat-gpa">3.00/4.3</div>
@@ -84,9 +121,17 @@
             </div>
         </div>
 
+        <!-- 课程掌握度面板 -->
+        <div class="course-panel" id="course-panel">
+            <div class="panel-header-mobile-toggle">
+                <h3>📖 当前课程</h3>
+                <button id="btn-toggle-course" class="btn-text mobile-only-inline">展开 ▼</button>
+            </div>
+            <div class="course-list" id="course-list">
+                <!-- 动态生成 -->
+            </div>
         </div>
         
-        <div id="tab-campus" class="tab-content">
         <!-- 长远规划面板（大三下开启） -->
         <div class="career-panel" id="career-panel" style="display: none;">
             <h3>🎯 长远规划</h3>
@@ -96,24 +141,17 @@
             <div class="career-progress" id="career-progress"></div>
         </div>
 
-        <!-- 课程掌握度面板 -->
-        <div class="course-panel" id="course-panel">
-            <h3>📖 当前课程</h3>
-            <div class="course-list" id="course-list">
-                <!-- 动态生成 -->
-            </div>
+        <!-- 移动端：行动分类过滤器 -->
+        <div class="mobile-action-filter mobile-only-flex">
+            <button class="filter-btn active" data-filter="all">🌟 全部</button>
+            <button class="filter-btn" data-filter="study">📚 学习</button>
+            <button class="filter-btn" data-filter="life">☕ 生活</button>
+            <button class="filter-btn" data-filter="social">🤝 发展</button>
         </div>
 
-        </div>
-
-        <div id="tab-actions" class="tab-content">
-            <!-- 移动端行动反馈区 -->
-            <div id="mobile-action-feedback" class="mobile-feedback-area">
-                <span id="mobile-feedback-text" class="feedback-text">选择你的行动...</span>
-            </div>
         <!-- 行动区域 -->
         <div class="action-panel">
-            <h3>选择行动</h3>
+            <h3 class="desktop-only">选择行动</h3>
             <div class="action-grid" id="action-grid">
                 <button class="action-btn study" data-action="attend-class">
                     <span class="action-icon">📚</span>
@@ -155,15 +193,15 @@
                     <span class="action-name">科研实习</span>
                     <span class="action-cost">体力 -3, SAN -3</span>
                 </button>
-                <button class="action-btn special" data-action="career" id="btn-career" style="display: none;">
+                <button class="action-btn study special" data-action="career" id="btn-career" style="display: none;">
                     <span class="action-icon">🎯</span>
                     <span class="action-name">长远规划</span>
                     <span class="action-cost">规划未来方向</span>
                 </button>
                 <button class="action-btn life" data-action="eat">
-                    <span class="action-icon">🍜</span>
-                    <span class="action-name">去食堂</span>
-                    <span class="action-cost">金币 -30, SAN +5</span>
+                    <span class="action-icon">🍱</span>
+                    <span class="action-name">改善伙食</span>
+                    <span class="action-cost">金币 -80, SAN +??</span>
                 </button>
                 <button class="action-btn life" data-action="entertainment">
                     <span class="action-icon">🎮</span>
@@ -175,65 +213,47 @@
                     <span class="action-name">去洗澡</span>
                     <span class="action-cost">SAN +8</span>
                 </button>
-                <button class="action-btn special" data-action="love" id="btn-love" title="恋爱模块">
+                <button class="action-btn life special" data-action="love" id="btn-love" title="恋爱模块">
                     <span class="action-icon">❤️</span>
                     <span class="action-name">恋爱</span>
                     <span class="action-cost">解锁条件</span>
                 </button>
-                <button class="action-btn special" data-action="date" id="btn-date" style="display: none;">
+                <button class="action-btn life special" data-action="date" id="btn-date" style="display: none;">
                     <span class="action-icon">💕</span>
                     <span class="action-name">约会</span>
                     <span class="action-cost">金币 -100, SAN +15</span>
                 </button>
-                <button class="action-btn special" data-action="rest">
+                <button class="action-btn life special" data-action="rest">
                     <span class="action-icon">😴</span>
                     <span class="action-name">休息</span>
                     <span class="action-cost">SAN +5</span>
                 </button>
             </div>
         </div>
-
-        </div>
         
-        <!-- 下一回合按钮 -->
-        <div class="turn-control">
+        <!-- 下一回合按钮 (桌面版保留，移动端使用底部固定栏) -->
+        <div class="turn-control desktop-only">
             <button id="btn-next-turn" class="btn btn-primary btn-large">
                 结束本月 ▶
             </button>
         </div>
+        
+        <!-- 移动端底部固定栏 (宽文本按钮) -->
+        <div class="mobile-bottom-bar mobile-only-flex">
+             <button id="btn-next-turn-mobile-text" class="btn btn-primary">
+                结束本月 ▶
+            </button>
+        </div>
 
-        <div id="tab-log" class="tab-content">
-        <!-- 事件日志 -->
-        <div class="event-log" id="event-log">
+        <!-- 事件日志 (桌面) -->
+        <div class="event-log desktop-only" id="event-log">
             <h3>📋 事件记录</h3>
             <div class="log-content" id="log-content">
                 <p class="log-entry">欢迎来到西安交通大学！新的大学生活开始了...</p>
             </div>
         </div>
-        </div>
-        
-        <!-- 移动端底部导航栏 -->
-        <nav class="bottom-nav">
-            <button class="nav-item active" data-tab="tab-dashboard">
-                <span class="nav-icon">📊</span>
-                <span class="nav-label">状态</span>
-            </button>
-            <button class="nav-item" data-tab="tab-campus">
-                <span class="nav-icon">🏫</span>
-                <span class="nav-label">学业</span>
-            </button>
-            <div class="nav-special">
-                <button id="btn-next-turn-mobile" class="btn-fab">▶</button>
-            </div>
-            <button class="nav-item" data-tab="tab-actions">
-                <span class="nav-icon">⚡</span>
-                <span class="nav-label">行动</span>
-            </button>
-            <button class="nav-item" data-tab="tab-log">
-                <span class="nav-icon">📜</span>
-                <span class="nav-label">日志</span>
-            </button>
-        </nav>
+
+        <!-- 移除移动端底部导航栏 nav class="bottom-nav" -->
     </div>
 
     <!-- 选择弹窗 -->
@@ -522,6 +542,19 @@
             <div class="modal-body" id="modal-body"></div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="modal-confirm" onclick="document.getElementById('modal').classList.remove('active')">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动端日志详情弹窗 -->
+    <div id="mobile-log-modal" class="modal">
+        <div class="modal-content" style="max-height: 80vh; display: flex; flex-direction: column;">
+             <div class="modal-header">
+                <h3 class="modal-title">📜 事件记录</h3>
+                <button class="modal-close mobile-log-close">&times;</button>
+            </div>
+            <div class="modal-body" id="mobile-log-body" style="flex: 1; overflow-y: auto; padding: 15px;">
+                <!-- Logs copied here -->
             </div>
         </div>
     </div>
