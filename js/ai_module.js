@@ -6,9 +6,9 @@
 const AIModule = (function() {
     // API 配置
     let API_KEY = null;
-    let API_PROVIDER = 'deepseek'; // 强制使用 deepseek
-    let API_ENDPOINT = 'https://ai.xjtu.edu.cn/api/proxy/api/v1'; // 默认代理地址
-    let API_MODEL = 'deepseek-chat';
+    let API_PROVIDER = 'modelscope'; // 强制使用 modelscope
+    let API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions'; // ModelScope API Inference
+    let API_MODEL = 'deepseek-ai/DeepSeek-V3.2';
 
     // 尝试从全局配置加载
     function loadConfig() {
@@ -41,7 +41,7 @@ const AIModule = (function() {
      */
     function saveUserConfig(key, provider, endpoint) {
         localStorage.setItem('xjtu_ai_key', key);
-        // provider 不再需要保存，固定为 deepseek
+        // provider 不再需要保存，固定为 modelscope
         if (endpoint) localStorage.setItem('xjtu_ai_endpoint', endpoint);
         else localStorage.removeItem('xjtu_ai_endpoint'); // 如果没有提供，移除存储，使用默认
         
@@ -61,35 +61,34 @@ const AIModule = (function() {
     }
     
     // 系统预设 Prompt - 核心人设
-    const SYSTEM_PROMPT = `
-你是一个在西安交通大学（XJTU）待了十年的老学长，语气幽默、毒舌、接地气，但通过字里行间能看出对母校的热爱（所谓"相爱相杀"）。
-你熟悉交大的各种梗，例如：
-- 地点：四大发明广场（腾飞广场）、钱学森图书馆（钱图）、西迁博物馆、康桥苑、梧桐道、东花园、北门小吃街、创新港（涵英楼）、主楼（迷宫）、东南田径场。
-- 书院：彭康（老建筑、氛围浓）、南洋（电路强、学霸多）、仲英（经常得奖）、文治（国学）、崇实（文科）、励志（国防生）、宗濂（医学生）、启德（经金）。
-- 课程：电路（挂科之王）、大学物理、高等数学、工程制图。
-- 梗：小学期（第三学期）、表白墙、刷卡机（滴，下课卡）、抢课（系统崩溃）、体测、猫咪（校园里的流浪猫）、樱花季、梧桐絮（漫天飞舞）。
+    const SYSTEM_PROMPT = `你是一个在西安交通大学（XJTU）待了十年的老学长。你的任务是生成一个随机事件。
 
-你的任务是根据玩家当前的属性状态，动态生成一个发生在月末的随机事件。
+【重要】你必须严格按照以下格式返回，只返回JSON，不要包含任何其他文本：
 
-要求：
-1. **文案风格**：简短精炼（50-100字），像是一个发生在身边的真实小插曲，或者朋友圈的吐槽。
-2. **事件影响**：事件会对玩家属性产生微小影响（GPA, SAN值, 体力, 金钱, 综测）。
-3. **成就关联**：如果事件非常吻合某个特定成就（例如提到"挂科"且玩家真的很惨），可以建议触发成就 ID（可选）。
-4. **输出格式**：必须严格返回纯 JSON 格式字符串，不要包含任何 markdown 标记（如 \`\`\`json）。
-
-JSON 结构示例：
 {
-    "event_text": "你在康桥苑二楼吃着泡馍，突然发现旁边坐着王树国校长...",
+    "event_text": "简短的事件描述（50-100字）",
     "effects": {
-        "gpa": 0,    // 范围 -0.5 到 +0.5
-        "san": 5,    // 范围 -20 到 +20
-        "stamina": 0, // 范围 -20 到 +20
-        "money": -20, // 范围 -500 到 +500
-        "social_score": 0 // 范围 -10 到 +10
+        "gpa": 0,
+        "san": 0,
+        "stamina": 0,
+        "money": 0,
+        "social_score": 0
     },
-    "achievement_id": null // 如果能关联到 data.js 中的成就 ID，则填入字符串 ID，否则 null
+    "achievement_id": null
 }
-`;
+
+【事件类型参考】
+- 学业相关：挂科、高分、缺课被点名等
+- 日常相关：食堂排队、宿舍生活、谈恋爱等
+- 校园活动：学生会、竞赛、演唱会等
+- 校园梗：电路之王、主楼迷宫、表白墙等
+
+【属性范围】
+- gpa: -0.5 到 +0.5
+- san: -20 到 +20（精神值）
+- stamina: -20 到 +20（体力）
+- money: -500 到 +500（金钱）
+- social_score: -10 到 +10（社交分）`;
 
     /**
      * 设置 API Key
@@ -191,13 +190,29 @@ JSON 结构示例：
             }
             const data = await response.json();
             const content = data.choices[0].message.content;
-            // 清理可能的 markdown 标记
-            const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            responseData = JSON.parse(jsonStr);
+            
+            // 清理内容：移除markdown标记和多余空白
+            let jsonStr = content.trim();
+            jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            // 如果内容中包含多个JSON对象，提取第一个完整的JSON
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                jsonStr = jsonMatch[0];
+            }
+            
+            // 解析JSON
+            try {
+                responseData = JSON.parse(jsonStr);
+            } catch (parseError) {
+                console.error("JSON Parse Error. Raw content:", content);
+                console.error("Cleaned JSON:", jsonStr);
+                throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
+            }
 
             // 基础校验
             if (!responseData || !responseData.event_text) {
-                throw new Error("Invalid AI Response format");
+                throw new Error("Invalid AI Response format: missing event_text");
             }
 
             return responseData;
@@ -251,7 +266,7 @@ JSON 结构示例：
         }
 
         return {
-            title: "🔮 命运的随机波动 (AI)",
+            title: "🔮 命运的随机波动",
             description: aiEventData.event_text,
             effects: changes,
             isAI: true

@@ -1,6 +1,6 @@
 window.GAME_CONFIG = {
     AI_PROVIDER: 'deepseek',
-    API_KEY: 'YOUR_API_KEY_HERE',
-    API_ENDPOINT: 'https://api.deepseek.com/chat/completions',
+    API_KEY: '',
+    API_ENDPOINT: '',
     AI_MODEL: 'deepseek-chat'
 };

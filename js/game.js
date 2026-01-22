@@ -213,8 +213,8 @@ class XJTUSimulator {
                 const endpoint = endpointElem ? endpointElem.value : '';
                 
                 if (key) {
-                    // 保存到 AI 模块，provider 固定为 deepseek
-                    AIModule.saveUserConfig(key, 'deepseek', endpoint);
+                    // 保存到 AI 模块，provider 固定为 modelscope
+                    AIModule.saveUserConfig(key, 'modelscope', endpoint);
                     // 显示提示
                     this.showMessage('设置已保存', '配置已更新，将在下次请求时生效。');
                     this.hideModal('settings-modal');
@@ -2479,7 +2479,6 @@ class XJTUSimulator {
             // 这里为了演示，只要有 Key 就尝试调，或者可以配合 RandomEventManager 混合使用
             if (config.key && Math.random() < 0.4) { 
                 console.log('Attempting AI Event Generation...');
-                this.showMessage('AI正在思考...', '正在生成本月随机事件，请稍候...');
                 const aiResult = await AIModule.fetchAIEvent();
                 console.log('AI Result:', aiResult);
                 
@@ -2487,8 +2486,8 @@ class XJTUSimulator {
                     // 构造符合游戏事件格式的对象
                     aiEvent = {
                         id: `ai_${Date.now()}`,
-                        name: '校园奇遇 (AI)',
-                        icon: '🤖',
+                        name: '校园随机事件',
+                        icon: '🌟',
                         description: aiResult.event_text,
                         options: [
                             {
@@ -2497,13 +2496,10 @@ class XJTUSimulator {
                             }
                         ]
                     };
-                    // 关闭等待提示
-                    this.hideModal('modal'); 
                 }
             }
         } catch (e) {
             console.warn('AI通过API生成事件失败，回退到本地事件库:', e);
-            this.hideModal('modal'); // 确保关闭等待提示
         }
 
         if (aiEvent) {
@@ -2520,6 +2516,44 @@ class XJTUSimulator {
 
         // 继续正常流程
         this.continueNextTurn();
+    }
+    
+    // 学期结束触发回顾事件（使用AI生成，但对玩家隐藏来源）
+    async triggerSemesterEndAIEvent() {
+        try {
+            const config = AIModule.getCurrentConfig();
+            if (!config.key) {
+                console.log('未配置AI Key，跳过学期结束回顾');
+                return;
+            }
+            
+            const semesterName = this.state.month === 1 ? '秋季学期' : '春季学期';
+            console.log(`学期结束：触发${semesterName}回顾事件`);
+            const aiResult = await AIModule.fetchAIEvent();
+            console.log('学期结束事件结果:', aiResult);
+            
+            if (aiResult) {
+                // 构造符合游戏事件格式的对象
+                const aiEvent = {
+                    id: `ai_semester_end_${Date.now()}`,
+                    name: `${semesterName}回顾`,
+                    icon: '📘',
+                    description: aiResult.event_text,
+                    options: [
+                        {
+                            text: '继续前进',
+                            effects: aiResult.effects
+                        }
+                    ]
+                };
+                // 显示事件
+                this.showRandomEventModal(aiEvent);
+            } else {
+                console.log('事件生成失败，继续游戏');
+            }
+        } catch (e) {
+            console.warn('学期结束事件生成失败:', e);
+        }
     }
     
     // 显示月末随机事件弹窗
@@ -2548,14 +2582,15 @@ class XJTUSimulator {
             btn.className = 'event-option-btn';
             
             // 生成效果提示
+            const effects = option.effects || {};
             const hints = [];
-            if (option.effects.money) hints.push(`金币${option.effects.money > 0 ? '+' : ''}${option.effects.money}`);
-            if (option.effects.san) hints.push(`SAN${option.effects.san > 0 ? '+' : ''}${option.effects.san}`);
-            if (option.effects.energy) hints.push(`体力${option.effects.energy > 0 ? '+' : ''}${option.effects.energy}`);
-            if (option.effects.social) hints.push(`综测${option.effects.social > 0 ? '+' : ''}${option.effects.social}`);
+            if (effects.money) hints.push(`金币${effects.money > 0 ? '+' : ''}${effects.money}`);
+            if (effects.san) hints.push(`SAN${effects.san > 0 ? '+' : ''}${effects.san}`);
+            if (effects.energy) hints.push(`体力${effects.energy > 0 ? '+' : ''}${effects.energy}`);
+            if (effects.social) hints.push(`综测${effects.social > 0 ? '+' : ''}${effects.social}`);
             
             btn.innerHTML = `
-                <div class="event-option-icon">${option.icon}</div>
+                <div class="event-option-icon">${option.icon || '👉'}</div>
                 <div class="event-option-content">
                     <div class="event-option-text">${option.text}</div>
                     <div class="event-option-hint">${hints.join(' | ') || '无明显影响'}</div>
@@ -2819,6 +2854,8 @@ class XJTUSimulator {
         // 检查期末考试
         if (this.state.month === 1 || this.state.month === 6) {
             this.doExam();
+            // 学期结束后强制触发AI随机事件
+            setTimeout(() => this.triggerSemesterEndAIEvent(), 1000);
         }
         
         // 考试周前一个月进行强化提示和选项
