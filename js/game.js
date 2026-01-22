@@ -91,6 +91,8 @@ class XJTUSimulator {
         const btnToggleCourses = document.getElementById('btn-toggle-courses');
         const courseList = document.getElementById('course-list');
         if (btnToggleCourses && courseList) {
+            // 初始化按钮文案：根据当前是否可见设置为 ▲/▼
+            btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
             btnToggleCourses.addEventListener('click', () => {
                 courseList.classList.toggle('visible');
                 btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
