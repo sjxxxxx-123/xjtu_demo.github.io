@@ -205,21 +205,28 @@ class XJTUSimulator {
         const settingsSave = document.getElementById('settings-save');
         if (settingsSave) {
             settingsSave.addEventListener('click', () => {
-                // 移除 provider 选择
                 const keyElem = document.getElementById('setting-api-key');
                 const endpointElem = document.getElementById('setting-endpoint');
                 
-                const key = keyElem ? keyElem.value : '';
-                const endpoint = endpointElem ? endpointElem.value : '';
+                const key = keyElem ? keyElem.value.trim() : '';
+                const endpoint = endpointElem ? endpointElem.value.trim() : '';
                 
-                if (key) {
+                if (key !== '') {
                     // 保存到 AI 模块，provider 固定为 modelscope
                     AIModule.saveUserConfig(key, 'modelscope', endpoint);
-                    // 显示提示
-                    this.showMessage('设置已保存', '配置已更新，将在下次请求时生效。');
+                    
+                    // 验证配置是否保存成功
+                    const savedConfig = AIModule.getCurrentConfig();
+                    console.log('✅ AI配置已保存:', { hasKey: !!savedConfig.key, endpoint: savedConfig.endpoint });
+                    
+                    if (savedConfig.key) {
+                        this.showMessage('设置已保存', `✅ API密钥已配置并立即生效\n当前模型: ${AIModule.getCurrentModel()}\n点击"结束本月"即可触发AI事件`);
+                    } else {
+                        this.showMessage('保存失败', '❌ 配置保存失败，请检查后重试');
+                    }
                     this.hideModal('settings-modal');
                 } else {
-                    alert('请输入 API Key');
+                    this.showMessage('输入错误', '⚠️ 请输入有效的 API Key');
                 }
             });
         }
@@ -291,9 +298,22 @@ class XJTUSimulator {
     showSettingsModal() {
         // 读取当前配置回显
         const config = AIModule.getCurrentConfig();
-        // 移除 provider 回显
-        document.getElementById('setting-api-key').value = config.key || '';
-        document.getElementById('setting-endpoint').value = config.endpoint || '';
+        const keyInput = document.getElementById('setting-api-key');
+        const endpointInput = document.getElementById('setting-endpoint');
+        
+        if (keyInput) {
+            keyInput.value = config.key || '';
+            keyInput.placeholder = config.key ? '已配置密钥' : '请输入你的 API Key';
+        }
+        if (endpointInput) {
+            endpointInput.value = config.endpoint || '';
+        }
+        
+        console.log('🔍 当前配置状态:', { 
+            hasKey: !!config.key, 
+            endpoint: config.endpoint,
+            model: AIModule.getCurrentModel()
+        });
         
         this.showModal('settings-modal');
     }
@@ -2475,12 +2495,14 @@ class XJTUSimulator {
         let aiEvent = null;
         try {
             const config = AIModule.getCurrentConfig();
+            console.log('AI配置检查:', { hasKey: !!config.key, provider: config.provider, endpoint: config.endpoint });
+            
             // 只要有 Key 每月必触发一次生成
             if (config.key) { 
-                console.log('Attempting AI Event Generation...');
+                console.log('开始AI事件生成，当前模型:', AIModule.getCurrentModel());
                 this.showMessage('命运的齿轮正在转动...', '等通知是西交每个学子必备的技能');
                 const aiResult = await AIModule.fetchAIEvent();
-                console.log('AI Result:', aiResult);
+                console.log('AI生成结果:', aiResult);
                 
                 if (aiResult) {
                     // 构造符合游戏事件格式的对象

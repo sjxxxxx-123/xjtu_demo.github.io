@@ -55,12 +55,25 @@ const AIModule = (function() {
      */
     function saveUserConfig(key, provider, endpoint) {
         localStorage.setItem('xjtu_ai_key', key);
-        // provider 不再需要保存，固定为 modelscope
-        if (endpoint) localStorage.setItem('xjtu_ai_endpoint', endpoint);
-        else localStorage.removeItem('xjtu_ai_endpoint'); // 如果没有提供，移除存储，使用默认
         
-        // 重新加载
-        loadConfig();
+        // 立即更新内存中的API_KEY
+        API_KEY = key;
+        
+        // 处理endpoint：如果用户提供了非空endpoint则使用，否则使用默认值
+        if (endpoint && endpoint.trim() !== '') {
+            localStorage.setItem('xjtu_ai_endpoint', endpoint);
+            API_ENDPOINT = endpoint;
+        } else {
+            localStorage.removeItem('xjtu_ai_endpoint');
+            // 确保使用默认endpoint
+            API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions';
+        }
+        
+        console.log('AI配置已保存并立即生效:', { 
+            hasKey: !!API_KEY, 
+            endpoint: API_ENDPOINT,
+            model: API_MODEL 
+        });
     }
     
     /**
