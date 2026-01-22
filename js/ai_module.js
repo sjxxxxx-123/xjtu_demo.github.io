@@ -8,7 +8,21 @@ const AIModule = (function() {
     let API_KEY = null;
     let API_PROVIDER = 'modelscope'; // 强制使用 modelscope
     let API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions'; // ModelScope API Inference
-    let API_MODEL = 'deepseek-ai/DeepSeek-V3.2';
+    
+    // 多模型配置列表
+    const AVAILABLE_MODELS = [
+        'deepseek-ai/DeepSeek-V3.2',
+        'Qwen/Qwen2.5-72B-Instruct',
+        'Qwen/Qwen2.5-32B-Instruct',
+        'Qwen/Qwen2.5-14B-Instruct',
+        'Qwen/Qwen2.5-7B-Instruct'
+    ];
+    
+    let currentModelIndex = 0;
+    let API_MODEL = AVAILABLE_MODELS[currentModelIndex];
+    
+    // 模型失败记录（避免频繁重试同一个失败的模型）
+    const modelFailureTime = {};
 
     // 尝试从全局配置加载
     function loadConfig() {
@@ -48,6 +62,41 @@ const AIModule = (function() {
         // 重新加载
         loadConfig();
     }
+    
+    /**
+     * 切换到下一个可用模型
+     */
+    function switchToNextModel() {
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+        
+        // 找到下一个未在最近1小时内失败的模型
+        let attempts = 0;
+        while (attempts < AVAILABLE_MODELS.length) {
+            currentModelIndex = (currentModelIndex + 1) % AVAILABLE_MODELS.length;
+            const model = AVAILABLE_MODELS[currentModelIndex];
+            
+            // 如果这个模型最近1小时内没有失败，或者已经是最后一个选择了
+            if (!modelFailureTime[model] || (now - modelFailureTime[model]) > oneHour || attempts === AVAILABLE_MODELS.length - 1) {
+                API_MODEL = model;
+                console.log(`已切换到模型: ${API_MODEL}`);
+                return API_MODEL;
+            }
+            attempts++;
+        }
+        
+        // 如果所有模型都在1小时内失败过，使用当前索引的模型（重试）
+        API_MODEL = AVAILABLE_MODELS[currentModelIndex];
+        return API_MODEL;
+    }
+    
+    /**
+     * 标记模型失败
+     */
+    function markModelFailure(model, error) {
+        modelFailureTime[model] = Date.now();
+        console.warn(`模型 ${model} 失败:`, error);
+    }
 
     /**
      * 获取当前配置
@@ -62,6 +111,12 @@ const AIModule = (function() {
     
     // 系统预设 Prompt - 核心人设
     const SYSTEM_PROMPT = `你是一个在西安交通大学（XJTU）待了十年的老学长。你的任务是生成一个随机事件。
+
+【个性化要求】
+- 结合玩家的年级、月份、书院、GPA、SAN、金钱、精力等信息，生成贴合处境的事件。
+- 大一偏萌新/社团拉新/迷路；高年级偏竞赛、实习、毕设、保研/出国/工作抉择。
+- 不同书院要体现气质：南洋(工科实验)、文治(人文)、仲英(志愿)、启德(经金)、钱学森(学霸科研)。
+- 语气自然像真实校园插曲，不要模板化重复句式。
 
 【重要】你必须严格按照以下格式返回，只返回JSON，不要包含任何其他文本：
 
@@ -150,7 +205,7 @@ const AIModule = (function() {
      * B. 异步 API 调用函数
      * 获取 AI 生成的随机事件
      */
-    async function fetchAIEvent() {
+    async function fetchAIEvent(retryCount = 0) {
         // 再次尝试加载配置（防止初始化时没有，后来用户设置了）
         if (!API_KEY) loadConfig();
 
@@ -162,9 +217,12 @@ const AIModule = (function() {
 
         const stateSummary = getGameStateSummary();
         const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}`;
+        const maxRetries = AVAILABLE_MODELS.length;
 
         try {
             let responseData;
+            
+            console.log(`正在使用模型 ${API_MODEL} 生成事件...`);
             
             // 统一使用 OpenAI 格式 (DeepSeek 兼容)
             const response = await fetch(API_ENDPOINT, {
@@ -186,6 +244,28 @@ const AIModule = (function() {
 
             if (!response.ok) {
                 const errText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errText);
+                } catch (e) {
+                    errorData = { message: errText };
+                }
+                
+                // 检测配额限制错误
+                const isQuotaError = errText.includes('quota') || 
+                                   errText.includes('exceeded') || 
+                                   errText.includes('limit') ||
+                                   (errorData.errors && errorData.errors.message && 
+                                    errorData.errors.message.includes('quota'));
+                
+                if (isQuotaError && retryCount < maxRetries) {
+                    console.warn(`模型 ${API_MODEL} 配额已用完，尝试切换到其他模型...`);
+                    markModelFailure(API_MODEL, '配额限制');
+                    switchToNextModel();
+                    // 递归重试
+                    return await fetchAIEvent(retryCount + 1);
+                }
+                
                 throw new Error(`API Error: ${response.status} - ${errText}`);
             }
             const data = await response.json();
@@ -200,6 +280,11 @@ const AIModule = (function() {
             if (jsonMatch) {
                 jsonStr = jsonMatch[0];
             }
+            
+            // 移除JSON中数字前的正号（JSON标准不允许 +5 这种格式，只能是 5）
+            // 匹配模式：冒号或逗号后面跟着空白字符和正号，然后是数字
+            jsonStr = jsonStr.replace(/:\s*\+(\d)/g, ': $1');  // "key": +5 -> "key": 5
+            jsonStr = jsonStr.replace(/,\s*\+(\d)/g, ', $1');  // , +5 -> , 5
             
             // 解析JSON
             try {
@@ -251,6 +336,10 @@ const AIModule = (function() {
             window.gameState.money += effects.money;
             changes.push(`金钱 ${effects.money > 0 ? '+' : ''}${effects.money}`);
         }
+        if (effects.social_score) {
+            window.gameState.social = Math.max(0, Math.min(100, (window.gameState.social || 0) + effects.social_score));
+            changes.push(`综测 ${effects.social_score > 0 ? '+' : ''}${effects.social_score}`);
+        }
         
         // 2. 更新 UI (假设 game.js 有 updateUI 函数)
         if (typeof updateUI === 'function') {
@@ -266,7 +355,7 @@ const AIModule = (function() {
         }
 
         return {
-            title: "🔮 命运的随机波动",
+            title: "命运的随机波动",
             description: aiEventData.event_text,
             effects: changes,
             isAI: true
@@ -280,7 +369,20 @@ const AIModule = (function() {
         fetchAIEvent,
         applyAIEvent,
         saveUserConfig,
-        getCurrentConfig
+        getCurrentConfig,
+        switchToNextModel,
+        getCurrentModel: () => API_MODEL,
+        getAvailableModels: () => AVAILABLE_MODELS,
+        setModel: (modelName) => {
+            const index = AVAILABLE_MODELS.indexOf(modelName);
+            if (index !== -1) {
+                currentModelIndex = index;
+                API_MODEL = modelName;
+                console.log(`手动切换到模型: ${API_MODEL}`);
+                return true;
+            }
+            return false;
+        }
     };
 })();
 

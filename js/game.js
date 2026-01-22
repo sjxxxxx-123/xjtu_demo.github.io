@@ -2475,10 +2475,10 @@ class XJTUSimulator {
         let aiEvent = null;
         try {
             const config = AIModule.getCurrentConfig();
-            // 只有当配置了 Key 且随机概率满足时(例如 30%) 尝试调用 AI
-            // 这里为了演示，只要有 Key 就尝试调，或者可以配合 RandomEventManager 混合使用
-            if (config.key && Math.random() < 0.4) { 
+            // 只要有 Key 每月必触发一次生成
+            if (config.key) { 
                 console.log('Attempting AI Event Generation...');
+                this.showMessage('命运的齿轮正在转动...', '等通知是西交每个学子必备的技能');
                 const aiResult = await AIModule.fetchAIEvent();
                 console.log('AI Result:', aiResult);
                 
@@ -2486,13 +2486,14 @@ class XJTUSimulator {
                     // 构造符合游戏事件格式的对象
                     aiEvent = {
                         id: `ai_${Date.now()}`,
-                        name: '校园随机事件',
-                        icon: '🌟',
+                        name: '命运的随机波动',
+                        icon: '🔮',
                         description: aiResult.event_text,
                         options: [
                             {
                                 text: '我知道了',
-                                effects: aiResult.effects
+                                effects: aiResult.effects,
+                                icon: '👍'
                             }
                         ]
                     };
@@ -2500,6 +2501,8 @@ class XJTUSimulator {
             }
         } catch (e) {
             console.warn('AI通过API生成事件失败，回退到本地事件库:', e);
+        } finally {
+            this.hideModal('modal');
         }
 
         if (aiEvent) {
@@ -2529,6 +2532,8 @@ class XJTUSimulator {
             
             const semesterName = this.state.month === 1 ? '秋季学期' : '春季学期';
             console.log(`学期结束：触发${semesterName}回顾事件`);
+            // 通用加载提示（不暴露AI）
+            this.showMessage('命运的齿轮正在转动...', '等通知是西交每个学子必备的技能');
             const aiResult = await AIModule.fetchAIEvent();
             console.log('学期结束事件结果:', aiResult);
             
@@ -2542,7 +2547,8 @@ class XJTUSimulator {
                     options: [
                         {
                             text: '继续前进',
-                            effects: aiResult.effects
+                            effects: aiResult.effects,
+                            icon: '👍'
                         }
                     ]
                 };
@@ -2553,6 +2559,8 @@ class XJTUSimulator {
             }
         } catch (e) {
             console.warn('学期结束事件生成失败:', e);
+        } finally {
+            this.hideModal('modal');
         }
     }
     
