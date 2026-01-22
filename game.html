@@ -499,27 +499,17 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">API Key</label>
-                    <input type="password" id="setting-api-key" placeholder="请输入你的 API Key" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
-                    <p style="font-size:0.8rem; color:#666; margin-top:5px;">
+                    <input type="password" id="setting-api-key" placeholder="请输入你的 API Key" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; margin-bottom: 10px;">
+                    <button class="btn btn-primary" id="test-api-key" style="width:100%; padding:8px; background:#003E7E; color:white; border:none; border-radius:4px; cursor:pointer;">应用密钥</button>
+                    <p id="api-test-result" style="font-size:0.9rem; margin-top:10px; padding:8px; border-radius:4px; display:none;"></p>
+                    <p style="font-size:0.8rem; color:#666; margin-top:10px;">
                         * Key 仅存储在本地浏览器中，不会上传服务器。<br>
                         * 可以在本地 config.js 中配置，也可以在此处输入。
                     </p>
                 </div>
-                <!-- 隐藏的高级设置（折叠） -->
-                <div style="margin-bottom: 10px;">
-                    <a href="#" onclick="document.getElementById('advanced-settings').style.display = document.getElementById('advanced-settings').style.display === 'none' ? 'block' : 'none'; return false;" style="font-size: 0.85rem; color: #666; text-decoration: underline;">
-                        高级设置（自定义 Endpoint）
-                    </a>
-                </div>
-                <div id="advanced-settings" style="display:none;">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">API Endpoint</label>
-                        <input type="text" id="setting-endpoint" placeholder="https://ai.xjtu.edu.cn/api/proxy/api/v1" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc;">
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="settings-save">保存配置</button>
+                <button class="btn btn-secondary" id="settings-close-btn">关闭</button>
             </div>
         </div>
     </div>

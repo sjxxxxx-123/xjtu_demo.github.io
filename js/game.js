@@ -202,33 +202,76 @@ class XJTUSimulator {
         const settingsClose = document.getElementById('settings-close');
         if (settingsClose) settingsClose.addEventListener('click', () => this.hideModal('settings-modal'));
         
-        const settingsSave = document.getElementById('settings-save');
-        if (settingsSave) {
-            settingsSave.addEventListener('click', () => {
+        const settingsCloseBtn = document.getElementById('settings-close-btn');
+        if (settingsCloseBtn) settingsCloseBtn.addEventListener('click', () => this.hideModal('settings-modal'));
+        
+        // 应用密钥按钮 - 测试API连接
+        const testApiKeyBtn = document.getElementById('test-api-key');
+        if (testApiKeyBtn) {
+            testApiKeyBtn.addEventListener('click', async () => {
                 const keyElem = document.getElementById('setting-api-key');
-                const endpointElem = document.getElementById('setting-endpoint');
+                const resultElem = document.getElementById('api-test-result');
                 
                 const key = keyElem ? keyElem.value.trim() : '';
-                const endpoint = endpointElem ? endpointElem.value.trim() : '';
                 
-                if (key !== '') {
-                    // 保存到 AI 模块，provider 固定为 modelscope
-                    AIModule.saveUserConfig(key, 'modelscope', endpoint);
-                    
-                    // 验证配置是否保存成功
-                    const savedConfig = AIModule.getCurrentConfig();
-                    console.log('✅ AI配置已保存:', { hasKey: !!savedConfig.key, endpoint: savedConfig.endpoint });
-                    
-                    if (savedConfig.key) {
-                        this.showMessage('设置已保存', `✅ API密钥已配置并立即生效\n当前模型: ${AIModule.getCurrentModel()}\n点击"结束本月"即可触发AI事件`);
-                    } else {
-                        this.showMessage('保存失败', '❌ 配置保存失败，请检查后重试');
+                if (key === '') {
+                    if (resultElem) {
+                        resultElem.style.display = 'block';
+                        resultElem.style.background = '#fff3cd';
+                        resultElem.style.color = '#856404';
+                        resultElem.textContent = '⚠️ 请输入有效的 API Key';
                     }
-                    this.hideModal('settings-modal');
-                } else {
-                    this.showMessage('输入错误', '⚠️ 请输入有效的 API Key');
+                    return;
+                }
+                
+                // 显示测试中状态
+                testApiKeyBtn.disabled = true;
+                testApiKeyBtn.textContent = '测试中...';
+                if (resultElem) {
+                    resultElem.style.display = 'block';
+                    resultElem.style.background = '#e7f3ff';
+                    resultElem.style.color = '#004085';
+                    resultElem.textContent = '⏳ 正在测试API连接...';
+                }
+                
+                try {
+                    // 保存配置
+                    AIModule.saveUserConfig(key, 'modelscope', '');
+                    
+                    // 测试API调用（支持模型轮询）
+                    const testResult = await this.testAIConnection();
+                    
+                    if (testResult.success) {
+                        if (resultElem) {
+                            resultElem.style.background = '#d4edda';
+                            resultElem.style.color = '#155724';
+                            resultElem.textContent = `✅ API密钥验证成功！\n可用模型: ${testResult.model || AIModule.getCurrentModel()}\n现在可以使用AI生成事件了`;
+                        }
+                    } else {
+                        if (resultElem) {
+                            resultElem.style.background = '#f8d7da';
+                            resultElem.style.color = '#721c24';
+                            resultElem.textContent = `❌ API调用失败: ${testResult.error}\n请检查密钥是否正确或稍后重试`;
+                        }
+                    }
+                } catch (error) {
+                    if (resultElem) {
+                        resultElem.style.background = '#f8d7da';
+                        resultElem.style.color = '#721c24';
+                        resultElem.textContent = `❌ 测试出错: ${error.message}`;
+                    }
+                } finally {
+                    testApiKeyBtn.disabled = false;
+                    testApiKeyBtn.textContent = '应用密钥';
                 }
             });
+        }
+        
+        // 删除原来的保存配置按钮逻辑（已被应用密钥按钮取代）
+        const settingsSave = document.getElementById('settings-save');
+        if (settingsSave) {
+            // 移除旧按钮的事件监听器
+            settingsSave.remove();
         }
 
         const examConfirm = document.getElementById('exam-confirm');
@@ -299,14 +342,16 @@ class XJTUSimulator {
         // 读取当前配置回显
         const config = AIModule.getCurrentConfig();
         const keyInput = document.getElementById('setting-api-key');
-        const endpointInput = document.getElementById('setting-endpoint');
         
         if (keyInput) {
             keyInput.value = config.key || '';
             keyInput.placeholder = config.key ? '已配置密钥' : '请输入你的 API Key';
         }
-        if (endpointInput) {
-            endpointInput.value = config.endpoint || '';
+        
+        // 隐藏测试结果
+        const resultElem = document.getElementById('api-test-result');
+        if (resultElem) {
+            resultElem.style.display = 'none';
         }
         
         console.log('🔍 当前配置状态:', { 
@@ -316,6 +361,74 @@ class XJTUSimulator {
         });
         
         this.showModal('settings-modal');
+    }
+
+    // 测试AI连接（支持模型轮询）
+    async testAIConnection(retryCount = 0) {
+        try {
+            const config = AIModule.getCurrentConfig();
+            if (!config.key) {
+                return { success: false, error: '未配置API密钥' };
+            }
+            
+            const maxRetries = AIModule.getAvailableModels().length;
+            const currentModel = AIModule.getCurrentModel();
+            
+            console.log(`测试API连接 (尝试 ${retryCount + 1}/${maxRetries})，当前模型: ${currentModel}`);
+            
+            // 调用AI模块进行简单测试
+            const response = await fetch(config.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.key}`
+                },
+                body: JSON.stringify({
+                    model: currentModel,
+                    messages: [
+                        { role: "user", content: "hi" }
+                    ],
+                    max_tokens: 5
+                })
+            });
+            
+            if (!response.ok) {
+                const errText = await response.text();
+                let errorMsg = `HTTP ${response.status}`;
+                let errorData;
+                
+                try {
+                    errorData = JSON.parse(errText);
+                    if (errorData.errors && errorData.errors.message) {
+                        errorMsg = errorData.errors.message;
+                    } else if (errorData.error && errorData.error.message) {
+                        errorMsg = errorData.error.message;
+                    }
+                } catch (e) {
+                    errorMsg = errText.substring(0, 100);
+                }
+                
+                // 检测配额限制错误
+                const isQuotaError = errText.includes('quota') || 
+                                   errText.includes('exceeded') || 
+                                   errText.includes('limit') ||
+                                   (errorData && errorData.errors && errorData.errors.message && 
+                                    errorData.errors.message.includes('quota'));
+                
+                if (isQuotaError && retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${currentModel} 配额已用完，尝试切换模型...`);
+                    AIModule.switchToNextModel();
+                    // 递归重试
+                    return await this.testAIConnection(retryCount + 1);
+                }
+                
+                return { success: false, error: errorMsg };
+            }
+            
+            return { success: true, model: currentModel };
+        } catch (error) {
+            return { success: false, error: error.message || '网络连接失败' };
+        }
     }
 
     // 初始化游戏状态
