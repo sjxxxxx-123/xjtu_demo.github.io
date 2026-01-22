@@ -79,17 +79,21 @@ class XJTUSimulator {
         const btnNextTurn = document.getElementById('btn-next-turn');
         if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
 
-        // 移动端底部宽按钮
+        // 移动端结束本月按钮
+        const btnNextTurnMobile = document.getElementById('btn-next-turn-mobile');
+        if (btnNextTurnMobile) btnNextTurnMobile.addEventListener('click', () => this.nextTurn());
+
+        // 移动端底部宽按钮（已弃用，保留兼容性）
         const btnNextTurnMobileText = document.getElementById('btn-next-turn-mobile-text');
         if (btnNextTurnMobileText) btnNextTurnMobileText.addEventListener('click', () => this.nextTurn());
 
         // 移动端课程面板折叠
-        const btnToggleCourse = document.getElementById('btn-toggle-course');
+        const btnToggleCourses = document.getElementById('btn-toggle-courses');
         const courseList = document.getElementById('course-list');
-        if (btnToggleCourse && courseList) {
-            btnToggleCourse.addEventListener('click', () => {
+        if (btnToggleCourses && courseList) {
+            btnToggleCourses.addEventListener('click', () => {
                 courseList.classList.toggle('visible');
-                btnToggleCourse.textContent = courseList.classList.contains('visible') ? '折叠 ▲' : '展开 ▼';
+                btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
             });
         }
 

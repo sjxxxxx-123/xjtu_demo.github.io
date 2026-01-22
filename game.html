@@ -124,8 +124,7 @@
         <!-- 课程掌握度面板 -->
         <div class="course-panel" id="course-panel">
             <div class="panel-header-mobile-toggle">
-                <h3>📖 当前课程</h3>
-            </div>
+                <h3>📖 当前课程</h3>                <button class="btn-text" id="btn-toggle-courses">퀏</button>            </div>
             <div class="course-list" id="course-list">
                 <!-- 动态生成 -->
             </div>
@@ -233,6 +232,13 @@
         <!-- 下一回合按钮：桌面端保留 -->
         <div class="turn-control desktop-only">
             <button id="btn-next-turn" class="btn btn-primary btn-large">
+                结束本月 ▶
+            </button>
+        </div>
+
+        <!-- 移动端结束本月按钮 -->
+        <div class="mobile-only-block" style="margin: 10px; display: block;">
+            <button id="btn-next-turn-mobile" class="btn btn-primary btn-large" style="width: 100%;">
                 结束本月 ▶
             </button>
         </div>
