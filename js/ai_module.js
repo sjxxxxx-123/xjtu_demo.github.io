@@ -132,6 +132,10 @@ const AIModule = (function() {
 - 不同书院要体现气质：南洋(工科实验)、文治(人文)、仲英(志愿)、启德(经金)、钱学森(学霸科研)。
 - 语气自然像真实校园插曲，不要模板化重复句式。
 
+【强相关性约束】
+- 事件中的人物、地点、社团、称谓必须与玩家当前的书院/背景/校区/最近行动强相关，不得凭空出现无关书院或陌生角色。
+- 如玩家开启新档或更换书院，只依据当前输入的角色信息生成事件，禁止引用旧存档或上一位角色的元素。
+
 【重要】你必须严格按照以下格式返回，只返回JSON，不要包含任何其他文本：
 
 {
@@ -182,10 +186,17 @@ const AIModule = (function() {
         const state = (window.game && window.game.state) ? window.game.state : null;
         if (!state) return "大萌新一个，刚刚入学。";
 
+        const backgroundInfo = (window.GameData && window.GameData.backgrounds) ? window.GameData.backgrounds[state.background] : null;
+        const collegeInfo = (window.GameData && window.GameData.colleges) ? window.GameData.colleges[state.college] : null;
+        const backgroundName = (backgroundInfo && backgroundInfo.name) ? backgroundInfo.name : (state.background || '未知背景');
+        const collegeName = (collegeInfo && collegeInfo.name) ? collegeInfo.name : (state.college || '未知书院');
+        const campusName = (collegeInfo && collegeInfo.campus) ? collegeInfo.campus : (state.campus || '未知校区');
+        const stateSignature = `${backgroundName}|${collegeName}|year${state.year}|month${state.month}|total${state.totalMonths || 0}`;
+
         const yearMap = { 1: "大一", 2: "大二", 3: "大三", 4: "大四" };
         const month = state.month;
         const year = yearMap[state.year] || "大四+";
-        const college = state.college || "未知书院";
+        const college = collegeName;
         
         // 评价 GPA
         let gpaDesc = "一般";
@@ -208,11 +219,12 @@ const AIModule = (function() {
         ];
         
         // 组合描述
-        return `玩家当前是${year}学生，就读于${college}。目前是${month}月。
+        return `玩家当前是${year}学生，就读于${college}（校区：${campusName}），背景：${backgroundName}。目前是${month}月。
         学业状况：GPA ${state.gpa.toFixed(2)} (${gpaDesc})。
         精神状态：SAN值 ${state.san} (${sanDesc})。
         金钱：${state.money}元。
-        状态：${recentActions[recentActionIdx]}。`;
+        状态：${recentActions[recentActionIdx]}。
+        当前存档签名：${stateSignature}（仅围绕此角色生成事件，禁止引用其他角色或旧存档）。`;
     }
 
     /**
@@ -230,7 +242,14 @@ const AIModule = (function() {
         }
 
         const stateSummary = getGameStateSummary();
-        const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}`;
+        const currentState = (window.game && window.game.state) ? window.game.state : null;
+        const backgroundInfo = (window.GameData && window.GameData.backgrounds && currentState) ? window.GameData.backgrounds[currentState.background] : null;
+        const collegeInfo = (window.GameData && window.GameData.colleges && currentState) ? window.GameData.colleges[currentState.college] : null;
+        const backgroundName = backgroundInfo && backgroundInfo.name ? backgroundInfo.name : (currentState ? currentState.background : '未知背景');
+        const collegeName = collegeInfo && collegeInfo.name ? collegeInfo.name : (currentState ? currentState.college : '未知书院');
+        const stateSignature = currentState ? `${backgroundName}|${collegeName}|year${currentState.year}|month${currentState.month}|total${currentState.totalMonths || 0}` : 'unknown';
+
+        const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}\n【关联性提醒】当前角色：背景=${backgroundName}，书院=${collegeName}，存档签名=${stateSignature}。事件涉及的角色/元素必须与该角色强相关，严禁混入其他书院或旧存档角色。`;
         const maxRetries = AVAILABLE_MODELS.length;
 
         try {

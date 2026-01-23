@@ -92,11 +92,28 @@ class XJTUSimulator {
         const btnToggleCourses = document.getElementById('btn-toggle-courses');
         const courseList = document.getElementById('course-list');
         if (btnToggleCourses && courseList) {
-            // 初始化按钮文案：根据当前是否可见设置为 ▲/▼
-            btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
+            const applyLayout = () => {
+                const isMobile = window.innerWidth <= 900; // 仅移动端显示折叠按钮
+                if (!isMobile) {
+                    btnToggleCourses.style.display = 'none';
+                    courseList.classList.add('visible');
+                    courseList.style.display = 'block'; // 桌面端强制显示课程列表
+                } else {
+                    btnToggleCourses.style.display = '';
+                    btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
+                    // 移动端根据可见性切换 display，避免默认隐藏后无法恢复
+                    courseList.style.display = courseList.classList.contains('visible') ? 'block' : 'none';
+                }
+            };
+
+            applyLayout();
+            window.addEventListener('resize', applyLayout);
+
             btnToggleCourses.addEventListener('click', () => {
+                if (window.innerWidth > 900) return; // 桌面端不需要折叠
                 courseList.classList.toggle('visible');
                 btnToggleCourses.textContent = courseList.classList.contains('visible') ? '▲' : '▼';
+                courseList.style.display = courseList.classList.contains('visible') ? 'block' : 'none';
             });
         }
 
@@ -526,6 +543,13 @@ class XJTUSimulator {
 
             // 行动记录
             actionsThisTurn: [],
+
+            // 档案缓存
+            profileNarrativeCache: {
+                semesterKey: null,
+                narrative: null,
+                lastUpdatedSemester: null
+            },
             
             // 书院成就统计
             quickHealCount: 0,
@@ -776,6 +800,10 @@ class XJTUSimulator {
         if (month >= 9 || month <= 1) return 'fall';
         if (month >= 2 && month <= 6) return 'spring';
         return 'summer';
+    }
+
+    getSemesterKey() {
+        return `${this.state.year}-${this.getCurrentSemester()}`;
     }
 
     // 规范数值为整数并做上下限裁剪，避免出现小数显示
@@ -2696,6 +2724,11 @@ class XJTUSimulator {
                 };
                 // 显示事件
                 this.showRandomEventModal(aiEvent);
+                // 学期结束后刷新档案（每学期一次），完成后提示
+                setTimeout(async () => {
+                    await this.generateAndCacheProfileNarrative(true);
+                    this.showMessage('简历更新', '简历又有新的更新，请查看。');
+                }, 500);
             } else {
                 console.log('事件生成失败，继续游戏');
             }
@@ -4071,172 +4104,258 @@ class XJTUSimulator {
         this.showModal('game-menu');
     }
 
-    // 显示课程详情
-    // 显示个人经历/档案 Modal
-    showProfileModal() {
+    // 显示个人经历/档案 Modal（简历/故事风，不展示属性和课程）
+    async showProfileModal() {
         console.log('Opening Profile Modal...');
         try {
             this.hideModal('game-menu');
-            
+
             if (!this.state) {
                 console.error('State is null');
                 return;
             }
 
-            const collegeName = GameData.colleges[this.state.college] ? GameData.colleges[this.state.college].name : '未知书院';
-            const gpa = (this.state.gpa || 0).toFixed(2);
-            const san = Math.round(this.state.san || 0);
-            const energy = Math.round(this.state.energy || 0);
-            const money = this.state.money || 0;
-            
-            // 生成个人总结文案
-            let summaryText = `你现在是 <strong>${collegeName}</strong> 的大${['一','二','三','四'][this.state.year-1] || 'N'}学生。`;
-            
-            if (gpa >= 3.8) summaryText += ` 你的学业表现<strong>非常优异</strong> (GPA ${gpa})，是大家眼中的学霸。`;
-            else if (gpa >= 3.0) summaryText += ` 你的成绩<strong>中规中矩</strong> (GPA ${gpa})，保持着稳定的节奏。`;
-            else summaryText += ` 你的学业<strong>稍显吃力</strong> (GPA ${gpa})，需要加油了。`;
-            
-            if (this.state.inRelationship) summaryText += ` 生活上，你正在享受一段<strong>甜蜜的恋爱</strong>。`;
-            else summaryText += ` 生活上，你目前<strong>单身</strong>，专注于提升自我。`;
-            
-            if (san < 40) summaryText += ` 最近你的<strong>精神状态不太好</strong>，注意休息。`;
-            else if (energy < 3) summaryText += ` 你的<strong>体力透支</strong>严重，不要太拼了。`;
-            else summaryText += ` 你的状态看起来<strong>很不错</strong>。`;
+            const semesterKey = this.getSemesterKey();
+            const cached = this.state.profileNarrativeCache || {};
+            const hasCurrent = cached.semesterKey === semesterKey && cached.narrative;
 
+            // 先展示加载占位
+            const resultModal = document.getElementById('exam-modal');
+            if (resultModal) {
+                resultModal.querySelector('.modal-title').innerText = '👤 个人经历';
+                resultModal.querySelector('.modal-body').innerHTML = '<div style="padding:20px; text-align:center; color:#666;">⏳ 正在整理档案，请稍候...</div>';
+                this.showModal('exam-modal');
+            }
 
-        // 构建弹窗内容
-        let content = `
-            <div class="profile-container" style="padding: 10px;">
-                <div class="profile-header" style="text-align:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                    <div style="font-size:3rem; margin-bottom:10px;">🎓</div>
-                    <h3 style="color:#003E7E; margin:0;">我的大学档案</h3>
-                    <p style="color:#666; font-size:0.9rem;">${this.state.year}年级 ${this.state.month}月</p>
-                </div>
+            const narrative = hasCurrent ? cached.narrative : await this.generateAndCacheProfileNarrative();
+            if (!narrative) {
+                this.showMessage('提示', '暂无档案数据');
+                return;
+            }
 
-                <div class="profile-summary" style="background:#f0f7ff; padding:15px; border-radius:8px; margin-bottom:20px; line-height:1.6;">
-                    ${summaryText}
-                </div>
+            const content = this.renderProfileNarrative(narrative);
 
-                <ul class="nav nav-tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:15px; padding:0; list-style:none;">
-                    <li style="margin-right:5px;"><a href="#" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.style.display='none'); document.getElementById('tab-courses').style.display='block'; return false;" style="padding:8px 15px; display:block; text-decoration:none; color:#003E7E; border:1px solid #ddd; border-bottom:none; border-radius:4px 4px 0 0; background:#fff;">课程学业</a></li>
-                    <li><a href="#" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.style.display='none'); document.getElementById('tab-stats').style.display='block'; return false;" style="padding:8px 15px; display:block; text-decoration:none; color:#003E7E; border:1px solid #ddd; border-bottom:none; border-radius:4px 4px 0 0; background:#f9f9f9;">详细属性</a></li>
-                </ul>
-
-                <div id="tab-courses" class="tab-pane">
-                    <div class="course-detail-list">
-        `;
-        
-        // 插入原有课程列表逻辑
-        if (this.state.currentCourses.length > 0) {
-            content += '<h4>📚 当前学期课程</h4>';
-            this.state.currentCourses.forEach(c => {
-                const difficultyText = c.difficulty >= 0.8 ? '困难' : c.difficulty >= 0.6 ? '中等' : '简单';
-                const difficultyColor = c.difficulty >= 0.8 ? '#F44336' : c.difficulty >= 0.6 ? '#FF9800' : '#4CAF50';
-                const typeText = c.type === 'major' ? '专业课' : c.type === 'pe' ? '体育课' : c.type === 'general' ? '通识课' : '选修课';
-                const masteryColor = c.mastery >= 80 ? '#4CAF50' : c.mastery >= 50 ? '#FF9800' : '#F44336';
-                
-                content += `
-                    <div class="course-detail-item">
-                        <div class="course-header">
-                            <strong>${c.name}</strong>
-                            <span class="course-tags">
-                                <span class="tag" style="background: ${difficultyColor}20; color: ${difficultyColor}">${difficultyText}</span>
-                                <span class="tag" style="background: var(--xjtu-blue); color: white;">${typeText}</span>
-                            </span>
-                        </div>
-                        <div class="course-info">
-                            <span>📖 ${c.credits}学分</span>
-                            <span>📝 上课${c.attendCount}次</span>
-                            <span>✏️ 自习${c.studyCount}次</span>
-                        </div>
-                        <div class="mastery-bar">
-                            <div class="mastery-label">掌握度: <span style="color: ${masteryColor}">${Math.round(c.mastery)}%</span></div>
-                            <div class="mastery-progress">
-                                <div class="mastery-fill" style="width: ${c.mastery}%; background: ${masteryColor}"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            content += '<p style="text-align:center; color:#999; padding:20px;">当前没有进行中的课程</p>';
-        }
-
-        if (this.state.retakeCourses && this.state.retakeCourses.length > 0) {
-            content += '<h4 style="color: #F44336; margin-top: 15px;">🔄 重修课程</h4>';
-            this.state.retakeCourses.forEach(c => {
-                // ...existing code for retake...
-                const masteryColor = c.mastery >= 60 ? '#4CAF50' : '#F44336';
-                content += `
-                    <div class="course-detail-item retake">
-                        <div class="course-header">
-                            <strong>${c.name}</strong>
-                            <span class="tag" style="background: #F4433620; color: #F44336">重修</span>
-                        </div>
-                        <div class="mastery-bar">
-                            <div class="mastery-label">掌握度: <span style="color: ${masteryColor}">${Math.round(c.mastery)}%</span></div>
-                            <div class="mastery-progress">
-                                <div class="mastery-fill" style="width: ${c.mastery}%; background: ${masteryColor}"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        content += `
-                    </div>
-                </div>
-
-                <div id="tab-stats" class="tab-pane" style="display:none;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
-                            <div style="font-size:2rem;">💰</div>
-                            <div style="font-weight:bold; color:#f0ad4e;">${money}</div>
-                            <div style="font-size:0.8rem; color:#666;">金币</div>
-                        </div>
-                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
-                            <div style="font-size:2rem;">🧠</div>
-                            <div style="font-weight:bold; color:#5cb85c;">${san}/100</div>
-                            <div style="font-size:0.8rem; color:#666;">SAN值</div>
-                        </div>
-                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
-                            <div style="font-size:2rem;">⚡</div>
-                            <div style="font-weight:bold; color:#0275d8;">${energy}/${this.state.maxEnergy}</div>
-                            <div style="font-size:0.8rem; color:#666;">体力</div>
-                        </div>
-                        <div class="stat-box" style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; text-align:center;">
-                            <div style="font-size:2rem;">🤝</div>
-                            <div style="font-weight:bold; color:#d9534f;">${Math.round(this.state.social || 0)}</div>
-                            <div style="font-size:0.8rem; color:#666;">社交能力</div>
-                        </div>
-                    </div>
-                    <div style="margin-top:20px;">
-                        <h4>📊 综合统计</h4>
-                        <ul style="font-size:0.9rem; color:#555; line-height:1.8;">
-                            <li>已修总学分: ${this.state.totalCredits || 0}</li>
-                            <li>挂科数量: ${this.state.failedCourses || 0}</li>
-                            <li>获得成就: ${AchievementSystem && AchievementSystem.achievements ? Object.values(AchievementSystem.achievements).filter(a => a.unlocked).length : 0} 个</li>
-                            <li>科研经历: ${this.state.researchExp || 0} 点</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 使用通用Modal显示
-        const resultModal = document.getElementById('exam-modal'); // 复用一个大点的 modal
-        if (resultModal) {
-            resultModal.querySelector('.modal-title').innerText = '👤 个人经历';
-            resultModal.querySelector('.modal-body').innerHTML = content;
-            resultModal.querySelector('.modal-footer').innerHTML = '<button class="btn btn-primary" onclick="document.getElementById(\'exam-modal\').classList.remove(\'active\')">关闭</button>';
-            this.showModal('exam-modal');
-        } else {
-            console.error('Modal template not found');
-        }
+            if (resultModal) {
+                resultModal.querySelector('.modal-body').innerHTML = content;
+                resultModal.classList.add('active');
+            }
         } catch (error) {
             console.error('Error showing profile modal:', error);
             this.showMessage('错误', '无法打开个人经历页面，请重试或刷新游戏。');
+        }
+    }
+
+    // 本地生成的个人档案（简历风）
+    buildLocalProfileNarrative(ctx) {
+        const baseTimeline = [
+            `${ctx.gradeText} · ${ctx.month}月：在${ctx.campusName}记录下当下的脚步。`,
+            ctx.competitionCount ? `竞赛累计 ${ctx.competitionCount} 次，收获 ${ctx.competitionWins || 0} 次奖项。` : '正在积累竞赛与项目经验。',
+            ctx.researchExp ? `科研/实验累计 ${ctx.researchExp} 点经验，逐步摸索科研方法论。` : '开始尝试科研与实验室生活。',
+            ctx.parttimeCount ? `完成 ${ctx.parttimeCount} 次兼职/实践，锻炼真实商业感知。` : '寻找实践机会，期待把知识落地。',
+            ctx.volunteerHours ? `志愿服务 ${ctx.volunteerHours} 小时，保持对社会议题的关切。` : '关注社区，计划投入志愿与公益。'
+        ];
+
+        const tags = [ctx.collegeName, ctx.backgroundName, ctx.campusName, ctx.gradeText];
+        if (ctx.competitionWins) tags.push('竞赛获奖');
+        if (ctx.researchExp) tags.push('科研经历');
+        if (ctx.volunteerHours) tags.push('公益志愿');
+        if (ctx.parttimeCount) tags.push('社会实践');
+
+        return {
+            headline: `${ctx.collegeName} · ${ctx.backgroundName} · ${ctx.campusName}`,
+            summary: `保持好奇、热爱实验，正在${ctx.gradeText}阶段探索校园与现实世界的交汇点。重视团队协作，也在学习独立完成一件事的节奏感。`,
+            timeline: baseTimeline,
+            tags,
+            oneLiner: '想把普通的一天，写成有光的日记。'
+        };
+    }
+
+    renderProfileNarrative(narrative) {
+        const collegeInfo = GameData.colleges[this.state.college] || {};
+        const backgroundInfo = GameData.backgrounds[this.state.background] || {};
+        const campusLabelMap = {
+            xingqing: '兴庆校区',
+            yanta: '雁塔校区',
+            qujiang: '曲江校区',
+            innovation: '创新港',
+            innovationharbor: '创新港',
+            innovation_harbor: '创新港'
+        };
+        const collegeName = collegeInfo.name || '未知书院';
+        const backgroundName = backgroundInfo.name || '未设定背景';
+        const campusRaw = collegeInfo.campus || this.state.campus || '校区待定';
+        const campusName = campusLabelMap[String(campusRaw).toLowerCase()] || campusRaw;
+        const gradeText = ['大一','大二','大三','大四'][this.state.year - 1] || '在读';
+
+        return `
+            <div class="profile-container" style="padding: 14px; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; line-height:1.6;">
+                <div class="profile-header" style="display:flex; align-items:flex-start; gap:12px; margin-bottom:16px;">
+                    <div style="font-size:2.8rem;">🎓</div>
+                    <div>
+                        <div style="font-size:1rem; color:#999;">${gradeText} · ${this.state.month}月 · ${campusName}</div>
+                        <h3 style="margin:4px 0 6px 0; color:#003E7E;">${collegeName}｜${backgroundName}</h3>
+                        <div style="color:#666; font-size:0.95rem;">${narrative.headline}</div>
+                    </div>
+                </div>
+
+                <div style="background:#f6f8fb; border:1px solid #e3e7ef; border-radius:10px; padding:14px; margin-bottom:14px;">
+                    <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">经历摘要</div>
+                    <div style="color:#333;">${narrative.summary}</div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">里程碑</div>
+                    <ul style="padding-left:18px; margin:0; color:#333;">
+                        ${narrative.timeline.map(item => `<li style="margin-bottom:6px;">${item}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">亮点标签</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        ${narrative.tags.map(tag => `<span style="background:#003E7E10; color:#003E7E; border:1px solid #003E7E30; border-radius:999px; padding:4px 10px; font-size:0.9rem;">${tag}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div style="background:#fffaf4; border:1px solid #ffe3c4; border-radius:10px; padding:12px;">
+                    <div style="color:#d26a00; font-weight:bold; margin-bottom:6px;">座右铭</div>
+                    <div style="color:#7a4a10;">${narrative.oneLiner}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    async generateAndCacheProfileNarrative(force = false) {
+        const semesterKey = this.getSemesterKey();
+        const cache = this.state.profileNarrativeCache || {};
+        if (!force && cache.semesterKey === semesterKey && cache.narrative) {
+            return cache.narrative;
+        }
+
+        const collegeInfo = GameData.colleges[this.state.college] || {};
+        const backgroundInfo = GameData.backgrounds[this.state.background] || {};
+        const campusLabelMap = {
+            xingqing: '兴庆校区',
+            yanta: '雁塔校区',
+            qujiang: '曲江校区',
+            innovation: '创新港',
+            innovationharbor: '创新港',
+            innovation_harbor: '创新港'
+        };
+        const collegeName = collegeInfo.name || '未知书院';
+        const backgroundName = backgroundInfo.name || '未设定背景';
+        const campusRaw = collegeInfo.campus || this.state.campus || '校区待定';
+        const campusName = campusLabelMap[String(campusRaw).toLowerCase()] || campusRaw;
+        const gradeText = ['大一','大二','大三','大四'][this.state.year - 1] || '在读';
+
+        const localNarrative = this.buildLocalProfileNarrative({
+            collegeName,
+            backgroundName,
+            campusName,
+            gradeText,
+            month: this.state.month,
+            achievements: AchievementSystem && AchievementSystem.achievements ? Object.values(AchievementSystem.achievements).filter(a => a.unlocked).map(a => a.name) : [],
+            volunteerHours: this.state.volunteerHoursThisYear || 0,
+            researchExp: this.state.researchExp || 0,
+            competitionCount: this.state.competitionCount || 0,
+            competitionWins: this.state.competitionWins || 0,
+            parttimeCount: this.state.parttimeCount || 0
+        });
+
+        const aiNarrative = await this.tryBuildProfileNarrativeWithAI(localNarrative);
+        const finalNarrative = aiNarrative || localNarrative;
+
+        this.state.profileNarrativeCache = {
+            semesterKey,
+            narrative: finalNarrative,
+            lastUpdatedSemester: semesterKey
+        };
+        return finalNarrative;
+    }
+
+    // 调用 AI 生成更个性化的档案（失败则返回 null）
+    async tryBuildProfileNarrativeWithAI(fallbackNarrative) {
+        try {
+            const config = AIModule.getCurrentConfig();
+            if (!config.key) return null;
+
+            const model = AIModule.getCurrentModel();
+            const stateSummary = AIModule.getGameStateSummary();
+            const baseFacts = `书院与背景=${fallbackNarrative.headline}；里程碑=${fallbackNarrative.timeline.join(' / ')}`;
+            const prompt = `基于以下玩家概况，生成一个简历/故事档案，返回JSON，不要返回除JSON以外内容：\n{
+  "headline": "一句精炼的身份定位（在原有基础上可补充，不得删除原有事实）",
+  "summary": "80-120字的第三人称摘要，避免罗列数字属性，只润色或扩写，不得更改事实",
+  "timeline": ["在原列表基础上最多追加1-2条，但不得修改或删除已有里程碑"],
+  "tags": ["在原标签基础上追加，不能删除原标签"],
+    "oneLiner": "座右铭，可替换但需保持中立积极"
+}\n严格要求：
+1) 下面的 baseFacts 信息不可改动、不可遗漏，只能在其基础上润色：${baseFacts}
+2) 不得出现学分/GPA/SAN等具体数值；语言自然。
+3) 生成时以提供的列表为基底，允许追加，不允许修改或删除基底内容。
+玩家概况：${stateSummary}`;
+
+            const response = await fetch(config.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${config.key}`
+                },
+                body: JSON.stringify({
+                    model,
+                    messages: [
+                        { role: 'system', content: '你是档案撰写助理，负责生成温暖、简洁、可信的故事档案摘要，只能在既有信息上润色和追加，禁止改写事实。' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.65,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            let content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+            if (!content) return null;
+
+            content = content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) content = match[0];
+
+            const parsed = JSON.parse(content);
+            if (!parsed || !parsed.summary) return null;
+
+            // 只允许在基础内容上追加，不改动已有事实
+            const timelineBase = Array.isArray(fallbackNarrative.timeline) ? fallbackNarrative.timeline : [];
+            const aiTimeline = Array.isArray(parsed.timeline) ? parsed.timeline : [];
+            const mergedTimeline = [...timelineBase];
+            aiTimeline.forEach(item => {
+                const exists = timelineBase.some(base => base.trim() === item.trim());
+                if (!exists && mergedTimeline.length - timelineBase.length < 2) mergedTimeline.push(item);
+            });
+
+            const tagsBase = Array.isArray(fallbackNarrative.tags) ? fallbackNarrative.tags : [];
+            const aiTags = Array.isArray(parsed.tags) ? parsed.tags : [];
+            const mergedTags = [...tagsBase];
+            aiTags.forEach(tag => {
+                const exists = tagsBase.some(base => base.trim() === tag.trim());
+                if (!exists) mergedTags.push(tag);
+            });
+
+            const headline = parsed.headline && parsed.headline.trim() && parsed.headline.trim() !== fallbackNarrative.headline
+                ? `${fallbackNarrative.headline} ｜ ${parsed.headline.trim()}`
+                : fallbackNarrative.headline;
+
+            const summary = `${fallbackNarrative.summary} ${parsed.summary || ''}`.trim();
+
+            return {
+                headline,
+                summary,
+                timeline: mergedTimeline,
+                tags: mergedTags,
+                oneLiner: parsed.oneLiner || fallbackNarrative.oneLiner
+            };
+        } catch (e) {
+            console.warn('AI profile generation failed, fallback to local narrative:', e);
+            return null;
         }
     }
     
