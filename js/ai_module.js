@@ -1,3 +1,4 @@
+// author: sjxxxx
 /**
  * AI API 接入模块 - XJTU本科模拟器
  * 处理与 LLM (Gemini/OpenAI) 的交互，生成动态随机事件
@@ -123,7 +124,7 @@ const AIModule = (function() {
     }
     
     // 系统预设 Prompt - 核心人设
-    const SYSTEM_PROMPT = `你是一个在西安交通大学（XJTU）待了十年的老学长。你的任务是生成一个随机事件。
+    const SYSTEM_PROMPT = `你是一个在鲜椒（XJTU）待了十年的老学长。你的任务是生成一个随机事件。
 
 【个性化要求】
 - 结合玩家的年级、月份、书院、GPA、SAN、金钱、精力等信息，生成贴合处境的事件。

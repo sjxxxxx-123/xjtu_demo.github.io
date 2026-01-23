@@ -1,3 +1,4 @@
+// author: sjxxxx
 /**
  * XJTU本科模拟器 - 游戏主逻辑
  * 核心游戏循环、状态管理、UI交互
@@ -2619,7 +2620,7 @@ class XJTUSimulator {
             // 只要有 Key 每月必触发一次生成
             if (config.key) { 
                 console.log('开始AI事件生成，当前模型:', AIModule.getCurrentModel());
-                this.showMessage('命运的齿轮正在转动...', '等通知是西交每个学子必备的技能');
+                this.showMessage('命运的齿轮正在转动...', '等通知是鲜椒每个学子必备的技能');
                 const aiResult = await AIModule.fetchAIEvent();
                 console.log('AI生成结果:', aiResult);
                 
@@ -2674,7 +2675,7 @@ class XJTUSimulator {
             const semesterName = this.state.month === 1 ? '秋季学期' : '春季学期';
             console.log(`学期结束：触发${semesterName}回顾事件`);
             // 通用加载提示（不暴露AI）
-            this.showMessage('命运的齿轮正在转动...', '等通知是西交每个学子必备的技能');
+            this.showMessage('命运的齿轮正在转动...', '等通知是鲜椒每个学子必备的技能');
             const aiResult = await AIModule.fetchAIEvent();
             console.log('学期结束事件结果:', aiResult);
             

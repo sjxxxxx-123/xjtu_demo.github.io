@@ -1,3 +1,4 @@
+// author: sjxxxx
 window.GAME_CONFIG = {
     AI_PROVIDER: 'deepseek',
     API_KEY: '',
