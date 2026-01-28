@@ -1677,6 +1677,11 @@ class XJTUSimulator {
         this.state.social = Math.min(100, this.state.social + socialGain);
         this.state.volunteerHoursThisYear++;
         this.state.volunteerHoursThisSemester = (this.state.volunteerHoursThisSemester || 0) + 1;
+        
+        // 志愿服务增加声望（每10次志愿+1声望）
+        if (this.state.volunteerHoursThisYear % 10 === 0) {
+            this.changeReputation(2, '坚持志愿服务');
+        }
 
         if (effects.volunteerEfficiency > 1) {
             this.addLog('🤝 完成志愿服务，仲英品格加持，综测分大幅提升！');
@@ -2445,6 +2450,7 @@ class XJTUSimulator {
             if (progress.internship >= 3 && progress.interview >= 80 && !progress.offer) {
                 progress.offer = true;
                 this.addLog('💼 恭喜！你拿到了正式工作Offer！', 'success');
+                this.changeReputation(3, '获得工作Offer');
                 AchievementSystem.unlock('jobOffer');
                 this.addBBSEvent('工作Offer');
             }
@@ -2529,6 +2535,7 @@ class XJTUSimulator {
                 this.state.charm = Math.min(100, this.state.charm + competition.reward.charm);
             }
             this.addLog(`🏆 ${competition.name}获奖！综测和能力都提升了！`, 'success');
+            this.changeReputation(5, `${competition.name}获奖`);
             this.addBBSEvent('竞赛获奖');
             
             // 保研路线加分
@@ -2593,6 +2600,7 @@ class XJTUSimulator {
             this.state.researchPapers = (this.state.researchPapers || 0) + 1;
             this.state.social = Math.min(100, this.state.social + 20);
             this.addLog('📝 科研成果发表论文！综测分大幅提升！', 'success');
+            this.changeReputation(5, '发表学术论文');
             AchievementSystem.unlock('researcher');
             this.addBBSEvent('论文发表');
         } else if (this.state.researchExp >= 5 && Math.random() < 0.3) {
@@ -3543,6 +3551,9 @@ class XJTUSimulator {
                 // 挂科
                 this.state.failedCourses++;
                 
+                // 挂科时降低声望
+                this.changeReputation(-8, `挂掉课程『${course.name}』`);
+                
                 // 书院核心课挂科额外惩罚
                 if (course.isCollegeCore || course.type === 'college_core') {
                     this.state.social = Math.max(0, this.state.social - 5);
@@ -3613,6 +3624,17 @@ class XJTUSimulator {
 
         // 更新GPA记录
         AchievementSystem.updateGPARecord(this.state.gpa);
+        
+        // GPA≥4.0 增加声望（学霸光环）
+        if (this.state.gpa >= 4.0) {
+            if (!this.state.gpaStudentAchieved) {
+                this.state.gpaStudentAchieved = true;
+                this.changeReputation(5, 'GPA突破4.0（学霸光环）');
+                this.addLog('⭐ 学霸光环！你的GPA突破4.0，校园名气大增！', 'success');
+            }
+        } else {
+            this.state.gpaStudentAchieved = false;
+        }
         
         // 检查成就
         AchievementSystem.checkAchievements(this.state);
@@ -4632,11 +4654,22 @@ class XJTUSimulator {
     // 更新BBS滚动条
     updateBBSScroll() {
         const scrollEl = document.getElementById('bbs-scroll');
-        if (!scrollEl) return;
+        const scrollElMobile = document.getElementById('bbs-scroll-mobile');
         
         // 生成BBS内容
         const bbsMessages = this.generateBBSMessages();
-        scrollEl.innerHTML = `<span class="bbs-item">${bbsMessages.join(' | ')}</span>`;
+        const bbsContent = `<span class="bbs-item">${bbsMessages.join(' | ')}</span>`;
+        
+        // 桌面版显示
+        if (scrollEl) {
+            scrollEl.innerHTML = bbsContent;
+        }
+        
+        // 移动版显示 - 为了实现无缝滚动，需要重复文本两次
+        if (scrollElMobile) {
+            const repeatedText = bbsMessages.join(' | ') + ' | ' + bbsMessages.join(' | ');
+            scrollElMobile.innerHTML = `<span class="bbs-item">${repeatedText}</span>`;
+        }
     }
     
     // 生成BBS消息
@@ -4701,6 +4734,49 @@ class XJTUSimulator {
         if (this.state.reputation >= 90) {
             AchievementSystem.unlock('campusStar');
         }
+    }
+    
+    // 显示声望增加方式说明
+    showReputationInfo() {
+        const reputationInfo = `
+<div style="text-align: left; line-height: 1.6;">
+    <h3 style="margin: 0 0 10px 0; color: #ff6b6b;">⭐ 声望系统</h3>
+    <p><strong>声望是什么？</strong>代表你在校园中的知名度和影响力。</p>
+    
+    <h4 style="margin: 12px 0 8px 0; color: #4caf50;">📈 增加声望的方式：</h4>
+    <ul style="margin: 0; padding-left: 20px;">
+        <li><strong>🏆 参加竞赛并获奖</strong>（+5分）</li>
+        <li><strong>📄 发表学术论文</strong>（+5分）- 科研经验≥10时</li>
+        <li><strong>💼 获得工作Offer</strong>（+3分）- 完成实习和面试</li>
+        <li><strong>🎓 GPA突破4.0</strong>（+5分）- 学霸光环（仅获奖一次）</li>
+        <li><strong>🤝 坚持志愿服务</strong>（+2分）- 每完成10次志愿</li>
+        <li><strong>💕 脱单成功</strong>（+10分）- 找到真爱</li>
+    </ul>
+    
+    <h4 style="margin: 12px 0 8px 0; color: #f44336;">📉 降低声望的方式：</h4>
+    <ul style="margin: 0; padding-left: 20px;">
+        <li><strong>⚠️ 挂科</strong>（-8分）- 任何课程不及格</li>
+        <li><strong>😈 产生负面舆论</strong>（-10分）- 引发校园关注</li>
+        <li><strong>💔 失败的表白</strong>（-10分）- 表白被拒</li>
+    </ul>
+    
+    <h4 style="margin: 12px 0 8px 0; color: #2196f3;">⭐ 声望等级：</h4>
+    <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem;">
+        <li><strong>0-20</strong>：校园隐形人 👤</li>
+        <li><strong>21-40</strong>：普通同学 👥</li>
+        <li><strong>41-60</strong>：有些名气 ⭐</li>
+        <li><strong>61-80</strong>：校园小红人 ⭐⭐</li>
+        <li><strong>81-100</strong>：校园名人 ⭐⭐⭐</li>
+    </ul>
+    
+    <p style="margin: 12px 0 0 0; color: #666; font-size: 0.85rem;">
+    💡 <strong>游戏影响</strong>：声望影响部分宿舍的申请资格，高声望也会影响故事情节分支。多项游戏机制（如竞赛获奖、论文发表等）都会影响声望。
+    </p>
+</div>
+        `;
+        document.getElementById('modal-title').textContent = '声望系统说明';
+        document.getElementById('modal-body').innerHTML = reputationInfo;
+        this.showModal('modal');
     }
     
     // 情人节检查（2月）
