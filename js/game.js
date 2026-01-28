@@ -4660,15 +4660,12 @@ class XJTUSimulator {
         const bbsMessages = this.generateBBSMessages();
         const bbsContent = `<span class="bbs-item">${bbsMessages.join(' | ')}</span>`;
         
-        // 桌面版显示
+        // 桌面版和移动版都显示相同内容（固定显示）
         if (scrollEl) {
             scrollEl.innerHTML = bbsContent;
         }
-        
-        // 移动版显示 - 为了实现无缝滚动，需要重复文本两次
         if (scrollElMobile) {
-            const repeatedText = bbsMessages.join(' | ') + ' | ' + bbsMessages.join(' | ');
-            scrollElMobile.innerHTML = `<span class="bbs-item">${repeatedText}</span>`;
+            scrollElMobile.innerHTML = bbsContent;
         }
     }
     
