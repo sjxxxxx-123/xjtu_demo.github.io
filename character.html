@@ -5,217 +5,982 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <title>创建角色 - XJTU本科模拟器</title>
+    <title>创建角色 - 鲜椒本科模拟器</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 志愿填报专用样式 */
+        .admission-portal {
+            max-width: 1000px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+        
+        .portal-header {
+            background: linear-gradient(135deg, var(--xianjao-blue) 0%, var(--xianjao-blue-dark) 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .portal-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .portal-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .portal-body {
+            padding: 40px;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+        
+        .step-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        
+        .step-item.active .step-circle {
+            background: var(--xianjao-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,62,126,0.3);
+        }
+        
+        .step-item.completed .step-circle {
+            background: var(--success);
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .step-item.active .step-label {
+            color: var(--xianjao-blue);
+            font-weight: 600;
+        }
+        
+        /* 成绩查询界面 */
+        .score-query {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .score-query h2 {
+            color: var(--xianjao-blue);
+            margin-bottom: 20px;
+        }
+        
+        .score-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .score-card {
+            padding: 30px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .score-card:hover {
+            border-color: var(--xianjao-blue);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,62,126,0.15);
+        }
+        
+        .score-card.selected {
+            border-color: var(--xianjao-blue);
+            background: rgba(0,62,126,0.05);
+        }
+        
+        .score-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--xianjao-blue);
+            margin-bottom: 10px;
+        }
+        
+        .score-tier {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .score-desc {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.5;
+        }
+        
+        /* 学科类别选择 */
+        .discipline-selector {
+            margin-top: 30px;
+        }
+        
+        .discipline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .discipline-btn {
+            padding: 20px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .discipline-btn:hover {
+            border-color: var(--xianjao-blue-light);
+            background: rgba(21,101,192,0.05);
+        }
+        
+        .discipline-btn.selected {
+            border-color: var(--xianjao-blue);
+            background: var(--xianjao-blue);
+            color: white;
+        }
+        
+        .discipline-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .discipline-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* 书院选择 */
+        .college-selector {
+            margin-top: 30px;
+        }
+        
+        .college-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .college-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .college-card:hover {
+            border-color: var(--xianjao-blue-light);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .college-card.selected {
+            border-color: var(--xianjao-blue);
+            background: rgba(0,62,126,0.03);
+            box-shadow: 0 8px 24px rgba(0,62,126,0.2);
+        }
+        
+        .college-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5;
+        }
+        
+        .college-card.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .college-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .college-icon {
+            font-size: 36px;
+        }
+        
+        .college-info h3 {
+            margin: 0 0 5px 0;
+            color: var(--xianjao-blue);
+            font-size: 18px;
+        }
+        
+        .college-campus {
+            font-size: 12px;
+            color: #999;
+            background: #f0f0f0;
+            padding: 3px 10px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+        
+        .college-desc {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 15px;
+            font-style: italic;
+            border-left: 3px solid var(--xianjao-blue-light);
+            padding-left: 12px;
+        }
+        
+        .college-requirements {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .requirement-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .requirement-score {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--xianjao-blue);
+        }
+        
+        .college-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .tag {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .tag.buff {
+            background: rgba(76,175,80,0.1);
+            color: var(--success);
+            border: 1px solid rgba(76,175,80,0.3);
+        }
+        
+        .tag.debuff {
+            background: rgba(244,67,54,0.1);
+            color: var(--danger);
+            border: 1px solid rgba(244,67,54,0.3);
+        }
+        
+        .lock-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* 操作按钮区 */
+        .portal-actions {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding-top: 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .btn-portal {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-portal.secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .btn-portal.secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-portal.primary {
+            background: var(--xianjao-blue);
+            color: white;
+        }
+        
+        .btn-portal.primary:hover {
+            background: var(--xianjao-blue-dark);
+            box-shadow: 0 4px 12px rgba(0,62,126,0.3);
+        }
+        
+        .btn-portal:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .section-hidden {
+            display: none;
+        }
+        
+        /* 提示信息 */
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid var(--xianjao-blue);
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+            color: #1565c0;
+            line-height: 1.6;
+        }
+        
+        .info-box strong {
+            color: var(--xianjao-blue-dark);
+        }
+        
+        /* 个人信息卡片 */
+        .personal-info-card {
+            max-width: 650px;
+            margin: 0 auto 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            min-width: 120px;
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-input-group {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .name-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--xianjao-blue-dark);
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .name-input:focus {
+            outline: none;
+            border-color: var(--xianjao-blue);
+            box-shadow: 0 0 0 3px rgba(0,62,126,0.1);
+        }
+        
+        .random-name-btn {
+            padding: 10px 16px;
+            background: white;
+            border: 2px solid var(--xianjao-blue-light);
+            border-radius: 8px;
+            color: var(--xianjao-blue);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .random-name-btn:hover {
+            background: var(--xianjao-blue);
+            color: white;
+        }
+        
+        .gender-options {
+            display: flex;
+            gap: 12px;
+            max-width: 400px;
+        }
+        
+        .gender-option {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+        }
+        
+        .gender-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .gender-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 15px;
+            font-weight: 500;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+        
+        .gender-option input[type="radio"]:checked + .gender-label {
+            border-color: var(--xianjao-blue);
+            background: var(--xianjao-blue);
+            color: white;
+        }
+        
+        .gender-label:hover {
+            border-color: var(--xianjao-blue-light);
+        }
+        
+        .avatar-icon {
+            font-size: 24px;
+        }
+    </style>
 </head>
 <body>
-    <!-- 角色创建界面 -->
-    <div id="character-screen" class="screen active">
-        <div class="character-container">
-            <h2>创建你的角色</h2>
+    <!-- 志愿填报系统 -->
+    <div class="admission-portal">
+        <!-- 顶部标题栏 -->
+        <div class="portal-header">
+            <h1>🎓 鲜椒大学本科招生系统</h1>
+            <p>欢迎参加2026年全国统一高考志愿填报 | 请根据您的分数选择合适的书院</p>
+        </div>
+        
+        <div class="portal-body">
+            <!-- 步骤指示器 -->
+            <div class="step-indicator">
+                <div class="step-item active" id="step1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">查询成绩</div>
+                </div>
+                <div class="step-item" id="step2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">选择学科</div>
+                </div>
+                <div class="step-item" id="step3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">填报志愿</div>
+                </div>
+            </div>
             
-            <!-- 出身背景选择 -->
-            <div class="selection-section">
-                <h3>选择出身背景</h3>
-                <div class="option-grid" id="background-options">
-                    <!-- JS动态生成 -->
+            <!-- 第一步：成绩查询 -->
+            <div id="section-score" class="section-score">
+                <!-- 个人信息卡片 -->
+                <div class="personal-info-card">
+                    <div class="info-row">
+                        <label class="info-label">姓名 / NAME</label>
+                        <div class="info-input-group">
+                            <input type="text" id="student-name" class="name-input" placeholder="请输入您的姓名" maxlength="10">
+                            <button class="random-name-btn" id="random-name-btn">🎲 随机</button>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <label class="info-label">性别 / GENDER</label>
+                        <div class="gender-options">
+                            <div class="gender-option">
+                                <input type="radio" name="gender" id="gender-male" value="male" checked>
+                                <label for="gender-male" class="gender-label">
+                                    <span class="avatar-icon">👨</span>
+                                    <span>男 (Male)</span>
+                                </label>
+                            </div>
+                            <div class="gender-option">
+                                <input type="radio" name="gender" id="gender-female" value="female">
+                                <label for="gender-female" class="gender-label">
+                                    <span class="avatar-icon">👩</span>
+                                    <span>女 (Female)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="score-query">
+                    <h2>📋 请选择您的高考成绩档次</h2>
+                    <p style="color: #666; margin-top: 10px;">不同的成绩将影响您可以报考的书院范围</p>
+                    
+                    <div class="score-options">
+                        <div class="score-card" data-score="680" data-tier="extraordinary">
+                            <div class="score-number">680+</div>
+                            <div class="score-tier">🏆 超常发挥</div>
+                            <div class="score-desc">省前200名，所有书院任选<br>开局GPA+0.5，声望+20</div>
+                        </div>
+                        
+                        <div class="score-card" data-score="650" data-tier="excellent">
+                            <div class="score-number">650-679</div>
+                            <div class="score-tier">🌟 优秀成绩</div>
+                            <div class="score-desc">省前1000名，大部分书院可选<br>开局GPA+0.3，声望+10</div>
+                        </div>
+                        
+                        <div class="score-card" data-score="620" data-tier="good">
+                            <div class="score-number">620-649</div>
+                            <div class="score-tier">✅ 正常发挥</div>
+                            <div class="score-desc">稳定发挥，多数书院可选<br>标准开局，无修正</div>
+                        </div>
+                        
+                        <div class="score-card" data-score="590" data-tier="average">
+                            <div class="score-number">590-619</div>
+                            <div class="score-tier">📝 压线录取</div>
+                            <div class="score-desc">刚过录取线，部分书院可选<br>开局略有挑战</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- 书院选择 -->
-            <div class="selection-section">
-                <h3>选择书院</h3>
-                <div class="option-grid" id="college-options">
-                   <!-- JS动态生成 -->
+            
+            <!-- 第二步：学科类别选择 -->
+            <div id="section-discipline" class="section-hidden">
+                <div class="info-box">
+                    <p><strong>💡 提示：</strong>您的高考成绩为 <span id="selected-score-display"></span> 分，<span id="selected-tier-display"></span>。请选择您感兴趣的学科类别，这将影响您的书院推荐。</p>
+                </div>
+                
+                <div class="discipline-selector">
+                    <h3 style="color: var(--xianjao-blue); margin-bottom: 15px;">🎯 选择学科类别</h3>
+                    <div class="discipline-grid">
+                        <div class="discipline-btn" data-discipline="engineering">
+                            <div class="discipline-icon">⚙️</div>
+                            <div class="discipline-name">工学</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">电气/机械/航天</div>
+                        </div>
+                        <div class="discipline-btn" data-discipline="science">
+                            <div class="discipline-icon">🔬</div>
+                            <div class="discipline-name">理学</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">数理化生</div>
+                        </div>
+                        <div class="discipline-btn" data-discipline="medicine">
+                            <div class="discipline-icon">⚕️</div>
+                            <div class="discipline-name">医学</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">临床/口腔/药学</div>
+                        </div>
+                        <div class="discipline-btn" data-discipline="business">
+                            <div class="discipline-icon">💼</div>
+                            <div class="discipline-name">经管</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">经金/管理</div>
+                        </div>
+                        <div class="discipline-btn" data-discipline="humanities">
+                            <div class="discipline-icon">🎨</div>
+                            <div class="discipline-name">人文社科</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">法学/新闻/哲学</div>
+                        </div>
+                        <div class="discipline-btn" data-discipline="elite">
+                            <div class="discipline-icon">🚀</div>
+                            <div class="discipline-name">拔尖计划</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">钱学森班</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- 选中详情展示 -->
-            <div id="selection-details" class="selection-details" style="display: none;">
-                <h3 id="detail-title">详细信息</h3>
-                <div id="detail-content">请选择背景和书院查看详情</div>
+            
+            <!-- 第三步：书院选择 -->
+            <div id="section-college" class="section-hidden">
+                <div class="info-box">
+                    <p><strong>🏫 填报志愿：</strong>根据您的成绩和学科选择，以下是您可以报考的书院。请仔细阅读各书院特色后做出选择。</p>
+                </div>
+                
+                <div class="college-selector">
+                    <h3 style="color: var(--xianjao-blue); margin-bottom: 15px;">📝 选择您的第一志愿书院</h3>
+                    <div class="college-grid" id="college-grid">
+                        <!-- 动态生成书院卡片 -->
+                    </div>
+                </div>
             </div>
-
-            <div class="character-actions">
-                <button id="btn-back-start" class="btn btn-secondary">返回</button>
-                <button id="btn-start-game" class="btn btn-primary" disabled>确认开始</button>
+            
+            <!-- 底部操作按钮 -->
+            <div class="portal-actions">
+                <button id="btn-prev" class="btn-portal secondary" style="display: none;">← 上一步</button>
+                <button id="btn-next" class="btn-portal primary" disabled>下一步 →</button>
             </div>
         </div>
     </div>
 
     <script src="js/data.js"></script>
     <script>
-        let selectedBackground = null;
+        // 状态管理
+        let currentStep = 1;
+        let selectedScore = null;
+        let selectedTier = null;
+        let selectedDiscipline = null;
         let selectedCollege = null;
-
-        function renderOptions() {
-            // Render Backgrounds
-            const bgContainer = document.getElementById('background-options');
-            bgContainer.innerHTML = '';
-            
-            if (typeof GameData !== 'undefined' && GameData.backgrounds) {
-                Object.values(GameData.backgrounds).forEach(bg => {
-                    const card = document.createElement('div');
-                    card.className = 'option-card';
-                    card.dataset.value = bg.id;
-                    card.innerHTML = `
-                        <div class="option-icon">${bg.icon}</div>
-                        <div class="option-name">${bg.name}</div>
-                        <div class="option-desc">${bg.description}</div>
-                    `;
-                    bgContainer.appendChild(card);
-                });
-            } else {
-                console.error('GameData.backgrounds not found');
-            }
-
-            // Render Colleges
-            const collegeContainer = document.getElementById('college-options');
-            collegeContainer.innerHTML = '';
-
-            if (typeof GameData !== 'undefined' && GameData.colleges) {
-                Object.values(GameData.colleges).forEach(college => {
-                    const card = document.createElement('div');
-                    card.className = 'option-card';
-                    card.dataset.value = college.id;
-
-                    // 简化版标签生成
-                    let miniTags = '';
-                    if (college.buffs) {
-                        miniTags += college.buffs.map(b => `<span class="mini-tag buff">${b.name}</span>`).join('');
-                    }
-                    if (college.debuffs) {
-                        miniTags += college.debuffs.map(db => `<span class="mini-tag debuff">${db.name}</span>`).join('');
-                    }
-
-                    // description is the "narration"/"flavor text"
-                    card.innerHTML = `
-                        <div class="option-icon">${college.icon}</div>
-                        <div class="option-name">${college.name}</div>
-                        <div class="option-desc">
-                            <div style="margin-bottom:8px; font-weight:500; color:#444; font-size:0.9em; font-style:italic;">${college.description}</div>
-                            <div class="mini-tags">${miniTags}</div>
-                        </div>
-                    `;
-                    collegeContainer.appendChild(card);
-                });
-            } else {
-                console.error('GameData.colleges not found');
-            }
-        }
-
-        function updateDetailPanel() {
-            const container = document.getElementById('selection-details');
-            const titleEl = document.getElementById('detail-title');
-            const contentEl = document.getElementById('detail-content');
-
-            if (!selectedBackground && !selectedCollege) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            let html = '';
-
-            // 背景详情
-            if (selectedBackground) {
-                const bg = GameData.backgrounds[selectedBackground];
-                html += `
-                    <div class="detail-group">
-                        <span class="detail-label">【出身背景】${bg.name}</span>
-                        <div class="detail-item">${bg.description}</div>
-                    </div>
-                `;
-            }
-
-            // 书院详情
-            if (selectedCollege) {
-                const col = GameData.colleges[selectedCollege];
-                html += `<div class="detail-group"><span class="detail-label">【所属书院】${col.name}</span>`;
-                
-                // Buffs
-                if (col.buffs && col.buffs.length > 0) {
-                    col.buffs.forEach(b => {
-                        html += `
-                            <div class="detail-item">
-                                <span class="detail-tag buff">${b.name}</span>
-                                <span>${b.desc}</span>
-                            </div>
-                        `;
-                    });
-                }
-
-                // Debuffs
-                if (col.debuffs && col.debuffs.length > 0) {
-                    col.debuffs.forEach(db => {
-                        html += `
-                            <div class="detail-item">
-                                <span class="detail-tag debuff">${db.name}</span>
-                                <span>${db.desc}</span>
-                            </div>
-                        `;
-                    });
-                }
-                html += `</div>`;
-            }
-
-            contentEl.innerHTML = html;
-        }
-
-        function initSelection() {
-             // Background Selection Delegation
-             document.getElementById('background-options').addEventListener('click', function(e) {
-                const card = e.target.closest('.option-card');
-                if (!card) return;
-                
-                document.querySelectorAll('#background-options .option-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                selectedBackground = card.dataset.value;
-                checkCanStart();
-                updateDetailPanel();
-            });
-
-            // College Selection Delegation
-            document.getElementById('college-options').addEventListener('click', function(e) {
-                const card = e.target.closest('.option-card');
-                if (!card) return;
-
-                document.querySelectorAll('#college-options .option-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                selectedCollege = card.dataset.value;
-                checkCanStart();
-                updateDetailPanel();
-            });
-        }
-
+        let studentName = '';
+        let studentGender = 'male';
+        
+        // 随机姓名库
+        const surnames = ['王', '李', '张', '刘', '陈', '杨', '黄', '赵', '周', '吴', '徐', '孙', '马', '朱', '胡', '郭', '何', '林', '罗', '高'];
+        const maleNames = ['浩然', '宇轩', '博文', '子轩', '梓豪', '俊杰', '明轩', '天佑', '瑞霖', '锦程', '晨曦', '睿智', '文昊', '煜城', '嘉懿'];
+        const femaleNames = ['诗涵', '雨萱', '欣怡', '梓萱', '可馨', '雅琪', '思琪', '静怡', '婉婷', '梦洁', '诗雅', '清妍', '雨桐', '舒涵', '芷若'];
+        
+        // 书院分数线配置（基于真实专业分布）
+        const collegeRequirements = {
+            qianxuesen: { minScore: 670, disciplines: ['elite'], priority: 1, campus: 'xingqing' },
+            nanyang: { minScore: 645, disciplines: ['engineering'], priority: 2, campus: 'xingqing' },
+            zhongying: { minScore: 640, disciplines: ['engineering'], priority: 3, campus: 'xingqing' },
+            pengkang: { minScore: 635, disciplines: ['engineering', 'science'], priority: 4, campus: 'xingqing' },
+            lizhi: { minScore: 630, disciplines: ['science'], priority: 5, campus: 'xingqing' },
+            zonglian: { minScore: 630, disciplines: ['medicine'], priority: 6, campus: 'yanta' },
+            wenzhi: { minScore: 625, disciplines: ['engineering'], priority: 7, campus: 'xingqing' },
+            qide: { minScore: 620, disciplines: ['business', 'engineering'], priority: 8, campus: 'chuangxingang' },
+            chongshi: { minScore: 615, disciplines: ['humanities', 'business'], priority: 9, campus: 'xingqing' }
+        };
+        
+        // 分数档次对应的出身背景
+        const tierBackgrounds = {
+            extraordinary: 'prodigy',    // 680+ -> 少年班神童
+            excellent: 'qianban',         // 650-679 -> 钱班大佬
+            good: 'normal',               // 620-649 -> 萌新小白
+            average: 'normal'             // 590-619 -> 萌新小白
+        };
+        
+        // 初始化
         document.addEventListener('DOMContentLoaded', function() {
-            renderOptions();
-            initSelection();
-
-            // 返回按钮
-            document.getElementById('btn-back-start').addEventListener('click', function() {
-                window.location.href = 'index.html';
+            initPersonalInfo();
+            initScoreSelection();
+            initDisciplineSelection();
+            initNavigation();
+        });
+        
+        // 个人信息初始化
+        function initPersonalInfo() {
+            const nameInput = document.getElementById('student-name');
+            const randomBtn = document.getElementById('random-name-btn');
+            const genderRadios = document.querySelectorAll('input[name="gender"]');
+            
+            // 随机姓名按钮
+            randomBtn.addEventListener('click', function() {
+                const surname = surnames[Math.floor(Math.random() * surnames.length)];
+                const currentGender = document.querySelector('input[name="gender"]:checked').value;
+                const nameList = currentGender === 'male' ? maleNames : femaleNames;
+                const givenName = nameList[Math.floor(Math.random() * nameList.length)];
+                nameInput.value = surname + givenName;
+                studentName = surname + givenName;
             });
-
-            // 确认开始
-            document.getElementById('btn-start-game').addEventListener('click', function() {
-                if (selectedBackground && selectedCollege) {
-                    // 保存选择到localStorage
-                    localStorage.setItem('xjtu_character', JSON.stringify({
-                        background: selectedBackground,
-                        college: selectedCollege
-                    }));
-                    sessionStorage.setItem('valid_session', 'true');
-                    localStorage.setItem('xjtu_session_token', 'true'); // 手机端兼容性备份
-                    window.location.href = 'game.html';
+            
+            // 姓名输入
+            nameInput.addEventListener('input', function() {
+                studentName = this.value.trim();
+                validateStep1();
+            });
+            
+            // 性别选择
+            genderRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    studentGender = this.value;
+                });
+            });
+            
+            // 生成默认随机姓名
+            randomBtn.click();
+        }
+        
+        // 验证第一步是否完成
+        function validateStep1() {
+            const hasName = studentName.length > 0;
+            const hasScore = selectedScore !== null;
+            document.getElementById('btn-next').disabled = !(hasName && hasScore);
+        };
+        
+        // 第一步：成绩选择
+        function initScoreSelection() {
+            const scoreCards = document.querySelectorAll('.score-card');
+            scoreCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    scoreCards.forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    selectedScore = parseInt(this.dataset.score);
+                    selectedTier = this.dataset.tier;
+                    
+                    validateStep1();
+                });
+            });
+        }
+        
+        // 第二步：学科选择
+        function initDisciplineSelection() {
+            const disciplineBtns = document.querySelectorAll('.discipline-btn');
+            disciplineBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    disciplineBtns.forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    selectedDiscipline = this.dataset.discipline;
+                    document.getElementById('btn-next').disabled = false;
+                });
+            });
+        }
+        
+        // 导航控制
+        function initNavigation() {
+            const btnNext = document.getElementById('btn-next');
+            const btnPrev = document.getElementById('btn-prev');
+            
+            btnNext.addEventListener('click', function() {
+                if (currentStep === 1 && selectedScore) {
+                    goToStep(2);
+                } else if (currentStep === 2 && selectedDiscipline) {
+                    goToStep(3);
+                } else if (currentStep === 3 && selectedCollege) {
+                    startGame();
                 }
             });
-        });
-
-        function checkCanStart() {
-            const canStart = selectedBackground && selectedCollege;
-            document.getElementById('btn-start-game').disabled = !canStart;
+            
+            btnPrev.addEventListener('click', function() {
+                if (currentStep > 1) {
+                    goToStep(currentStep - 1);
+                }
+            });
+        }
+        
+        // 步骤跳转
+        function goToStep(step) {
+            currentStep = step;
+            
+            // 更新步骤指示器
+            updateStepIndicator();
+            
+            // 显示/隐藏对应区域
+            document.getElementById('section-score').classList.toggle('section-hidden', step !== 1);
+            document.getElementById('section-discipline').classList.toggle('section-hidden', step !== 2);
+            document.getElementById('section-college').classList.toggle('section-hidden', step !== 3);
+            
+            // 更新按钮状态
+            document.getElementById('btn-prev').style.display = step > 1 ? 'block' : 'none';
+            const btnNext = document.getElementById('btn-next');
+            
+            if (step === 1) {
+                btnNext.textContent = '下一步 →';
+                btnNext.disabled = !selectedScore;
+            } else if (step === 2) {
+                // 更新成绩显示
+                updateScoreDisplay();
+                btnNext.textContent = '下一步 →';
+                btnNext.disabled = !selectedDiscipline;
+            } else if (step === 3) {
+                // 渲染书院列表
+                renderColleges();
+                btnNext.textContent = '确认入学 🎓';
+                btnNext.disabled = !selectedCollege;
+            }
+        }
+        
+        // 更新步骤指示器
+        function updateStepIndicator() {
+            for (let i = 1; i <= 3; i++) {
+                const stepItem = document.getElementById(`step${i}`);
+                stepItem.classList.remove('active', 'completed');
+                
+                if (i < currentStep) {
+                    stepItem.classList.add('completed');
+                } else if (i === currentStep) {
+                    stepItem.classList.add('active');
+                }
+            }
+        }
+        
+        // 更新成绩显示
+        function updateScoreDisplay() {
+            const tierNames = {
+                extraordinary: '超常发挥（680+）',
+                excellent: '优秀成绩（650-679）',
+                good: '正常发挥（620-649）',
+                average: '压线录取（590-619）'
+            };
+            
+            document.getElementById('selected-score-display').textContent = selectedScore;
+            document.getElementById('selected-tier-display').textContent = tierNames[selectedTier];
+        }
+        
+        // 渲染书院列表
+        function renderColleges() {
+            const grid = document.getElementById('college-grid');
+            grid.innerHTML = '';
+            
+            // 获取所有书院并按优先级排序
+            const colleges = Object.entries(GameData.colleges)
+                .map(([id, data]) => ({
+                    id,
+                    ...data,
+                    requirement: collegeRequirements[id] || { minScore: 590, disciplines: [], priority: 99 }
+                }))
+                .sort((a, b) => a.requirement.priority - b.requirement.priority);
+            
+            colleges.forEach(college => {
+                const req = college.requirement;
+                const isScoreEnough = selectedScore >= req.minScore;
+                const isDisciplineMatch = req.disciplines.length === 0 || 
+                                         req.disciplines.includes(selectedDiscipline);
+                const isLocked = !isScoreEnough || !isDisciplineMatch;
+                
+                const card = document.createElement('div');
+                card.className = `college-card ${isLocked ? 'locked' : ''}`;
+                card.dataset.collegeId = college.id;
+                
+                // 构建标签
+                let tags = '';
+                if (college.buffs) {
+                    college.buffs.forEach(buff => {
+                        tags += `<span class="tag buff">✓ ${buff.name}</span>`;
+                    });
+                }
+                if (college.debuffs) {
+                    college.debuffs.forEach(debuff => {
+                        tags += `<span class="tag debuff">⚠ ${debuff.name}</span>`;
+                    });
+                }
+                
+                // 校区显示
+                let campusText = '兴庆校区';
+                if (req.campus === 'yanta') campusText = '雁塔校区';
+                else if (req.campus === 'chuangxingang') campusText = '创新港';
+                
+                card.innerHTML = `
+                    ${isLocked ? '<div class="lock-badge">🔒 条件不符</div>' : ''}
+                    <div class="college-header">
+                        <div class="college-icon">${college.icon}</div>
+                        <div class="college-info">
+                            <h3>${college.name}</h3>
+                            <span class="college-campus">${campusText}</span>
+                        </div>
+                    </div>
+                    <div class="college-desc">${college.description}</div>
+                    <div class="college-requirements">
+                        <span class="requirement-label">录取分数线：</span>
+                        <span class="requirement-score">${req.minScore}分</span>
+                    </div>
+                    <div class="college-tags">${tags}</div>
+                `;
+                
+                // 只有未锁定的书院才能点击
+                if (!isLocked) {
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', function() {
+                        document.querySelectorAll('.college-card').forEach(c => c.classList.remove('selected'));
+                        this.classList.add('selected');
+                        selectedCollege = this.dataset.collegeId;
+                        document.getElementById('btn-next').disabled = false;
+                    });
+                }
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        // 开始游戏
+        function startGame() {
+            if (!selectedCollege || !selectedTier) return;
+            
+            // 根据分数档次选择对应的出身背景
+            const background = tierBackgrounds[selectedTier];
+            
+            // 保存到localStorage
+            localStorage.setItem('xjtu_character', JSON.stringify({
+                name: studentName,
+                gender: studentGender,
+                background: background,
+                college: selectedCollege,
+                score: selectedScore,
+                tier: selectedTier,
+                discipline: selectedDiscipline
+            }));
+            
+            sessionStorage.setItem('valid_session', 'true');
+            localStorage.setItem('xjtu_session_token', 'true');
+            
+            // 跳转到游戏界面
+            window.location.href = 'game.html';
         }
     </script>
 </body>

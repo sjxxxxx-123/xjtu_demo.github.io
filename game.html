@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <title>游戏中 - XJTU本科模拟器</title>
+    <title>游戏中 - 鲜椒本科模拟器</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/mobile_v2.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -511,7 +511,7 @@
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label style="display:block; margin-bottom:5px; font-weight:bold;">API 接入</label>
                     <div style="padding: 10px; background: #f0f7ff; border-radius: 4px; border-left: 4px solid #003E7E; font-size: 0.9rem; margin-bottom: 15px;">
-                        当前使用: <strong>XJTU AI Proxy</strong><br>
+                        当前使用: <strong>鲜椒 AI Proxy</strong><br>
                         无需翻墙，支持 DeepSeek 模型。
                     </div>
                 </div>
@@ -528,6 +528,266 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="settings-close-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 鲜椒生存手册弹窗 -->
+    <div id="survival-handbook-modal" class="modal">
+        <div class="modal-content handbook-content" style="max-height: 90vh; overflow-y: auto; max-width: 900px;">
+            <div class="modal-header">
+                <h2 class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+                    <span>📖</span>
+                    <span>鲜椒生存手册</span>
+                </h2>
+                <button class="modal-close" id="handbook-close">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- 标签页导航 -->
+                <div class="handbook-tabs" style="display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; overflow-x: auto;">
+                    <button class="handbook-tab-btn active" data-tab="intro">🎮 新手指南</button>
+                    <button class="handbook-tab-btn" data-tab="gameplay">🎯 主要玩法</button>
+                    <button class="handbook-tab-btn" data-tab="systems">⚙️ 游戏系统</button>
+                    <button class="handbook-tab-btn" data-tab="endings">🎓 结局详解</button>
+                    <button class="handbook-tab-btn" data-tab="tips">💡 生存建议</button>
+                </div>
+
+                <!-- 标签页内容 -->
+                <div id="handbook-content" class="handbook-content-wrapper">
+                    <!-- 新手指南 -->
+                    <div class="handbook-tab-content active" data-tab="intro">
+                        <h3>👋 欢迎来到鲜椒!</h3>
+                        <p>你已经踏入鲜椒的校园，四年的大学生活正在等待你。这本手册将帮助你更好地理解游戏的各个方面。</p>
+                        
+                        <h4>🎮 基础操作</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>选择行动：</strong>点击屏幕上的行动按钮选择你这个月想做的事</li>
+                            <li><strong>结束本月：</strong>点击"结束本月"按钮推进时间，进行考试和事件触发</li>
+                            <li><strong>查看属性：</strong>屏幕上方和右侧显示你的各项属性值</li>
+                            <li><strong>保存游戏：</strong>点击菜单按钮可以保存和读档</li>
+                        </ul>
+
+                        <h4>📊 核心属性</h4>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <p><strong>🔋 体力(Energy)</strong>: 行动的消耗资源，每月恢复至上限</p>
+                            <p><strong>🧠 SAN值</strong>: 心理健康度(0-100)，低于0游戏失败</p>
+                            <p><strong>💰 金币</strong>: 用于娱乐、吃饭、约会等消费</p>
+                            <p><strong>📚 GPA</strong>: 学业成绩(0-4.3)，影响学业相关成就</p>
+                            <p><strong>⭐ 综测</strong>: 综合素质评分，升学竞争力的重要指标</p>
+                            <p><strong>⭐ 声望</strong>: 校园知名度(0-100)，通过成就和行为变化</p>
+                        </div>
+                    </div>
+
+                    <!-- 主要玩法 -->
+                    <div class="handbook-tab-content" data-tab="gameplay">
+                        <h3>🎯 游戏的核心目标</h3>
+                        <p>通过四年的大学生涯，完成你的学业目标，最终获得毕业证或更高的成就。</p>
+
+                        <h4>📚 学习系统</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>上课：</strong>每月消耗2体力，可平衡学习或重点某门课</li>
+                            <li><strong>自习：</strong>每月消耗3体力，在不同地点自习有不同加成</li>
+                            <li><strong>掌握度：</strong>每门课都有掌握度，高于60%可能及格，每月衰减</li>
+                            <li><strong>期末考试：</strong>1月和6月进行期末考试，决定是否及格</li>
+                        </ul>
+
+                        <h4>🏆 活动与成就</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>参加竞赛：</strong>获奖加综测和GPA，但SAN消耗</li>
+                            <li><strong>科研实习：</strong>积累研究经验，可发论文获高综测加成</li>
+                            <li><strong>兼职打工：</strong>赚取金币但消耗体力和SAN</li>
+                            <li><strong>志愿服务：</strong>提升综测和声望</li>
+                            <li><strong>社团活动：</strong>增加社交值和SAN</li>
+                        </ul>
+
+                        <h4>💕 恋爱系统</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>解锁条件：</strong>各书院有不同的恋爱解锁条件</li>
+                            <li><strong>约会地点：</strong>有6个不同的约会地点，消耗金币换取SAN恢复</li>
+                            <li><strong>脱单：</strong>约会时有一定概率脱单</li>
+                            <li><strong>约会效果：</strong>脱单后可持续约会维持关系</li>
+                        </ul>
+                    </div>
+
+                    <!-- 游戏系统 -->
+                    <div class="handbook-tab-content" data-tab="systems">
+                        <h3>⚙️ 深入的游戏系统</h3>
+
+                        <h4>🏛️ 书院系统</h4>
+                        <p>不同书院有不同的特殊效果：</p>
+                        <ul style="line-height: 1.8; font-size: 0.95rem;">
+                            <li><strong>彭康</strong>: 地利人和(上课体力-1)，体力恢复加成</li>
+                            <li><strong>文治</strong>: 打小锤子等特殊活动，社团联动</li>
+                            <li><strong>南洋</strong>: 工程师特质，实验类课程加成</li>
+                            <li><strong>钱班</strong>: 掌握度起步高，难度大，GPA无上限</li>
+                            <li><strong>仲英</strong>: 志愿特效，综测加倍</li>
+                            <li><strong>励志</strong>: 逻辑课程自习加成</li>
+                            <li><strong>崇实</strong>: 社交效率高，脱单加成</li>
+                            <li><strong>宗濂</strong>: 医学特色，考试周体力消耗翻倍</li>
+                            <li><strong>启德</strong>: 兼职收入加成，精英生活</li>
+                        </ul>
+
+                        <h4>📈 长远规划系统</h4>
+                        <p>大三下学期可选择三条路线之一：</p>
+                        <div style="background: #f9f9f9; padding: 12px; border-left: 4px solid #2196F3; margin: 10px 0;">
+                            <p><strong>🎓 保研深造</strong>: 联系导师、大创项目、竞赛加分</p>
+                            <p><strong>✈️ 出国留学</strong>: 托福/GRE、申请材料、金币消耗大</p>
+                            <p><strong>💼 就业工作</strong>: 实习经历、面试技巧、获得Offer</p>
+                        </div>
+
+                        <h4>📊 其他系统</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>体测系统：</strong>5月和10月进行体测，达标要求</li>
+                            <li><strong>声望系统：</strong>通过成就和行为积累，影响剧情</li>
+                            <li><strong>寒假系统：</strong>选择不同活动获得不同收益</li>
+                            <li><strong>大四毕设：</strong>进度条系统，完成后毕业</li>
+                        </ul>
+                    </div>
+
+                    <!-- 结局详解 -->
+                    <div class="handbook-tab-content" data-tab="endings">
+                        <h3>🎓 游戏结局详解</h3>
+                        <p>游戏在大四完成毕设后进入结局，根据你的成绩和选择显示不同的结局。</p>
+
+                        <h4 style="color: #f44336;">😢 肄业结局</h4>
+                        <div style="background: #ffebee; padding: 12px; border-left: 4px solid #f44336; margin: 10px 0; border-radius: 4px;">
+                            <p><strong>触发条件：</strong></p>
+                            <ul>
+                                <li>GPA < 2.0（挂科过多）</li>
+                                <li>或 SAN值 ≤ 0（身心崩溃）</li>
+                            </ul>
+                            <p><strong>结局描述：</strong>很遗憾，你没能完成学业。但这不是结束，人生还有很多可能性...</p>
+                            <p style="color: #888; font-size: 0.9rem;">💡 <strong>避免方法：</strong>维持GPA > 2.0，定期休息管理SAN值</p>
+                        </div>
+
+                        <h4 style="color: #4CAF50;">🎓 普通毕业</h4>
+                        <div style="background: #f1f8f4; padding: 12px; border-left: 4px solid #4CAF50; margin: 10px 0; border-radius: 4px;">
+                            <p><strong>触发条件：</strong></p>
+                            <ul>
+                                <li>GPA ≥ 2.0</li>
+                                <li>不符合其他特殊结局条件</li>
+                            </ul>
+                            <p><strong>结局描述：</strong>你顺利完成了四年大学生活，拿到了毕业证。平凡而珍贵的青春。</p>
+                            <p style="color: #888; font-size: 0.9rem;">💡 <strong>难度：</strong>入门难度，完成学业即可</p>
+                        </div>
+
+                        <h4 style="color: #2196F3;">📚 保研成功</h4>
+                        <div style="background: #e3f2fd; padding: 12px; border-left: 4px solid #2196F3; margin: 10px 0; border-radius: 4px;">
+                            <p><strong>触发条件：</strong></p>
+                            <ul>
+                                <li><strong>GPA ≥ 3.5</strong> - 需要稳定的学业成绩</li>
+                                <li><strong>综测 ≥ 80</strong> - 需要参与各类活动</li>
+                                <li>不符合优秀毕业生的条件</li>
+                            </ul>
+                            <p><strong>结局描述：</strong>优异的成绩让你获得了保研资格，继续在学术道路上前进！</p>
+                            <p style="color: #888; font-size: 0.9rem;">💡 <strong>建议路线：</strong>选择"保研深造"路线，完成导师要求</p>
+                        </div>
+
+                        <h4 style="color: #FF9800;">🏆 优秀毕业生</h4>
+                        <div style="background: #fff3e0; padding: 12px; border-left: 4px solid #FF9800; margin: 10px 0; border-radius: 4px;">
+                            <p><strong>触发条件（需同时满足所有条件）：</strong></p>
+                            <ul>
+                                <li><strong>GPA ≥ 4.0</strong> - 接近满分的学业成绩</li>
+                                <li><strong>综测 ≥ 95</strong> - 综合素质几乎完美</li>
+                                <li><strong>国家奖学金</strong> - 需要通过特定成就解锁</li>
+                            </ul>
+                            <p><strong>结局描述：</strong>你是年级的佼佼者，获得了优秀毕业生称号，前途无量！</p>
+                            <p style="color: #d32f2f; font-size: 0.9rem;">⚠️ <strong>最高难度：</strong>需要几乎完美的表现</p>
+                        </div>
+
+                        <h4 style="color: #9C27B0;">🚀 西迁精神传承者</h4>
+                        <div style="background: #f3e5f5; padding: 12px; border-left: 4px solid #9C27B0; margin: 10px 0; border-radius: 4px;">
+                            <p><strong>触发条件：</strong></p>
+                            <ul>
+                                <li>激活 <strong>westwardPath</strong> 标志</li>
+                                <li>需要通过游戏中的特定选择或事件</li>
+                            </ul>
+                            <p><strong>结局描述：</strong>你深刻理解了西迁精神，选择去西部建设祖国，成为新时代的西迁人！</p>
+                            <p style="color: #888; font-size: 0.9rem;">💡 <strong>特殊路线：</strong>需要在游戏中做出相应选择</p>
+                        </div>
+
+                        <h4>📊 结局优先级</h4>
+                        <p>游戏在毕业时按照以下顺序自动判定结局：</p>
+                        <ol style="background: #f5f5f5; padding: 15px; border-radius: 4px; line-height: 2;">
+                            <li><strong>优秀毕业生</strong> 🏆 (需要GPA≥4.0 且综测≥95 且国奖)</li>
+                            <li><strong>西迁精神传承者</strong> 🚀 (需要westwardPath=true)</li>
+                            <li><strong>保研成功</strong> 📚 (需要GPA≥3.5 且综测≥80)</li>
+                            <li><strong>普通毕业</strong> 🎓 (需要GPA≥2.0)</li>
+                            <li><strong>肄业结局</strong> 😢 (默认最坏结局)</li>
+                        </ol>
+                    </div>
+
+                    <!-- 生存建议 -->
+                    <div class="handbook-tab-content" data-tab="tips">
+                        <h3>💡 鲜椒生存建议</h3>
+
+                        <h4>🎯 目标规划</h4>
+                        <ul style="line-height: 2;">
+                            <li><strong>确定目标：</strong>从一开始就明确你的游戏目标（普通毕业/保研/优秀）</li>
+                            <li><strong>选择路线：</strong>大三下选择合适的长远规划路线</li>
+                            <li><strong>持续追踪：</strong>定期检查各项数值是否向目标靠近</li>
+                        </ul>
+
+                        <h4>📚 学习建议</h4>
+                        <div style="background: #e8f5e9; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                            <ul style="line-height: 2;">
+                                <li>🔴 <strong>高风险课程(难度>0.7)：</strong>每月需要至少3-4次上课/自习</li>
+                                <li>🟡 <strong>中等课程(难度0.5-0.7)：</strong>每月2-3次足够</li>
+                                <li>🟢 <strong>简单课程(难度<0.5)：</strong>每月1-2次维持</li>
+                                <li>⚠️ <strong>掌握度<50%：</strong>务必在期末前加强复习</li>
+                            </ul>
+                        </div>
+
+                        <h4>🧠 SAN值管理</h4>
+                        <div style="background: #fff3e0; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                            <ul style="line-height: 2;">
+                                <li>SAN值是最重要的资源，低于0即游戏失败</li>
+                                <li>定期进行休息、洗澡、娱乐、约会等恢复活动</li>
+                                <li>避免过度参与消耗SAN的活动（竞赛、科研）</li>
+                                <li>进入考试冲刺模式时要在6月/1月前恢复SAN</li>
+                            </ul>
+                        </div>
+
+                        <h4>💰 金币管理</h4>
+                        <ul style="line-height: 2;">
+                            <li>每月有固定生活费消耗（约600-800），提前规划</li>
+                            <li>兼职是稳定的金币来源</li>
+                            <li>大额消费（旅游、留学）需要提前积累</li>
+                            <li>金币不足时可减少娱乐活动支出</li>
+                        </ul>
+
+                        <h4>🏆 成就解锁建议</h4>
+                        <ul style="line-height: 2;">
+                            <li>关注游戏中的事件和提示，许多成就会有隐藏条件</li>
+                            <li>多尝试不同的行为和选择</li>
+                            <li>参加竞赛、发表论文、获得奖学金都是重要成就</li>
+                            <li>声望系统与许多成就相关</li>
+                        </ul>
+
+                        <h4>⭐ 快速获得优秀毕业生的策略</h4>
+                        <div style="background: #f3e5f5; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                            <p><strong>需要完成：</strong></p>
+                            <ol>
+                                <li>保持GPA ≥ 4.0（几乎不能挂科）</li>
+                                <li>维持综测 ≥ 95（积极参加各类活动）</li>
+                                <li>获得国家奖学金（需要特定的成就解锁）</li>
+                            </ol>
+                            <p><strong>建议方法：</strong>从大一就选择难度最高的课程并认真学习，同时积极参加竞赛、科研、志愿等活动</p>
+                        </div>
+
+                        <h4>🌟 一般性建议</h4>
+                        <ul style="line-height: 2;">
+                            <li>不要太贪心，在GPA和SAN之间平衡</li>
+                            <li>参加一些社交活动对解锁恋爱有帮助</li>
+                            <li>利用寒假小学期进行集中学习或休整</li>
+                            <li>大四毕设压力大，提前做好心理准备</li>
+                            <li>不同的书院有不同的优势，充分利用书院特性</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button class="btn btn-primary" id="handbook-confirm" style="background: #003E7E;">开始游戏</button>
             </div>
         </div>
     </div>

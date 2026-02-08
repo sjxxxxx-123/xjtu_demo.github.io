@@ -1,10 +1,10 @@
 // author: sjxxxx
 /**
- * XJTU本科模拟器 - 游戏主逻辑
+ * 鲜椒本科模拟器 - 游戏主逻辑
  * 核心游戏循环、状态管理、UI交互
  */
 
-class XJTUSimulator {
+class XianjaoSimulator {
     constructor() {
         // 游戏状态
         this.state = null;
@@ -55,6 +55,7 @@ class XJTUSimulator {
             this.initGameState();
             this.normalizeStateIntegers();
             localStorage.removeItem('xjtu_character');
+            this.isNewGame = true;  // 标记为新游戏
         } else {
             // 没有数据，说明既不是继续游戏也不是新游戏，可能是非法访问或数据丢失，返回首页
             window.location.href = 'index.html';
@@ -69,6 +70,11 @@ class XJTUSimulator {
         }
 
         this.updateUI();
+
+        // 新游戏时显示生存手册
+        if (this.isNewGame) {
+            setTimeout(() => this.showSurvivalHandbook(), 300);
+        }
     }
 
     // 绑定事件
@@ -336,6 +342,23 @@ class XJTUSimulator {
                 const career = btn.dataset.career;
                 this.selectCareerPath(career);
             });
+        });
+
+        // 生存手册相关事件绑定
+        const handbookConfirmBtn = document.getElementById('handbook-confirm');
+        if (handbookConfirmBtn) {
+            handbookConfirmBtn.addEventListener('click', () => this.hideModal('survival-handbook-modal'));
+        }
+
+        const handbookCloseBtn = document.getElementById('handbook-close');
+        if (handbookCloseBtn) {
+            handbookCloseBtn.addEventListener('click', () => this.hideModal('survival-handbook-modal'));
+        }
+
+        // 生存手册标签页切换
+        const handbookTabBtns = document.querySelectorAll('.handbook-tab-btn');
+        handbookTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.switchHandbookTab(btn.dataset.tab));
         });
     }
 
@@ -4790,6 +4813,34 @@ class XJTUSimulator {
         }
     }
 
+    // 显示鲜椒生存手册
+    showSurvivalHandbook() {
+        this.showModal('survival-handbook-modal');
+    }
+
+    // 切换生存手册标签页
+    switchHandbookTab(tabName) {
+        // 更新标签页按钮
+        const tabBtns = document.querySelectorAll('.handbook-tab-btn');
+        tabBtns.forEach(btn => {
+            if (btn.dataset.tab === tabName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // 更新内容显示
+        const tabContents = document.querySelectorAll('.handbook-tab-content');
+        tabContents.forEach(content => {
+            if (content.dataset.tab === tabName) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+    }
+
     // 保存游戏
     saveGame(silent = false) {
         localStorage.setItem('xjtu_game_state', JSON.stringify(this.state));
@@ -4802,5 +4853,5 @@ class XJTUSimulator {
 
 // 启动游戏
 document.addEventListener('DOMContentLoaded', () => {
-    window.game = new XJTUSimulator();
+    window.game = new XianjaoSimulator();
 });

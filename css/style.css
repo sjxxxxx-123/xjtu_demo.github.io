@@ -1,15 +1,15 @@
-/* author: sjxxxx */
+﻿/* author: sjxxxx */
 /* ========================================
-   XJTU本科模拟器 - 样式表
-   主色调：交大蓝 #003E7E
+   鲜椒本科模拟器 - 样式表
+   主色调：鲜椒蓝 #003E7E
    ======================================== */
 
 /* CSS变量 */
 :root {
-    --xjtu-blue: #003E7E;
-    --xjtu-blue-light: #1565C0;
-    --xjtu-blue-dark: #002855;
-    --xjtu-gold: #C9A227;
+    --xianjao-blue: #003E7E;
+    --xianjao-blue-light: #1565C0;
+    --xianjao-blue-dark: #002855;
+    --xianjao-gold: #C9A227;
     --success: #4CAF50;
     --warning: #FF9800;
     --danger: #F44336;
@@ -67,7 +67,7 @@ body {
    开始界面
    ======================================== */
 #start-screen {
-    background: linear-gradient(135deg, var(--xjtu-blue) 0%, var(--xjtu-blue-dark) 100%);
+    background: linear-gradient(135deg, var(--xianjao-blue) 0%, var(--xianjao-blue-dark) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -129,7 +129,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--xjtu-blue-light), var(--xjtu-blue));
+    background: linear-gradient(135deg, var(--xianjao-blue-light), var(--xianjao-blue));
     color: #fff;
     box-shadow: 0 4px 12px rgba(0, 62, 126, 0.3);
 }
@@ -174,7 +174,7 @@ body {
 .btn-icon {
     background: transparent;
     border: none;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 8px;
@@ -201,7 +201,7 @@ body {
 
 .character-container h2 {
     text-align: center;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 30px;
     font-size: 1.8rem;
 }
@@ -214,7 +214,7 @@ body {
     color: var(--text-primary);
     margin-bottom: 15px;
     padding-left: 10px;
-    border-left: 4px solid var(--xjtu-blue);
+    border-left: 4px solid var(--xianjao-blue);
 }
 
 .option-grid {
@@ -234,13 +234,13 @@ body {
 }
 
 .option-card:hover {
-    border-color: var(--xjtu-blue-light);
+    border-color: var(--xianjao-blue-light);
     box-shadow: var(--shadow-hover);
     transform: translateY(-4px);
 }
 
 .option-card.selected {
-    border-color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
     background: linear-gradient(135deg, rgba(0, 62, 126, 0.05), rgba(0, 62, 126, 0.1));
     box-shadow: 0 0 0 3px rgba(0, 62, 126, 0.2);
 }
@@ -252,7 +252,7 @@ body {
 
 .option-name {
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 8px;
 }
 
@@ -288,8 +288,8 @@ body {
 }
 
 .character-actions .btn-secondary:hover {
-    border-color: var(--xjtu-blue);
-    color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
+    color: var(--xianjao-blue);
 }
 
 /* ========================================
@@ -302,7 +302,7 @@ body {
 
 /* 游戏头部 */
 .game-header {
-    background: var(--xjtu-blue);
+    background: var(--xianjao-blue);
     color: #fff;
     padding: 15px 20px;
     display: flex;
@@ -365,7 +365,7 @@ body {
 .stat-value {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 8px;
 }
 
@@ -382,7 +382,7 @@ body {
     transition: width 0.5s ease;
 }
 
-.stat-fill.gpa { background: linear-gradient(90deg, var(--xjtu-blue-light), var(--xjtu-blue)); }
+.stat-fill.gpa { background: linear-gradient(90deg, var(--xianjao-blue-light), var(--xianjao-blue)); }
 .stat-fill.san { background: linear-gradient(90deg, #81C784, #4CAF50); }
 .stat-fill.energy { background: linear-gradient(90deg, #FFB74D, #FF9800); }
 .stat-fill.social { background: linear-gradient(90deg, #BA68C8, #9C27B0); }
@@ -397,7 +397,7 @@ body {
 }
 
 .course-panel h3 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 15px;
     font-size: 1rem;
 }
@@ -412,7 +412,7 @@ body {
     background: var(--bg-primary);
     padding: 12px;
     border-radius: var(--border-radius-sm);
-    border-left: 4px solid var(--xjtu-blue);
+    border-left: 4px solid var(--xianjao-blue);
 }
 
 .course-name {
@@ -436,7 +436,7 @@ body {
 
 .course-mastery-fill {
     height: 100%;
-    background: var(--xjtu-blue-light);
+    background: var(--xianjao-blue-light);
     border-radius: 3px;
     transition: width 0.3s ease;
 }
@@ -459,7 +459,7 @@ body {
 }
 
 .action-panel h3 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 15px;
     font-size: 1rem;
 }
@@ -496,7 +496,7 @@ body {
     cursor: not-allowed;
 }
 
-.action-btn.study { border-color: var(--xjtu-blue-light); }
+.action-btn.study { border-color: var(--xianjao-blue-light); }
 .action-btn.study:hover:not(:disabled) { background: rgba(21, 101, 192, 0.1); }
 
 .action-btn.social { border-color: #9C27B0; }
@@ -505,7 +505,7 @@ body {
 .action-btn.life { border-color: var(--success); }
 .action-btn.life:hover:not(:disabled) { background: rgba(76, 175, 80, 0.1); }
 
-.action-btn.special { border-color: var(--xjtu-gold); }
+.action-btn.special { border-color: var(--xianjao-gold); }
 .action-btn.special:hover:not(:disabled) { background: rgba(201, 162, 39, 0.1); }
 
 .action-icon {
@@ -554,7 +554,7 @@ body {
 }
 
 .event-log h3 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 10px;
     font-size: 1rem;
 }
@@ -577,7 +577,7 @@ body {
 }
 
 .log-entry.important {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     font-weight: 500;
 }
 
@@ -615,7 +615,7 @@ body {
 
 .thesis-container h2 {
     text-align: center;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 30px;
 }
 
@@ -642,7 +642,7 @@ body {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--xjtu-blue-light), var(--xjtu-blue));
+    background: linear-gradient(90deg, var(--xianjao-blue-light), var(--xianjao-blue));
     border-radius: 15px;
     transition: width 0.5s ease;
 }
@@ -652,7 +652,7 @@ body {
     margin-top: 10px;
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .thesis-stats {
@@ -680,7 +680,7 @@ body {
 .thesis-stat span:last-child {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .thesis-actions {
@@ -707,7 +707,7 @@ body {
    结局界面
    ======================================== */
 #ending-screen {
-    background: linear-gradient(135deg, var(--xjtu-blue) 0%, var(--xjtu-blue-dark) 100%);
+    background: linear-gradient(135deg, var(--xianjao-blue) 0%, var(--xianjao-blue-dark) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -778,7 +778,7 @@ body {
 }
 
 .ending-achievements h4 {
-    color: var(--xjtu-gold);
+    color: var(--xianjao-gold);
     margin-bottom: 15px;
 }
 
@@ -791,7 +791,7 @@ body {
 
 .ending-achievement-badge {
     background: rgba(201, 162, 39, 0.2);
-    color: var(--xjtu-gold);
+    color: var(--xianjao-gold);
     padding: 8px 15px;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -818,7 +818,7 @@ body {
 
 .achievements-container h2 {
     text-align: center;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 30px;
 }
 
@@ -840,7 +840,7 @@ body {
 }
 
 .achievement-card.unlocked {
-    border-color: var(--xjtu-gold);
+    border-color: var(--xianjao-gold);
     background: linear-gradient(135deg, rgba(201, 162, 39, 0.05), rgba(201, 162, 39, 0.1));
 }
 
@@ -859,7 +859,7 @@ body {
 
 .ach-name {
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 5px;
 }
 
@@ -942,7 +942,7 @@ body {
 }
 
 .modal-title {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     font-size: 1.2rem;
 }
 
@@ -989,13 +989,13 @@ body {
 }
 
 .choice-btn:hover {
-    border-color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
     background: rgba(0, 62, 126, 0.05);
 }
 
 .choice-btn-name {
     font-weight: 500;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 5px;
 }
 
@@ -1006,7 +1006,7 @@ body {
 
 /* 课程详情弹窗 */
 .course-detail-list h4 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 12px;
     font-size: 1rem;
 }
@@ -1104,7 +1104,7 @@ body {
     display: block;
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 /* 考试结果 */
@@ -1159,7 +1159,7 @@ body {
 }
 
 .menu-content h3 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 25px;
     padding: 25px 20px 0;
     font-size: 1.5rem;
@@ -1194,8 +1194,8 @@ body {
 
 .menu-buttons .btn-secondary:hover {
     background: #f0f7ff;
-    color: var(--xjtu-blue);
-    border-color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
+    border-color: var(--xianjao-blue);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 62, 126, 0.15);
 }
@@ -1255,7 +1255,7 @@ body {
 }
 
 .achievement-popup-content {
-    background: linear-gradient(135deg, var(--xjtu-gold), #D4AF37);
+    background: linear-gradient(135deg, var(--xianjao-gold), #D4AF37);
     color: #fff;
     padding: 15px 25px;
     border-radius: var(--border-radius);
@@ -1302,7 +1302,7 @@ body {
 }
 
 .choice-btn:hover {
-    border-color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
     background: rgba(0, 48, 87, 0.05);
     transform: translateY(-2px);
 }
@@ -1406,7 +1406,7 @@ body {
 
 .summer-college-tag {
     display: inline-block;
-    background: linear-gradient(135deg, var(--xjtu-blue), var(--xjtu-blue-light));
+    background: linear-gradient(135deg, var(--xianjao-blue), var(--xianjao-blue-light));
     color: white;
     padding: 4px 12px;
     border-radius: 15px;
@@ -2703,11 +2703,11 @@ body {
     padding: 15px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    border-left: 4px solid var(--xjtu-gold);
+    border-left: 4px solid var(--xianjao-gold);
 }
 
 .career-panel h3 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     font-size: 1rem;
     margin-bottom: 10px;
 }
@@ -2721,7 +2721,7 @@ body {
 
 .career-path {
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .career-progress {
@@ -2770,7 +2770,7 @@ body {
 
 .pool-name {
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .pool-desc {
@@ -2792,7 +2792,7 @@ body {
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
-    background: var(--xjtu-blue);
+    background: var(--xianjao-blue);
     border-radius: 50%;
     cursor: pointer;
 }
@@ -2802,7 +2802,7 @@ body {
     width: 40px;
     text-align: center;
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .weight-total {
@@ -2878,7 +2878,7 @@ body {
 }
 
 .career-choice-btn:hover {
-    border-color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
     background: rgba(0, 62, 126, 0.05);
     transform: translateX(5px);
 }
@@ -2889,7 +2889,7 @@ body {
 
 .career-name {
     font-weight: 600;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     margin-bottom: 3px;
 }
 
@@ -2900,7 +2900,7 @@ body {
 
 /* 声望条 */
 .stat-fill.reputation {
-    background: linear-gradient(90deg, var(--xjtu-gold), #FFD700);
+    background: linear-gradient(90deg, var(--xianjao-gold), #FFD700);
 }
 
 /* ========================================
@@ -2917,12 +2917,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--xjtu-blue-light);
+    background: var(--xianjao-blue-light);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--xjtu-blue);
+    background: var(--xianjao-blue);
 }
 
 /* ========================================
@@ -2943,8 +2943,8 @@ body {
 }
 
 @keyframes glow {
-    0%, 100% { box-shadow: 0 0 5px var(--xjtu-gold); }
-    50% { box-shadow: 0 0 20px var(--xjtu-gold); }
+    0%, 100% { box-shadow: 0 0 5px var(--xianjao-gold); }
+    50% { box-shadow: 0 0 20px var(--xianjao-gold); }
 }
 
 /* 状态变化动画 */
@@ -2991,7 +2991,7 @@ body {
     gap: 30px;
     margin-bottom: 20px;
     font-size: 1.2rem;
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
 }
 
 .achievements-categories {
@@ -3015,13 +3015,13 @@ body {
 }
 
 .category-btn:hover {
-    border-color: var(--xjtu-blue);
-    color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
+    color: var(--xianjao-blue);
 }
 
 .category-btn.active {
-    background: var(--xjtu-blue);
-    border-color: var(--xjtu-blue);
+    background: var(--xianjao-blue);
+    border-color: var(--xianjao-blue);
     color: white;
 }
 
@@ -3042,7 +3042,7 @@ body {
 }
 
 .achievement-card.unlocked {
-    border-color: var(--xjtu-gold);
+    border-color: var(--xianjao-gold);
     box-shadow: var(--shadow);
 }
 
@@ -3080,7 +3080,7 @@ body {
 }
 
 .ending-achievements h3 {
-    color: var(--xjtu-gold);
+    color: var(--xianjao-gold);
     font-size: 1.2rem;
     margin-bottom: 15px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -3145,7 +3145,7 @@ body {
 }
 
 .event-header {
-    background: linear-gradient(135deg, var(--xjtu-blue) 0%, var(--xjtu-blue-light) 100%);
+    background: linear-gradient(135deg, var(--xianjao-blue) 0%, var(--xianjao-blue-light) 100%);
     padding: 30px 20px;
     text-align: center;
     color: white;
@@ -3181,7 +3181,7 @@ body {
     padding: 15px;
     background: var(--bg-primary);
     border-radius: var(--border-radius-sm);
-    border-left: 4px solid var(--xjtu-blue);
+    border-left: 4px solid var(--xianjao-blue);
 }
 
 .event-options {
@@ -3204,7 +3204,7 @@ body {
 }
 
 .event-option-btn:hover {
-    border-color: var(--xjtu-blue);
+    border-color: var(--xianjao-blue);
     background: rgba(0, 62, 126, 0.05);
     transform: translateX(5px);
     box-shadow: var(--shadow-hover);
@@ -3221,7 +3221,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--xjtu-blue) 0%, var(--xjtu-blue-light) 100%);
+    background: linear-gradient(135deg, var(--xianjao-blue) 0%, var(--xianjao-blue-light) 100%);
     border-radius: 50%;
 }
 
@@ -3310,7 +3310,7 @@ body {
     justify-content: center;
     gap: 10px;
     padding: 12px 20px;
-    background: linear-gradient(135deg, var(--xjtu-gold) 0%, #D4AF37 100%);
+    background: linear-gradient(135deg, var(--xianjao-gold) 0%, #D4AF37 100%);
     color: white;
     border-radius: var(--border-radius);
     margin-bottom: 20px;
@@ -3384,7 +3384,7 @@ body {
 }
 
 .makeup-section-header h4 {
-    color: var(--xjtu-blue);
+    color: var(--xianjao-blue);
     font-size: 1rem;
     margin: 0;
     padding-bottom: 8px;
@@ -3444,7 +3444,7 @@ body {
 
 .makeup-option input[type="radio"] {
     margin-top: 3px;
-    accent-color: var(--xjtu-blue);
+    accent-color: var(--xianjao-blue);
 }
 
 .makeup-option .option-text {
@@ -3559,7 +3559,7 @@ body {
     padding: 20px;
     background: var(--bg-card);
     border-radius: var(--border-radius);
-    border-left: 5px solid var(--xjtu-blue);
+    border-left: 5px solid var(--xianjao-blue);
     box-shadow: var(--shadow);
     animation: fadeIn 0.3s ease;
 }
@@ -3625,4 +3625,103 @@ body {
 }
 .mini-tag.buff { color: var(--success); background: rgba(76, 175, 80, 0.05); }
 .mini-tag.debuff { color: var(--danger); background: rgba(244, 67, 54, 0.05); }
+
+/* ========================================
+   鲜椒生存手册
+   ======================================== */
+.handbook-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.handbook-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    flex-wrap: wrap;
+}
+
+.handbook-tab-btn {
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.handbook-tab-btn:hover {
+    color: var(--xianjao-blue);
+}
+
+.handbook-tab-btn.active {
+    color: var(--xianjao-blue);
+    border-bottom-color: var(--xianjao-blue);
+}
+
+.handbook-content-wrapper {
+    position: relative;
+}
+
+.handbook-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.handbook-tab-content.active {
+    display: block;
+}
+
+.handbook-tab-content h3 {
+    font-size: 1.3rem;
+    color: var(--xianjao-blue);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.handbook-tab-content h4 {
+    font-size: 1rem;
+    color: #333;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.handbook-tab-content ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.handbook-tab-content ul li {
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.handbook-tab-content ul li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--xianjao-blue);
+    font-weight: bold;
+}
+
+.handbook-tab-content ol {
+    padding-left: 20px;
+}
+
+.handbook-tab-content ol li {
+    padding: 8px 0;
+}
+
+.handbook-tab-content p {
+    margin-bottom: 10px;
+    line-height: 1.6;
+    color: #555;
+}
 
