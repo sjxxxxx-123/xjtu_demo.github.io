@@ -354,12 +354,6 @@ class XianjaoSimulator {
         if (handbookCloseBtn) {
             handbookCloseBtn.addEventListener('click', () => this.hideModal('survival-handbook-modal'));
         }
-
-        // 生存手册标签页切换
-        const handbookTabBtns = document.querySelectorAll('.handbook-tab-btn');
-        handbookTabBtns.forEach(btn => {
-            btn.addEventListener('click', () => this.switchHandbookTab(btn.dataset.tab));
-        });
     }
 
     // 移动端行动按钮过滤
@@ -4816,29 +4810,6 @@ class XianjaoSimulator {
     // 显示鲜椒生存手册
     showSurvivalHandbook() {
         this.showModal('survival-handbook-modal');
-    }
-
-    // 切换生存手册标签页
-    switchHandbookTab(tabName) {
-        // 更新标签页按钮
-        const tabBtns = document.querySelectorAll('.handbook-tab-btn');
-        tabBtns.forEach(btn => {
-            if (btn.dataset.tab === tabName) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-
-        // 更新内容显示
-        const tabContents = document.querySelectorAll('.handbook-tab-content');
-        tabContents.forEach(content => {
-            if (content.dataset.tab === tabName) {
-                content.classList.add('active');
-            } else {
-                content.classList.remove('active');
-            }
-        });
     }
 
     // 保存游戏

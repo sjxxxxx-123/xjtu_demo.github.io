@@ -3627,101 +3627,362 @@ body {
 .mini-tag.debuff { color: var(--danger); background: rgba(244, 67, 54, 0.05); }
 
 /* ========================================
-   鲜椒生存手册
+   鲜椒生存手册 - 核心理念版
    ======================================== */
-.handbook-content {
+.handbook-modal {
     max-height: 90vh;
     overflow-y: auto;
+    background: #fff;
+    border-radius: 16px;
 }
 
-.handbook-tabs {
+.handbook-body {
+    padding: 0 !important;
+}
+
+/* 核心理念区域 */
+.handbook-philosophy {
+    text-align: center;
+    padding: 48px 40px;
+    background: linear-gradient(135deg, rgba(0, 62, 126, 0.05), rgba(26, 95, 159, 0.08));
+    border-bottom: 3px solid rgba(0, 62, 126, 0.1);
+}
+
+.philosophy-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.philosophy-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--xianjao-blue);
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.philosophy-text {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 24px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.philosophy-text strong {
+    color: var(--xianjao-blue);
+    font-weight: 600;
+}
+
+.philosophy-tags {
     display: flex;
-    gap: 10px;
-    border-bottom: 2px solid #ddd;
-    margin-bottom: 20px;
-    overflow-x: auto;
+    gap: 12px;
+    justify-content: center;
     flex-wrap: wrap;
 }
 
-.handbook-tab-btn {
-    padding: 10px 16px;
-    border: none;
-    background: transparent;
+.tag {
+    display: inline-block;
+    padding: 8px 20px;
+    background: white;
+    border: 2px solid var(--xianjao-blue-light);
+    border-radius: 25px;
+    color: var(--xianjao-blue);
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(0, 62, 126, 0.1);
+}
+
+/* 通用区块样式 */
+.section-heading {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--xianjao-blue);
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.section-subtitle {
+    text-align: center;
     color: #666;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
+    font-size: 1.05rem;
+    margin-bottom: 32px;
+}
+
+/* 游戏玩法区域 */
+.handbook-gameplay-section {
+    padding: 48px 40px;
+    background: white;
+}
+
+.gameplay-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.gameplay-item {
+    background: linear-gradient(135deg, #f8f9fa, white);
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
     transition: all 0.3s ease;
-    white-space: nowrap;
 }
 
-.handbook-tab-btn:hover {
-    color: var(--xianjao-blue);
+.gameplay-item:hover {
+    border-color: var(--xianjao-blue-light);
+    box-shadow: 0 8px 24px rgba(0, 62, 126, 0.15);
+    transform: translateY(-4px);
 }
 
-.handbook-tab-btn.active {
-    color: var(--xianjao-blue);
-    border-bottom-color: var(--xianjao-blue);
+.gameplay-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
 }
 
-.handbook-content-wrapper {
-    position: relative;
-}
-
-.handbook-tab-content {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.handbook-tab-content.active {
-    display: block;
-}
-
-.handbook-tab-content h3 {
+.gameplay-item h3 {
     font-size: 1.3rem;
     color: var(--xianjao-blue);
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
+    margin-bottom: 12px;
+    font-weight: 600;
 }
 
-.handbook-tab-content h4 {
-    font-size: 1rem;
+.gameplay-item p {
+    color: #666;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+/* 结局展示区域 */
+.handbook-endings-section {
+    padding: 48px 40px;
+    background: linear-gradient(to bottom, white, #f8f9fa);
+}
+
+.endings-showcase {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.ending-showcase-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    border: 3px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.ending-showcase-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+.ending-showcase-card.fail {
+    border-color: #ffcdd2;
+    background: linear-gradient(135deg, white, #ffebee);
+}
+
+.ending-showcase-card.normal {
+    border-color: #c8e6c9;
+    background: linear-gradient(135deg, white, #f1f8e9);
+}
+
+.ending-showcase-card.good {
+    border-color: #bbdefb;
+    background: linear-gradient(135deg, white, #e3f2fd);
+}
+
+.ending-showcase-card.excellent {
+    border-color: #ffe082;
+    background: linear-gradient(135deg, white, #fff8e1);
+}
+
+.ending-showcase-card.hidden {
+    border-color: #e1bee7;
+    background: linear-gradient(135deg, white, #f3e5f5);
+}
+
+.ending-badge {
+    font-size: 3.5rem;
+    margin-bottom: 12px;
+}
+
+.ending-showcase-card h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
     color: #333;
-    margin-top: 15px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
-.handbook-tab-content ul {
-    list-style: none;
-    padding-left: 0;
+.ending-condition {
+    font-size: 0.85rem;
+    color: #999;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    line-height: 1.4;
 }
 
-.handbook-tab-content ul li {
-    padding: 6px 0;
-    padding-left: 20px;
-    position: relative;
-}
-
-.handbook-tab-content ul li:before {
-    content: "▸";
-    position: absolute;
-    left: 0;
-    color: var(--xianjao-blue);
-    font-weight: bold;
-}
-
-.handbook-tab-content ol {
-    padding-left: 20px;
-}
-
-.handbook-tab-content ol li {
-    padding: 8px 0;
-}
-
-.handbook-tab-content p {
-    margin-bottom: 10px;
+.ending-message {
+    font-size: 0.9rem;
+    color: #666;
     line-height: 1.6;
-    color: #555;
+    font-style: italic;
 }
+
+/* 游戏特色区域 */
+.handbook-features-section {
+    padding: 48px 40px;
+    background: white;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: linear-gradient(135deg, #f8f9fa, white);
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    border-color: var(--xianjao-blue-light);
+    box-shadow: 0 8px 24px rgba(0, 62, 126, 0.15);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.feature-card h3 {
+    font-size: 1.3rem;
+    color: var(--xianjao-blue);
+    margin-bottom: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+}
+
+.feature-list li {
+    padding: 8px 0;
+    color: #555;
+    line-height: 1.6;
+    border-bottom: 1px dashed #e9ecef;
+}
+
+.feature-list li:last-child {
+    border-bottom: none;
+}
+
+.feature-note {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #999;
+    font-style: italic;
+    margin: 0;
+    padding-top: 12px;
+    border-top: 2px solid #f0f0f0;
+}
+
+/* 告别区域 */
+.handbook-farewell {
+    text-align: center;
+    padding: 56px 40px;
+    background: linear-gradient(135deg, rgba(0, 62, 126, 0.05), rgba(26, 95, 159, 0.08));
+}
+
+.farewell-icon-large {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.handbook-farewell h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--xianjao-blue);
+    margin-bottom: 24px;
+}
+
+.handbook-farewell p {
+    font-size: 1.1rem;
+    color: #555;
+    line-height: 2;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.handbook-farewell strong {
+    color: var(--xianjao-blue);
+    font-size: 1.15rem;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .philosophy-title {
+        font-size: 1.5rem;
+    }
+    
+    .philosophy-text {
+        font-size: 1rem;
+    }
+    
+    .gameplay-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .endings-showcase {
+        grid-template-columns: 1fr;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .handbook-philosophy,
+    .handbook-gameplay-section,
+    .handbook-endings-section,
+    .handbook-features-section,
+    .handbook-farewell {
+        padding: 32px 24px;
+    }
+}
+
+/* 旧样式已清理完毕 */
+
 
