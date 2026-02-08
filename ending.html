@@ -7,7 +7,7 @@
     <title>结局 - 鲜椒本科模拟器</title>
     <link rel="stylesheet" href="css/style.css">
         <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- 结局界面 -->
@@ -22,6 +22,9 @@
             <div class="ending-achievements" id="ending-achievements">
                 <!-- 动态生成 -->
             </div>
+            <div class="ending-biography" id="ending-biography">
+                <div class="biography-loading">正在生成小传...</div>
+            </div>
             <div class="ending-actions">
                 <button id="btn-restart" class="btn btn-primary">重新开始</button>
                 <button id="btn-view-achievements" class="btn btn-secondary">查看成就</button>
@@ -29,6 +32,7 @@
         </div>
     </div>
 
+    <script src="js/ai_module.js"></script>
     <script src="js/achievements.js"></script>
     <script>
         const endings = {
@@ -64,7 +68,7 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // 获取结局类型
             const urlParams = new URLSearchParams(window.location.search);
             const endingType = urlParams.get('type') || 'normal';
@@ -78,8 +82,10 @@
 
             // 获取游戏状态显示统计
             const savedState = localStorage.getItem('xjtu_game_state');
+            let parsedState = null;
             if (savedState) {
                 const state = JSON.parse(savedState);
+                parsedState = state;
                 const statsDiv = document.getElementById('ending-stats');
                 statsDiv.innerHTML = `
                     <div class="ending-stat-item">
@@ -119,6 +125,109 @@
                         ${unlockedAchievements.length > 6 ? `<div class="ending-achievement-more">还有 ${unlockedAchievements.length - 6} 个...</div>` : ''}
                     </div>
                 `;
+            }
+
+            const biographyTarget = document.getElementById('ending-biography');
+            const renderBiography = (bio) => {
+                biographyTarget.innerHTML = '';
+
+                const title = document.createElement('div');
+                title.className = 'biography-title';
+                title.textContent = bio.title || '结局小传';
+
+                const quote = document.createElement('div');
+                quote.className = 'biography-quote';
+                quote.textContent = bio.quote || '“知止不殆，善莫大焉。”';
+
+                const dividerTop = document.createElement('div');
+                dividerTop.className = 'biography-divider';
+
+                const preface = document.createElement('div');
+                preface.className = 'biography-preface';
+                preface.textContent = bio.preface || '其人初入杏坛，怀志而行。';
+
+                const body = document.createElement('div');
+                body.className = 'biography-body';
+                const bodyLines = (bio.body || '').split(/\n+/).filter(Boolean);
+                if (bodyLines.length === 0) {
+                    const p = document.createElement('p');
+                    p.textContent = '学途有起有伏，终归有得。';
+                    body.appendChild(p);
+                } else {
+                    bodyLines.forEach((line) => {
+                        const p = document.createElement('p');
+                        p.textContent = line;
+                        body.appendChild(p);
+                    });
+                }
+
+                const epilogue = document.createElement('div');
+                epilogue.className = 'biography-epilogue';
+                const epilogueTitle = document.createElement('div');
+                epilogueTitle.className = 'biography-epilogue-title';
+                epilogueTitle.textContent = bio.epilogue_title || '太史公曰';
+                const epilogueText = document.createElement('div');
+                epilogueText.className = 'biography-epilogue-text';
+                epilogueText.textContent = bio.epilogue || '得失之间，最贵在自知。';
+                epilogue.appendChild(epilogueTitle);
+                epilogue.appendChild(epilogueText);
+
+                const signature = document.createElement('div');
+                signature.className = 'biography-signature';
+                signature.textContent = bio.signature || '太史公曰';
+
+                biographyTarget.appendChild(title);
+                biographyTarget.appendChild(quote);
+                biographyTarget.appendChild(dividerTop);
+                biographyTarget.appendChild(preface);
+                biographyTarget.appendChild(body);
+                biographyTarget.appendChild(epilogue);
+                biographyTarget.appendChild(signature);
+            };
+
+            const renderFallbackBiography = () => {
+                renderBiography({
+                    title: '认清现实',
+                    quote: '“知止不殆，善莫大焉。”',
+                    preface: '其人入学之初，抱志而行，亦知进退。',
+                    body: '四年之中，或勤或惰，或明或迷，终能取舍有度。\n功名未必尽得，然心志既定，亦足自立。',
+                    epilogue_title: '太史公曰',
+                    epilogue: '得失之间，贵在自知；知止而行，方能久远。',
+                    signature: '太史公曰'
+                });
+            };
+
+            try {
+                if (window.AIModule && typeof AIModule.fetchEndingBiography === 'function' && parsedState && parsedState.name) {
+                    console.log('正在生成个性化小传...', {
+                        playerName: parsedState.name,
+                        college: parsedState.college,
+                        background: parsedState.background,
+                        discipline: parsedState.discipline,
+                        totalMonths: parsedState.totalMonths,
+                        gpa: parsedState.gpa,
+                        social: parsedState.social,
+                        san: parsedState.san
+                    });
+                    const bio = await AIModule.fetchEndingBiography({
+                        endingType,
+                        endingTitle: ending.title,
+                        endingDesc: ending.desc,
+                        state: parsedState
+                    });
+                    if (bio && bio.body) {
+                        renderBiography(bio);
+                    } else {
+                        console.warn('小传数据不完整，使用默认文案');
+                        renderFallbackBiography();
+                    }
+                } else {
+                    console.warn('AI模块不可用或缺少玩家名字');
+                    renderFallbackBiography();
+                }
+            } catch (error) {
+                console.warn('小传生成失败，使用默认文案', error);
+                renderFallbackBiography();
             }
 
             // 解锁毕业成就

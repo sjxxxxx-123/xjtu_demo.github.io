@@ -53,6 +53,10 @@ class XianjaoSimulator {
             this.selectedBackground = character.background;
             this.selectedCollege = character.college;
             this.initGameState();
+            // 保存玩家名字和其他个性化信息到state
+            this.state.name = character.name || '学生';
+            this.state.gender = character.gender || '';
+            this.state.discipline = character.discipline || '';
             this.normalizeStateIntegers();
             localStorage.removeItem('xjtu_character');
             this.isNewGame = true;  // 标记为新游戏
@@ -497,6 +501,7 @@ class XianjaoSimulator {
             totalMonths: 0,
 
             // 角色信息
+            name: '', // 玩家名字（从character.html传入）
             background: this.selectedBackground,
             college: this.selectedCollege,
             campus: college.campus || 'xingqing', // 校区

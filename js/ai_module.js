@@ -163,6 +163,20 @@ const AIModule = (function() {
 - money: -500 到 +500（金钱）
 - social_score: -10 到 +10（社交分）`;
 
+    const BIOGRAPHY_SYSTEM_PROMPT = `你是太史公，为鲜椒本科模拟器的结局撰写人物小传。
+
+【核心约束 - 必须遵守】
+- 小传中必须准确使用玩家的真实名字，不能用"其人""某生"等代称逃避
+- 书院名称必须准确使用（只能是钱学森、南洋、崇实、仲英、励志、文治、宗濂、启德）
+- 专业/背景必须与玩家真实选择一致，不能虚构或改动
+- 时间跨度必须真实（从大一9月开始，严格按月计算到毕业月份）
+【写作风格】
+- 采用古文碑帖风，夹少量白话，读起来庄重而不晦涩。
+- 故事中必须清晰出现玩家的真实名字和所在书院名称。
+- 结局描述要与玩家最终的GPA、SAN值、综测相符，不能虚构。
+
+【重要】必须严格返回 JSON，不要包含任何其他文本，且body必须包含玩家名字、书院、专业、时间和成绩。`;
+
     /**
      * 设置 API Key
      * @param {string} key 
@@ -342,6 +356,164 @@ const AIModule = (function() {
         }
     }
 
+    function buildEndingBiographyPrompt(input) {
+        const state = input && input.state ? input.state : {};
+        const toNumber = (value, digits) => {
+            if (typeof value !== 'number') return '未知';
+            if (typeof digits === 'number') return value.toFixed(digits);
+            return String(value);
+        };
+
+        // 计算实际经过的时间跨度
+        const totalMonths = state.totalMonths || 0;
+        const monthsAtEnd = 9 + totalMonths; // 从9月开始
+        const yearsAtEnd = Math.floor((monthsAtEnd - 1) / 12) + 1;
+        const finalMonth = ((monthsAtEnd - 1) % 12) + 1;
+        const monthName = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'][finalMonth - 1];
+        const yearName = ['大一', '大二', '大三', '大四'][yearsAtEnd - 1] || '毕业后';
+
+        // 获取书院和背景的中文名称
+        const collegeNameMap = {
+            'pengkang': '彭康书院',
+            'wenchi': '文治书院',
+            'nanyang': '南洋书院',
+            'qianxuesen': '钱学森书院',
+            'zhongying': '仲英书院',
+            'lezhi': '励志书院',
+            'chongshi': '崇实书院',
+            'zongzhe': '宗濂书院',
+            'qide': '启德书院'
+        };
+        const backgroundNameMap = {
+            'top': '高分考生',
+            'normal': '普通学生',
+            'low': '低分生',
+            'abroad': '留学生',
+            'athlete': '运动员'
+        };
+
+        const collegeName = collegeNameMap[state.college] || state.college || '某书院';
+        const backgroundName = backgroundNameMap[state.background] || state.background || '学生';
+        const playerName = state.name || '某生';
+
+        const summaryLines = [
+            `【玩家信息】`,
+            `姓名: ${playerName}（必须在小传中使用此名字）`,
+            `书院: ${collegeName}（必须出现在小传中）`,
+            `背景: ${backgroundName}`,
+            `专业/类别: ${state.discipline || '未指定'}`,
+            ``,
+            `【时间信息】`,
+            `入学: 大一9月`,
+            `毕业: ${yearName}${monthName}`,
+            `经历时间: ${totalMonths}个月`,
+            ``,
+            `【最终成绩】`,
+            `GPA: ${toNumber(state.gpa, 2)}`,
+            `综测分数: ${toNumber(state.social)}`,
+            `精神值SAN: ${toNumber(state.san)}`,
+            `挂科次数: ${toNumber(state.failedCourses)}`,
+            ``,
+            `【结局类型】`,
+            `类型: ${input && input.endingType ? input.endingType : 'unknown'}`,
+            `结局标题: ${input && input.endingTitle ? input.endingTitle : '未知结局'}`,
+            `结局描述: ${input && input.endingDesc ? input.endingDesc : '无'}`
+        ];
+
+        return `请基于以下信息为该玩家撰写古文风格的人物小传。\n${summaryLines.join('\n')}\n\n【重要提示】\n撰写时必须：\n1. 使用玩家真实姓名"${playerName}"，不能用代称\n2. 明确提及所在书院"${collegeName}"\n3. 反映真实的专业背景"${backgroundName}"\n4. 时间因果必须符（大一入学→${yearName}${monthName}毕业，共${totalMonths}月）\n5. 成绩数据要体现在叙事中（GPA ${toNumber(state.gpa, 2)}，综测${toNumber(state.social)}）`;
+    }
+
+    /**
+     * 生成结局人物小传
+     */
+    async function fetchEndingBiography(input, retryCount = 0) {
+        if (!API_KEY) loadConfig();
+
+        if (!API_KEY) {
+            console.warn("AI API Key未设置");
+            throw new Error("MISSING_API_KEY");
+        }
+
+        const userPrompt = buildEndingBiographyPrompt(input || {});
+        const maxRetries = AVAILABLE_MODELS.length;
+
+        try {
+            let responseData;
+
+            console.log(`正在使用模型 ${API_MODEL} 生成结局小传...`);
+
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: API_MODEL,
+                    messages: [
+                        { role: "system", content: BIOGRAPHY_SYSTEM_PROMPT },
+                        { role: "user", content: userPrompt }
+                    ],
+                    temperature: 0.9,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errText);
+                } catch (e) {
+                    errorData = { message: errText };
+                }
+
+                const isQuotaError = errText.includes('quota') ||
+                                   errText.includes('exceeded') ||
+                                   errText.includes('limit') ||
+                                   (errorData.errors && errorData.errors.message &&
+                                    errorData.errors.message.includes('quota'));
+
+                if (isQuotaError && retryCount < maxRetries) {
+                    console.warn(`模型 ${API_MODEL} 配额已用完，尝试切换到其他模型...`);
+                    markModelFailure(API_MODEL, '配额限制');
+                    switchToNextModel();
+                    return await fetchEndingBiography(input, retryCount + 1);
+                }
+
+                throw new Error(`API Error: ${response.status} - ${errText}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices[0].message.content;
+
+            let jsonStr = content.trim();
+            jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                jsonStr = jsonMatch[0];
+            }
+
+            try {
+                responseData = JSON.parse(jsonStr);
+            } catch (parseError) {
+                console.error("JSON Parse Error. Raw content:", content);
+                console.error("Cleaned JSON:", jsonStr);
+                throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
+            }
+
+            if (!responseData || !responseData.title || !responseData.body) {
+                throw new Error("Invalid AI Response format: missing title/body");
+            }
+
+            return responseData;
+        } catch (error) {
+            console.error("Fetch Ending Biography Failed:", error);
+            throw error;
+        }
+    }
+
     /**
      * C. 结构化 JSON 处理逻辑
      * 应用 AI 生成的事件效果
@@ -400,6 +572,7 @@ const AIModule = (function() {
         setApiKey,
         getGameStateSummary,
         fetchAIEvent,
+        fetchEndingBiography,
         applyAIEvent,
         saveUserConfig,
         getCurrentConfig,
