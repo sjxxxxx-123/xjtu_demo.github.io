@@ -223,6 +223,124 @@
         max-height: 80vh;
         border-radius: 16px;
     }
+
+    .handbook-modal {
+        width: 94% !important;
+        margin: 12px auto !important;
+        max-height: calc(100vh - 24px) !important;
+        border-radius: 12px !important;
+    }
+
+    #survival-handbook-modal .modal-header {
+        padding: 16px !important;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    #survival-handbook-modal .modal-title {
+        font-size: 1.25rem !important;
+        gap: 8px !important;
+    }
+
+    #survival-handbook-modal .modal-title span:first-child {
+        font-size: 1.5rem !important;
+    }
+
+    #survival-handbook-modal .modal-close {
+        font-size: 1.7rem !important;
+    }
+
+    #survival-handbook-modal .handbook-philosophy,
+    #survival-handbook-modal .handbook-gameplay-section,
+    #survival-handbook-modal .handbook-endings-section,
+    #survival-handbook-modal .handbook-features-section,
+    #survival-handbook-modal .handbook-farewell {
+        padding: 20px 16px;
+    }
+
+    #survival-handbook-modal .philosophy-icon {
+        font-size: 2.8rem;
+        margin-bottom: 10px;
+    }
+
+    #survival-handbook-modal .philosophy-title,
+    #survival-handbook-modal .section-heading,
+    #survival-handbook-modal .handbook-farewell h2 {
+        font-size: 1.25rem;
+        margin-bottom: 10px;
+    }
+
+    #survival-handbook-modal .philosophy-text,
+    #survival-handbook-modal .handbook-farewell p {
+        font-size: 0.92rem;
+        line-height: 1.65;
+    }
+
+    #survival-handbook-modal .philosophy-tags {
+        gap: 8px;
+    }
+
+    #survival-handbook-modal .philosophy-tags .tag {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    #survival-handbook-modal .section-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    #survival-handbook-modal .gameplay-grid,
+    #survival-handbook-modal .features-grid,
+    #survival-handbook-modal .endings-showcase {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    #survival-handbook-modal .gameplay-item,
+    #survival-handbook-modal .feature-card,
+    #survival-handbook-modal .ending-showcase-card {
+        padding: 14px 12px;
+        border-radius: 12px;
+    }
+
+    #survival-handbook-modal .gameplay-icon,
+    #survival-handbook-modal .feature-icon,
+    #survival-handbook-modal .ending-badge,
+    #survival-handbook-modal .farewell-icon-large {
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+
+    #survival-handbook-modal .gameplay-item h3,
+    #survival-handbook-modal .feature-card h3,
+    #survival-handbook-modal .ending-showcase-card h3 {
+        font-size: 1rem;
+        margin-bottom: 8px;
+    }
+
+    #survival-handbook-modal .gameplay-item p,
+    #survival-handbook-modal .ending-message,
+    #survival-handbook-modal .feature-list li,
+    #survival-handbook-modal .feature-note {
+        font-size: 0.85rem;
+        line-height: 1.55;
+    }
+
+    #survival-handbook-modal .ending-condition {
+        font-size: 0.75rem;
+        padding: 5px 8px;
+    }
+
+    #survival-handbook-modal .modal-footer {
+        padding: 14px !important;
+    }
+
+    #survival-handbook-modal #handbook-confirm {
+        width: 100%;
+        padding: 12px 16px !important;
+        font-size: 0.98rem !important;
+        letter-spacing: 0.3px !important;
+    }
     
     /* --- 移动端BBS样式 --- */
     .m-bbs-ticker {

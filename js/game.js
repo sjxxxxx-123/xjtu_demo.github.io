@@ -6,8 +6,8 @@
 
 class XianjaoSimulator {
     constructor() {
-        // 游戏状态
-        this.state = null;
+    // 游戏状态
+    this.state = null;
         this.selectedBackground = null;
         this.selectedCollege = null;
         
@@ -539,6 +539,7 @@ class XianjaoSimulator {
             failedCourses: 0,
             retakeCourses: [],
             makeupCourses: [], // 补考课程列表（仅专业课）
+            lastSemesterCourses: [],
             totalCredits: 0,
             totalGradePoints: 0,
 
@@ -824,6 +825,19 @@ class XianjaoSimulator {
         return 'summer';
     }
 
+    getMonthMultiplier() {
+        return (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
+    }
+
+    getAttendBaseGain() {
+        return 3.0 * this.state.studyEfficiency * this.getMonthMultiplier();
+    }
+
+    getStudyBaseGain(location) {
+        const bonus = location ? (location.masteryBonus || 1) : 1;
+        return 5.0 * bonus * this.state.studyEfficiency * this.getMonthMultiplier();
+    }
+
     getSemesterKey() {
         return `${this.state.year}-${this.getCurrentSemester()}`;
     }
@@ -949,10 +963,39 @@ class XianjaoSimulator {
 
     // 更新课程列表
     updateCourseList() {
+        this.ensureCourseCollections();
         const courseList = document.getElementById('course-list');
         courseList.innerHTML = '';
 
-        this.state.currentCourses.forEach(course => {
+        const isBreakMonth = [7, 8, 12].includes(this.state.month);
+        const hasCurrent = this.state.currentCourses.length > 0;
+        const hasRetake = this.state.retakeCourses.length > 0;
+        const hasLastSemester = Array.isArray(this.state.lastSemesterCourses) && this.state.lastSemesterCourses.length > 0;
+
+        if (!hasCurrent && !hasRetake && isBreakMonth && hasLastSemester) {
+            const historyHeader = document.createElement('div');
+            historyHeader.innerHTML = '<h4 style="color: #003E7E; margin: 10px 0;">📄 上学期成绩</h4>';
+            courseList.appendChild(historyHeader);
+
+            this.state.lastSemesterCourses.forEach(course => {
+                const courseEl = document.createElement('div');
+                courseEl.className = 'course-item';
+                courseEl.innerHTML = `
+                    <div class="course-name">${course.name}</div>
+                    <div class="course-mastery">成绩: ${course.score} | 等级: ${course.grade}</div>
+                    <div class="course-mastery-bar">
+                        <div class="course-mastery-fill" style="width: ${Math.min(100, course.score)}%"></div>
+                    </div>
+                `;
+                courseList.appendChild(courseEl);
+            });
+            return;
+        }
+
+        const retakeNames = new Set(this.state.retakeCourses.map(course => course.name));
+        const visibleCurrentCourses = this.state.currentCourses.filter(course => !retakeNames.has(course.name));
+
+        visibleCurrentCourses.forEach(course => {
             const courseEl = document.createElement('div');
             courseEl.className = `course-item${course.failed ? ' failed' : ''}`;
             courseEl.innerHTML = `
@@ -984,6 +1027,25 @@ class XianjaoSimulator {
                 courseList.appendChild(courseEl);
             });
         }
+    }
+
+    ensureCourseCollections() {
+        if (!Array.isArray(this.state.currentCourses)) this.state.currentCourses = [];
+        if (!Array.isArray(this.state.retakeCourses)) this.state.retakeCourses = [];
+        if (!Array.isArray(this.state.makeupCourses)) this.state.makeupCourses = [];
+    }
+
+    hasAnyStudyCourses() {
+        this.ensureCourseCollections();
+        return this.state.currentCourses.length > 0 || this.state.retakeCourses.length > 0;
+    }
+
+    ensureSemesterCoursesReady() {
+        this.ensureCourseCollections();
+        const semester = this.getCurrentSemester();
+        const inRegularSemester = semester === 'fall' || semester === 'spring';
+        if (!inRegularSemester || this.state.year > 3) return;
+        if (this.state.currentCourses.length === 0) this.loadSemesterCourses();
     }
 
     // 更新行动按钮状态
@@ -1140,13 +1202,14 @@ class XianjaoSimulator {
 
     // 去上课
     attendClass() {
+        this.ensureSemesterCoursesReady();
         const energyCost = this.getAttendClassEnergy();
         if (this.state.energy < energyCost) {
             this.showMessage('体力不足', '你太累了，需要休息一下。');
             return;
         }
 
-        if (this.state.currentCourses.length === 0) {
+        if (!this.hasAnyStudyCourses()) {
             this.showMessage('没有课程', '当前没有需要上的课程。');
             return;
         }
@@ -1163,9 +1226,10 @@ class XianjaoSimulator {
         // 添加"全部课程"选项
         const allBtn = document.createElement('button');
         allBtn.className = 'choice-btn';
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        const baseGain = actionType === 'attend' ? 3 : 5;
-        const displayGain = baseGain * monthMultiplier;
+        const location = actionType === 'study' ? this.pendingStudyLocation : null;
+        const displayGain = actionType === 'attend'
+            ? Math.round(this.getAttendBaseGain())
+            : Math.round(this.getStudyBaseGain(location));
         const monthTip = (this.state.month === 1 || this.state.month === 6) ? '📝 期末月加成！' : '';
         allBtn.innerHTML = `
             <div class="choice-btn-name">📚 全部课程</div>
@@ -1243,11 +1307,14 @@ class XianjaoSimulator {
             options.appendChild(retakeHeader);
             
             this.state.retakeCourses.forEach((course, index) => {
+                const retakeGain = actionType === 'attend'
+                    ? Math.round(10 * this.state.studyEfficiency * this.getMonthMultiplier())
+                    : Math.round(15 * (location ? location.masteryBonus || 1 : 1) * this.state.studyEfficiency * this.getMonthMultiplier());
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn retake';
                 btn.innerHTML = `
                     <div class="choice-btn-name">${course.name} (重修)</div>
-                    <div class="choice-btn-desc">当前掌握: ${Math.round(course.mastery)}% | 重点学习掌握+${actionType === 'attend' ? '8' : '12'}</div>
+                    <div class="choice-btn-desc">当前掌握: ${Math.round(course.mastery)}% | 掌握度+${retakeGain}</div>
                 `;
                 btn.addEventListener('click', () => {
                     this.hideModal('choice-modal');
@@ -1275,10 +1342,7 @@ class XianjaoSimulator {
         AchievementSystem.resetLateWakeup();
 
         // 文治书院迟到判定
-        let masteryGain = 3.0 * this.state.studyEfficiency;  // 进一步提高到 3.0
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        masteryGain *= monthMultiplier;
+        let masteryGain = this.getAttendBaseGain();
         let lateToClass = false;
         if (this.state.college === 'wenzhi' && Math.random() < 0.05) {
             this.addLog('🏃 从西区赶到东区上课，迟到了！本次学习效果减半', 'warning');
@@ -1298,6 +1362,13 @@ class XianjaoSimulator {
             
             course.mastery = Math.min(100, course.mastery + courseGain);
             course.attendCount++;
+        });
+
+        this.state.retakeCourses.forEach(course => {
+            const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
+            const retakeGain = masteryGain * difficultyFactor;
+            course.mastery = Math.min(100, course.mastery + retakeGain);
+            course.attendCount = (course.attendCount || 0) + 1;
         });
         
         // 触发书院特殊事件
@@ -1319,12 +1390,9 @@ class XianjaoSimulator {
         AchievementSystem.resetLateWakeup();
         
         const focusedCourse = this.state.currentCourses[courseIndex];
-        let focusedGain = 8 * this.state.studyEfficiency;  // 进一步提高到 8.0
-        let otherGain = 1.5 * this.state.studyEfficiency;  // 进一步提高到 1.5
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        focusedGain *= monthMultiplier;
-        otherGain *= monthMultiplier;
+        const monthMultiplier = this.getMonthMultiplier();
+        let focusedGain = 8 * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 8.0
+        let otherGain = 1.5 * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 1.5
         
         // 文治书院迟到判定
         if (this.state.college === 'wenzhi' && Math.random() < 0.05) {
@@ -1367,10 +1435,8 @@ class XianjaoSimulator {
         
         const course = this.state.retakeCourses[courseIndex];
         const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
-        let gain = 10 * this.state.studyEfficiency * difficultyFactor;  // 提高重修课上课增益到 10
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        gain *= monthMultiplier;
+        const monthMultiplier = this.getMonthMultiplier();
+        let gain = 10 * this.state.studyEfficiency * difficultyFactor * monthMultiplier;  // 提高重修课上课增益到 10
         
         course.mastery = Math.min(100, course.mastery + gain);
         course.attendCount++;
@@ -1482,8 +1548,14 @@ class XianjaoSimulator {
 
     // 显示自习地点选择
     showStudyLocationChoice() {
+        this.ensureSemesterCoursesReady();
         if (this.state.energy < 3) {
             this.showMessage('体力不足', '你太累了，需要休息一下。');
+            return;
+        }
+
+        if (!this.hasAnyStudyCourses()) {
+            this.showMessage('没有课程', '当前没有需要学习的课程。');
             return;
         }
         
@@ -1528,10 +1600,7 @@ class XianjaoSimulator {
         this.state.san -= location.sanLoss;
         this.state.studyLocation = location.id;
 
-        let masteryGain = 5.0 * location.masteryBonus * this.state.studyEfficiency;  // 进一步提高到 5.0
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        masteryGain *= monthMultiplier;
+        let masteryGain = this.getStudyBaseGain(location);
 
         // 书院特殊加成
         this.applyStudyLocationBonus(location);
@@ -1550,6 +1619,12 @@ class XianjaoSimulator {
             course.studyCount++;
         });
 
+        this.state.retakeCourses.forEach(course => {
+            const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
+            course.mastery = Math.min(100, course.mastery + masteryGain * difficultyFactor);
+            course.studyCount = (course.studyCount || 0) + 1;
+        });
+
         this.addLog(`📖 在${location.name}复习所有课程，知识稳步增长`);
         this.state.actionsThisTurn.push('self-study');
         this.checkActionEvents('self-study');
@@ -1566,12 +1641,9 @@ class XianjaoSimulator {
         this.state.san -= location.sanLoss;
         this.state.studyLocation = location.id;
 
-        let focusedGain = 11 * location.masteryBonus * this.state.studyEfficiency;  // 进一步提高到 11.0
-        let otherGain = 1.5 * location.masteryBonus * this.state.studyEfficiency;  // 进一步提高到 1.5
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        focusedGain *= monthMultiplier;
-        otherGain *= monthMultiplier;
+        const monthMultiplier = this.getMonthMultiplier();
+        let focusedGain = 11 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 11.0
+        let otherGain = 1.5 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 1.5
 
         // 书院特殊加成
         this.applyStudyLocationBonus(location);
@@ -1611,10 +1683,8 @@ class XianjaoSimulator {
         this.state.san -= location.sanLoss;
         
         const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
-        let gain = 15 * location.masteryBonus * this.state.studyEfficiency * difficultyFactor;  // 提高重修课自习增益到 15
-        // 期末月（1月和6月）翻两倍，平时翻一倍
-        const monthMultiplier = (this.state.month === 1 || this.state.month === 6) ? 4 : 2;
-        gain *= monthMultiplier;
+        const monthMultiplier = this.getMonthMultiplier();
+        let gain = 15 * location.masteryBonus * this.state.studyEfficiency * difficultyFactor * monthMultiplier;  // 提高重修课自习增益到 15
         
         course.mastery = Math.min(100, course.mastery + gain);
         course.studyCount++;
@@ -2980,23 +3050,8 @@ class XianjaoSimulator {
 
     // 每月知识遗忘衰减
     applyMonthlyMasteryDecay() {
-        // 先保证体力上限等核心数值为整数
-        this.normalizeStateIntegers();
-
-        const decayCourseList = (list) => {
-            if (!list) return;
-            list.forEach(course => {
-                const difficulty = course.difficulty || 0.6;
-                const baseDecay = 4 + Math.max(0, (difficulty - 0.5) * 10);
-                const masteryFactor = course.mastery >= 80 ? 1.25 : course.mastery >= 50 ? 1 : 0.7;
-                const decayRate = course.masteryDecayRate || 1;
-                const decay = baseDecay * masteryFactor * decayRate;
-                course.mastery = Math.max(0, course.mastery - decay);
-            });
-        };
-
-        decayCourseList(this.state.currentCourses);
-        decayCourseList(this.state.retakeCourses);
+        // 关闭掌握度随时间衰减，避免无行动下降
+        return;
     }
 
     // 推进月份
@@ -3020,6 +3075,7 @@ class XianjaoSimulator {
             if (this.state.makeupCourses && this.state.makeupCourses.length > 0) {
                 this.doMakeupExam();
             }
+            this.doRetakeExamAtSemesterStart();
             this.loadSemesterCourses();
             this.addLog('📅 春季学期开始了', 'important');
             
@@ -3047,6 +3103,7 @@ class XianjaoSimulator {
             if (this.state.makeupCourses && this.state.makeupCourses.length > 0) {
                 this.doMakeupExam();
             }
+            this.doRetakeExamAtSemesterStart();
             this.startNewYear();
             
             // 重置学期选课状态
@@ -3661,6 +3718,16 @@ class XianjaoSimulator {
         // 检查成就
         AchievementSystem.checkAchievements(this.state);
 
+        // 缓存当学期课程成绩（仅非重修课程）供寒暑假展示
+        this.state.lastSemesterCourses = results
+            .filter(item => !item.isRetake)
+            .map(item => ({
+                name: item.course,
+                score: item.score,
+                grade: item.grade,
+                passed: item.passed
+            }));
+
         // 显示考试结果
         this.showExamResults(results);
     }
@@ -3727,6 +3794,7 @@ class XianjaoSimulator {
     // 处理考试确认
     handleExamConfirm() {
         this.hideModal('exam-modal');
+        this.state.currentCourses = [];
         
         // 检查是否有挂科课程
         const failedResults = this.lastExamResults?.filter(r => !r.passed) || [];
@@ -3910,6 +3978,51 @@ class XianjaoSimulator {
         
         // 显示补考结果
         this.showMakeupExamResults(results);
+    }
+
+    // 开学重修考试：掌握度 > 50% 必过
+    doRetakeExamAtSemesterStart() {
+        this.ensureCourseCollections();
+        if (!this.state.retakeCourses.length) return;
+
+        const results = [];
+        const remainingRetakes = [];
+
+        this.state.retakeCourses.forEach(course => {
+            const mastery = Number(course.mastery || 0);
+            const passed = mastery > 50;
+
+            results.push({
+                name: course.name,
+                mastery: Math.round(mastery),
+                passed
+            });
+
+            if (passed) {
+                const gradePoint = 1.0;
+                this.state.totalCredits += course.credits;
+                this.state.totalGradePoints += gradePoint * course.credits;
+                this.state.failedCourses = Math.max(0, (this.state.failedCourses || 0) - 1);
+            } else {
+                remainingRetakes.push(course);
+            }
+        });
+
+        this.state.retakeCourses = remainingRetakes;
+
+        if (this.state.totalCredits > 0) {
+            this.state.gpa = Math.min(4.3, this.state.totalGradePoints / this.state.totalCredits);
+        }
+
+        const passCount = results.filter(item => item.passed).length;
+        const failCount = results.length - passCount;
+
+        if (passCount > 0) {
+            this.addLog(`✅ 开学重修考试通过 ${passCount} 门（掌握度>50%必过）`, 'success');
+        }
+        if (failCount > 0) {
+            this.addLog(`📚 开学重修考试未通过 ${failCount} 门，需继续重修`, 'warning');
+        }
     }
     
     // 显示补考结果
@@ -4191,6 +4304,7 @@ class XianjaoSimulator {
 
     // 本地生成的个人档案（简历风）
     buildLocalProfileNarrative(ctx) {
+        const namePrefix = ctx.playerName && ctx.playerName !== '学生' ? `${ctx.playerName}，` : '';
         const baseTimeline = [
             `${ctx.gradeText} · ${ctx.month}月：在${ctx.campusName}记录下当下的脚步。`,
             ctx.competitionCount ? `竞赛累计 ${ctx.competitionCount} 次，收获 ${ctx.competitionWins || 0} 次奖项。` : '正在积累竞赛与项目经验。',
@@ -4199,18 +4313,63 @@ class XianjaoSimulator {
             ctx.volunteerHours ? `志愿服务 ${ctx.volunteerHours} 小时，保持对社会议题的关切。` : '关注社区，计划投入志愿与公益。'
         ];
 
-        const tags = [ctx.collegeName, ctx.backgroundName, ctx.campusName, ctx.gradeText];
+        const tags = [ctx.collegeName, ctx.campusName, ctx.gradeText];
         if (ctx.competitionWins) tags.push('竞赛获奖');
         if (ctx.researchExp) tags.push('科研经历');
         if (ctx.volunteerHours) tags.push('公益志愿');
         if (ctx.parttimeCount) tags.push('社会实践');
+        if (ctx.disciplineName && ctx.disciplineName !== '未选择') tags.push(ctx.disciplineName);
 
         return {
-            headline: `${ctx.collegeName} · ${ctx.backgroundName} · ${ctx.campusName}`,
-            summary: `保持好奇、热爱实验，正在${ctx.gradeText}阶段探索校园与现实世界的交汇点。重视团队协作，也在学习独立完成一件事的节奏感。`,
+            headline: `${ctx.playerName || '学生'} · ${ctx.collegeName} · ${ctx.campusName}`,
+            summary: `${namePrefix}保持好奇、热爱实验，正在${ctx.gradeText}阶段探索校园与现实世界的交汇点。重视团队协作，也在学习独立完成一件事的节奏感。`,
             timeline: baseTimeline,
             tags,
             oneLiner: '想把普通的一天，写成有光的日记。'
+        };
+    }
+
+    sanitizeProfileText(text, forbiddenTerms = []) {
+        let cleaned = String(text || '');
+        forbiddenTerms.forEach(term => {
+            if (!term) return;
+            cleaned = cleaned.split(term).join('');
+        });
+
+        return cleaned
+            .replace(/[｜|]/g, '·')
+            .replace(/\s*·\s*/g, ' · ')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/( · ){2,}/g, ' · ')
+            .replace(/^\s*·\s*|\s*·\s*$/g, '')
+            .replace(/，\s*，/g, '，')
+            .replace(/。\s*。/g, '。')
+            .trim();
+    }
+
+    sanitizeProfileNarrative(narrative, options = {}) {
+        const forbiddenTerms = options.forbiddenTerms || [];
+        const baseIdentity = options.baseIdentity || '';
+        const cleanedHeadline = this.sanitizeProfileText(narrative.headline, forbiddenTerms);
+
+        let displayHeadline = cleanedHeadline;
+        if (baseIdentity && displayHeadline.startsWith(baseIdentity)) {
+            displayHeadline = displayHeadline.slice(baseIdentity.length);
+        }
+        displayHeadline = this.sanitizeProfileText(displayHeadline, forbiddenTerms);
+        if (displayHeadline === baseIdentity) displayHeadline = '';
+
+        return {
+            ...narrative,
+            headline: displayHeadline,
+            summary: this.sanitizeProfileText(narrative.summary, forbiddenTerms),
+            timeline: (Array.isArray(narrative.timeline) ? narrative.timeline : [])
+                .map(item => this.sanitizeProfileText(item, forbiddenTerms))
+                .filter(Boolean),
+            tags: (Array.isArray(narrative.tags) ? narrative.tags : [])
+                .map(tag => this.sanitizeProfileText(tag, forbiddenTerms))
+                .filter(tag => tag && !forbiddenTerms.some(term => term && tag.includes(term))),
+            oneLiner: this.sanitizeProfileText(narrative.oneLiner, forbiddenTerms)
         };
     }
 
@@ -4230,6 +4389,34 @@ class XianjaoSimulator {
         const campusRaw = collegeInfo.campus || this.state.campus || '校区待定';
         const campusName = campusLabelMap[String(campusRaw).toLowerCase()] || campusRaw;
         const gradeText = ['大一','大二','大三','大四'][this.state.year - 1] || '在读';
+        const playerName = this.state.name || '学生';
+        const genderMap = {
+            male: '男',
+            female: '女'
+        };
+        const genderLabel = genderMap[this.state.gender] || (this.state.gender || '未填写');
+        const disciplineMap = {
+            engineering: '工学',
+            science: '理学',
+            medicine: '医学',
+            business: '经管',
+            humanities: '人文社科',
+            elite: '拔尖计划'
+        };
+        const disciplineLabel = disciplineMap[this.state.discipline] || (this.state.discipline || '未选择');
+        const baseIdentity = `${playerName} · ${collegeName} · ${campusName}`;
+        const narrativeData = this.sanitizeProfileNarrative(narrative, {
+            baseIdentity,
+            forbiddenTerms: [
+                backgroundName,
+                '少年班神童',
+                '钱班大佬',
+                '萌新小白',
+                'prodigy',
+                'qianban',
+                'normal'
+            ]
+        });
 
         return `
             <div class="profile-container" style="padding: 14px; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; line-height:1.6;">
@@ -4237,33 +4424,43 @@ class XianjaoSimulator {
                     <div style="font-size:2.8rem;">🎓</div>
                     <div>
                         <div style="font-size:1rem; color:#999;">${gradeText} · ${this.state.month}月 · ${campusName}</div>
-                        <h3 style="margin:4px 0 6px 0; color:#003E7E;">${collegeName}｜${backgroundName}</h3>
-                        <div style="color:#666; font-size:0.95rem;">${narrative.headline}</div>
+                        <h3 style="margin:4px 0 6px 0; color:#003E7E;">${playerName}｜${collegeName}</h3>
+                        ${narrativeData.headline ? `<div style="color:#666; font-size:0.95rem;">${narrativeData.headline}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="background:#ffffff; border:1px solid #e3e7ef; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+                    <div style="color:#003E7E; font-weight:bold; margin-bottom:8px;">基础信息</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px 10px; color:#333; font-size:0.92rem;">
+                        <span style="background:#f6f8fb; border:1px solid #e9edf5; border-radius:8px; padding:4px 10px;">姓名：${playerName}</span>
+                        <span style="background:#f6f8fb; border:1px solid #e9edf5; border-radius:8px; padding:4px 10px;">性别：${genderLabel}</span>
+                        <span style="background:#f6f8fb; border:1px solid #e9edf5; border-radius:8px; padding:4px 10px;">学科方向：${disciplineLabel}</span>
+                        <span style="background:#f6f8fb; border:1px solid #e9edf5; border-radius:8px; padding:4px 10px;">书院：${collegeName}</span>
                     </div>
                 </div>
 
                 <div style="background:#f6f8fb; border:1px solid #e3e7ef; border-radius:10px; padding:14px; margin-bottom:14px;">
                     <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">经历摘要</div>
-                    <div style="color:#333;">${narrative.summary}</div>
+                    <div style="color:#333;">${narrativeData.summary}</div>
                 </div>
 
                 <div style="margin-bottom:14px;">
                     <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">里程碑</div>
                     <ul style="padding-left:18px; margin:0; color:#333;">
-                        ${narrative.timeline.map(item => `<li style="margin-bottom:6px;">${item}</li>`).join('')}
+                        ${narrativeData.timeline.map(item => `<li style="margin-bottom:6px;">${item}</li>`).join('')}
                     </ul>
                 </div>
 
                 <div style="margin-bottom:14px;">
                     <div style="color:#003E7E; font-weight:bold; margin-bottom:6px;">亮点标签</div>
                     <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                        ${narrative.tags.map(tag => `<span style="background:#003E7E10; color:#003E7E; border:1px solid #003E7E30; border-radius:999px; padding:4px 10px; font-size:0.9rem;">${tag}</span>`).join('')}
+                        ${narrativeData.tags.map(tag => `<span style="background:#003E7E10; color:#003E7E; border:1px solid #003E7E30; border-radius:999px; padding:4px 10px; font-size:0.9rem;">${tag}</span>`).join('')}
                     </div>
                 </div>
 
                 <div style="background:#fffaf4; border:1px solid #ffe3c4; border-radius:10px; padding:12px;">
                     <div style="color:#d26a00; font-weight:bold; margin-bottom:6px;">座右铭</div>
-                    <div style="color:#7a4a10;">${narrative.oneLiner}</div>
+                    <div style="color:#7a4a10;">${narrativeData.oneLiner}</div>
                 </div>
             </div>
         `;
@@ -4291,11 +4488,29 @@ class XianjaoSimulator {
         const campusRaw = collegeInfo.campus || this.state.campus || '校区待定';
         const campusName = campusLabelMap[String(campusRaw).toLowerCase()] || campusRaw;
         const gradeText = ['大一','大二','大三','大四'][this.state.year - 1] || '在读';
+        const playerName = this.state.name || '学生';
+        const genderMap = {
+            male: '男',
+            female: '女'
+        };
+        const playerGender = genderMap[this.state.gender] || (this.state.gender || '未填写');
+        const disciplineMap = {
+            engineering: '工学',
+            science: '理学',
+            medicine: '医学',
+            business: '经管',
+            humanities: '人文社科',
+            elite: '拔尖计划'
+        };
+        const disciplineName = disciplineMap[this.state.discipline] || (this.state.discipline || '未选择');
 
         const localNarrative = this.buildLocalProfileNarrative({
+            playerName,
+            playerGender,
             collegeName,
             backgroundName,
             campusName,
+            disciplineName,
             gradeText,
             month: this.state.month,
             achievements: AchievementSystem && AchievementSystem.achievements ? Object.values(AchievementSystem.achievements).filter(a => a.unlocked).map(a => a.name) : [],
@@ -4325,7 +4540,7 @@ class XianjaoSimulator {
 
             const model = AIModule.getCurrentModel();
             const stateSummary = AIModule.getGameStateSummary();
-            const baseFacts = `书院与背景=${fallbackNarrative.headline}；里程碑=${fallbackNarrative.timeline.join(' / ')}`;
+            const baseFacts = `身份定位=${fallbackNarrative.headline}；里程碑=${fallbackNarrative.timeline.join(' / ')}`;
             const prompt = `基于以下玩家概况，生成一个简历/故事档案，返回JSON，不要返回除JSON以外内容：\n{
   "headline": "一句精炼的身份定位（在原有基础上可补充，不得删除原有事实）",
   "summary": "80-120字的第三人称摘要，避免罗列数字属性，只润色或扩写，不得更改事实",
@@ -4334,8 +4549,9 @@ class XianjaoSimulator {
     "oneLiner": "座右铭，可替换但需保持中立积极"
 }\n严格要求：
 1) 下面的 baseFacts 信息不可改动、不可遗漏，只能在其基础上润色：${baseFacts}
-2) 不得出现学分/GPA/SAN等具体数值；语言自然。
-3) 生成时以提供的列表为基底，允许追加，不允许修改或删除基底内容。
+2) 必须保留并体现玩家姓名（如有）、性别信息和学科方向，不得丢失。
+3) 不得出现学分/GPA/SAN等具体数值；语言自然。
+4) 生成时以提供的列表为基底，允许追加，不允许修改或删除基底内容。
 玩家概况：${stateSummary}`;
 
             const response = await fetch(config.endpoint, {

@@ -4052,15 +4052,15 @@ body {
     }
     
     .gameplay-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
     
     .endings-showcase {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
     
     .features-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
     
     .handbook-philosophy,
