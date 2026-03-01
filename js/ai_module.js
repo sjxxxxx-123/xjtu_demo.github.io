@@ -6,9 +6,11 @@
 
 const AIModule = (function() {
     // API 配置
-    let API_KEY = null;
+    const DEFAULT_API_KEY = 'ms-3befc017-9b78-432e-81a2-2c4859dc158d';
+    const DEFAULT_API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions';
+    let API_KEY = DEFAULT_API_KEY;
     let API_PROVIDER = 'modelscope'; // 强制使用 modelscope
-    let API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions'; // ModelScope API Inference
+    let API_ENDPOINT = DEFAULT_API_ENDPOINT; // ModelScope API Inference
     
     // 多模型配置列表
     const AVAILABLE_MODELS = [
@@ -41,7 +43,7 @@ const AIModule = (function() {
 
         // 其次读取 config.js (本地开发环境)
         if (typeof window !== 'undefined' && window.GAME_CONFIG) {
-            API_KEY = window.GAME_CONFIG.API_KEY;
+            API_KEY = window.GAME_CONFIG.API_KEY || API_KEY;
             API_ENDPOINT = window.GAME_CONFIG.API_ENDPOINT || API_ENDPOINT;
             API_MODEL = window.GAME_CONFIG.AI_MODEL || API_MODEL;
         }
@@ -67,7 +69,7 @@ const AIModule = (function() {
         } else {
             localStorage.removeItem('xjtu_ai_endpoint');
             // 确保使用默认endpoint
-            API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions';
+            API_ENDPOINT = DEFAULT_API_ENDPOINT;
         }
         
         console.log('AI配置已保存并立即生效:', { 
