@@ -64,6 +64,10 @@ const AIModule = (function() {
             : Date.now();
     }
 
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     function recordModelLatency(model, latencyMs, success = true) {
         if (!model || typeof latencyMs !== 'number' || !Number.isFinite(latencyMs)) return;
 
@@ -90,6 +94,21 @@ const AIModule = (function() {
         const sampleBonus = stats && stats.count ? Math.max(0, 300 - stats.count * 10) : 400;
         const failPenalty = stats && stats.failCount ? Math.min(1500, stats.failCount * 120) : 0;
         return baseLatency + sampleBonus + failPenalty;
+    }
+
+    function getRankedModels(excludedModels) {
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+        const excludedSet = excludedModels instanceof Set ? excludedModels : new Set();
+
+        const candidates = AVAILABLE_MODELS.filter((model) => !excludedSet.has(model));
+        candidates.sort((a, b) => {
+            const aInCooldown = modelFailureTime[a] && (now - modelFailureTime[a]) <= oneHour ? 1 : 0;
+            const bInCooldown = modelFailureTime[b] && (now - modelFailureTime[b]) <= oneHour ? 1 : 0;
+            if (aInCooldown !== bInCooldown) return aInCooldown - bInCooldown;
+            return getModelScore(a) - getModelScore(b);
+        });
+        return candidates;
     }
 
     function pickFastestModel(excludeModel) {
@@ -167,19 +186,32 @@ const AIModule = (function() {
      * 切换到下一个可用模型
      */
     function switchToNextModel() {
-        const fastestModel = pickFastestModel(API_MODEL);
-        const index = AVAILABLE_MODELS.indexOf(fastestModel);
+        const excluded = new Set([API_MODEL]);
+        const ranked = getRankedModels(excluded);
+        const nextModel = ranked.length > 0 ? ranked[0] : API_MODEL;
+        const index = AVAILABLE_MODELS.indexOf(nextModel);
         if (index !== -1) currentModelIndex = index;
-        API_MODEL = fastestModel;
+        API_MODEL = nextModel;
         console.log(`已切换到更快模型: ${API_MODEL}`);
         return API_MODEL;
     }
 
     function selectFastestModel() {
-        const fastestModel = pickFastestModel(null);
+        const ranked = getRankedModels(new Set());
+        const fastestModel = ranked.length > 0 ? ranked[0] : API_MODEL;
         const index = AVAILABLE_MODELS.indexOf(fastestModel);
         if (index !== -1) currentModelIndex = index;
         API_MODEL = fastestModel;
+        return API_MODEL;
+    }
+
+    function selectBestModelForRequest(attemptedModels) {
+        const ranked = getRankedModels(attemptedModels || new Set());
+        const selected = ranked.length > 0 ? ranked[0] : null;
+        if (!selected) return null;
+        const index = AVAILABLE_MODELS.indexOf(selected);
+        if (index !== -1) currentModelIndex = index;
+        API_MODEL = selected;
         return API_MODEL;
     }
     
@@ -349,102 +381,86 @@ const AIModule = (function() {
 
         const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}\n【关联性提醒】当前角色：背景=${backgroundName}，书院=${collegeName}，存档签名=${stateSignature}。事件涉及的角色/元素必须与该角色强相关，严禁混入其他书院或旧存档角色。`;
         const maxRetries = AVAILABLE_MODELS.length;
+        const attemptedModels = new Set();
+        let lastError = null;
 
-        try {
-            let responseData;
-            
-            console.log(`正在使用模型 ${API_MODEL} 生成事件...`);
-            const startedAt = getNowMs();
-            
-            // 统一使用 OpenAI 格式 (DeepSeek 兼容)
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: API_MODEL,
-                    messages: [
-                        { role: "system", content: SYSTEM_PROMPT },
-                        { role: "user", content: userPrompt }
-                    ],
-                    temperature: 1.0,
-                    stream: false
-                })
-            });
+        for (let attempt = retryCount; attempt < maxRetries; attempt++) {
+            const selectedModel = selectBestModelForRequest(attemptedModels);
+            if (!selectedModel) break;
+            attemptedModels.add(selectedModel);
 
-            if (!response.ok) {
-                const errText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errText);
-                } catch (e) {
-                    errorData = { message: errText };
-                }
-                
-                if (retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 请求失败，自动切换到其他模型重试...`);
-                    markModelFailure(API_MODEL, errText);
-                    switchToNextModel();
-                    // 递归重试
-                    return await fetchAIEvent(retryCount + 1);
-                }
-                
-                throw new Error(`API Error: ${response.status} - ${errText}`);
-            }
-            const data = await response.json();
-            recordModelLatency(API_MODEL, getNowMs() - startedAt, true);
-            const content = data.choices[0].message.content;
-            
-            // 清理内容：移除markdown标记和多余空白
-            let jsonStr = content.trim();
-            jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-            
-            // 如果内容中包含多个JSON对象，提取第一个完整的JSON
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                jsonStr = jsonMatch[0];
-            }
-            
-            // 移除JSON中数字前的正号（JSON标准不允许 +5 这种格式，只能是 5）
-            // 匹配模式：冒号或逗号后面跟着空白字符和正号，然后是数字
-            jsonStr = jsonStr.replace(/:\s*\+(\d)/g, ': $1');  // "key": +5 -> "key": 5
-            jsonStr = jsonStr.replace(/,\s*\+(\d)/g, ', $1');  // , +5 -> , 5
-            
-            // 解析JSON
             try {
-                responseData = JSON.parse(jsonStr);
-            } catch (parseError) {
-                console.error("JSON Parse Error. Raw content:", content);
-                console.error("Cleaned JSON:", jsonStr);
-                if (retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 返回格式异常，自动切换模型重试...`);
-                    markModelFailure(API_MODEL, parseError.message || 'JSON Parse Error');
-                    switchToNextModel();
-                    return await fetchAIEvent(retryCount + 1);
+                let responseData;
+                console.log(`正在使用模型 ${selectedModel} 生成事件...`);
+                const startedAt = getNowMs();
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT },
+                            { role: "user", content: userPrompt }
+                        ],
+                        temperature: 1.0,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    markModelFailure(selectedModel, errText);
+                    lastError = new Error(`API Error: ${response.status} - ${errText}`);
+                    console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
+                    if (response.status === 429) {
+                        await sleep(300 + Math.floor(Math.random() * 500));
+                    }
+                    continue;
                 }
-                throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
-            }
 
-            // 基础校验
-            if (!responseData || !responseData.event_text) {
-                throw new Error("Invalid AI Response format: missing event_text");
-            }
+                const data = await response.json();
+                recordModelLatency(selectedModel, getNowMs() - startedAt, true);
+                const content = data.choices[0].message.content;
 
-            return responseData;
+                let jsonStr = content.trim();
+                jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonStr = jsonMatch[0];
+                }
+                jsonStr = jsonStr.replace(/:\s*\+(\d)/g, ': $1');
+                jsonStr = jsonStr.replace(/,\s*\+(\d)/g, ', $1');
 
-        } catch (error) {
-            if (retryCount < maxRetries - 1) {
-                console.warn(`模型 ${API_MODEL} 调用异常，自动切换模型重试...`);
-                markModelFailure(API_MODEL, error && error.message ? error.message : error);
-                switchToNextModel();
-                return await fetchAIEvent(retryCount + 1);
+                try {
+                    responseData = JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error("JSON Parse Error. Raw content:", content);
+                    console.error("Cleaned JSON:", jsonStr);
+                    markModelFailure(selectedModel, parseError.message || 'JSON Parse Error');
+                    lastError = new Error(`Invalid JSON format from AI: ${parseError.message}`);
+                    continue;
+                }
+
+                if (!responseData || !responseData.event_text) {
+                    markModelFailure(selectedModel, 'missing event_text');
+                    lastError = new Error("Invalid AI Response format: missing event_text");
+                    continue;
+                }
+
+                return responseData;
+            } catch (error) {
+                markModelFailure(selectedModel, error && error.message ? error.message : error);
+                lastError = error;
+                console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
             }
-            console.error("Fetch AI Event Failed:", error);
-            // 抛出错误以便上层处理（显示设置弹窗等）
-            throw error;
         }
+
+        console.error("Fetch AI Event Failed:", lastError);
+        throw (lastError || new Error('所有模型均调用失败'));
     }
 
     function buildEndingBiographyPrompt(input) {
@@ -531,90 +547,84 @@ const AIModule = (function() {
 
         const userPrompt = buildEndingBiographyPrompt(input || {});
         const maxRetries = AVAILABLE_MODELS.length;
+        const attemptedModels = new Set();
+        let lastError = null;
 
-        try {
-            let responseData;
-
-            console.log(`正在使用模型 ${API_MODEL} 生成结局小传...`);
-            const startedAt = getNowMs();
-
-            const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: API_MODEL,
-                    messages: [
-                        { role: "system", content: BIOGRAPHY_SYSTEM_PROMPT },
-                        { role: "user", content: userPrompt }
-                    ],
-                    temperature: 0.9,
-                    stream: false
-                })
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errText);
-                } catch (e) {
-                    errorData = { message: errText };
-                }
-
-                if (retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 请求失败，自动切换到其他模型重试...`);
-                    markModelFailure(API_MODEL, errText);
-                    switchToNextModel();
-                    return await fetchEndingBiography(input, retryCount + 1);
-                }
-
-                throw new Error(`API Error: ${response.status} - ${errText}`);
-            }
-
-            const data = await response.json();
-            recordModelLatency(API_MODEL, getNowMs() - startedAt, true);
-            const content = data.choices[0].message.content;
-
-            let jsonStr = content.trim();
-            jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                jsonStr = jsonMatch[0];
-            }
+        for (let attempt = retryCount; attempt < maxRetries; attempt++) {
+            const selectedModel = selectBestModelForRequest(attemptedModels);
+            if (!selectedModel) break;
+            attemptedModels.add(selectedModel);
 
             try {
-                responseData = JSON.parse(jsonStr);
-            } catch (parseError) {
-                console.error("JSON Parse Error. Raw content:", content);
-                console.error("Cleaned JSON:", jsonStr);
-                if (retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 返回格式异常，自动切换模型重试...`);
-                    markModelFailure(API_MODEL, parseError.message || 'JSON Parse Error');
-                    switchToNextModel();
-                    return await fetchEndingBiography(input, retryCount + 1);
+                let responseData;
+                console.log(`正在使用模型 ${selectedModel} 生成结局小传...`);
+                const startedAt = getNowMs();
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: "system", content: BIOGRAPHY_SYSTEM_PROMPT },
+                            { role: "user", content: userPrompt }
+                        ],
+                        temperature: 0.9,
+                        stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    markModelFailure(selectedModel, errText);
+                    lastError = new Error(`API Error: ${response.status} - ${errText}`);
+                    console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
+                    if (response.status === 429) {
+                        await sleep(300 + Math.floor(Math.random() * 500));
+                    }
+                    continue;
                 }
-                throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
-            }
 
-            if (!responseData || !responseData.title || !responseData.body) {
-                throw new Error("Invalid AI Response format: missing title/body");
-            }
+                const data = await response.json();
+                recordModelLatency(selectedModel, getNowMs() - startedAt, true);
+                const content = data.choices[0].message.content;
 
-            return responseData;
-        } catch (error) {
-            if (retryCount < maxRetries - 1) {
-                console.warn(`模型 ${API_MODEL} 调用异常，自动切换模型重试...`);
-                markModelFailure(API_MODEL, error && error.message ? error.message : error);
-                switchToNextModel();
-                return await fetchEndingBiography(input, retryCount + 1);
+                let jsonStr = content.trim();
+                jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonStr = jsonMatch[0];
+                }
+
+                try {
+                    responseData = JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error("JSON Parse Error. Raw content:", content);
+                    console.error("Cleaned JSON:", jsonStr);
+                    markModelFailure(selectedModel, parseError.message || 'JSON Parse Error');
+                    lastError = new Error(`Invalid JSON format from AI: ${parseError.message}`);
+                    continue;
+                }
+
+                if (!responseData || !responseData.title || !responseData.body) {
+                    markModelFailure(selectedModel, 'missing title/body');
+                    lastError = new Error("Invalid AI Response format: missing title/body");
+                    continue;
+                }
+
+                return responseData;
+            } catch (error) {
+                markModelFailure(selectedModel, error && error.message ? error.message : error);
+                lastError = error;
+                console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
             }
-            console.error("Fetch Ending Biography Failed:", error);
-            throw error;
         }
+
+        console.error("Fetch Ending Biography Failed:", lastError);
+        throw (lastError || new Error('所有模型均调用失败'));
     }
 
     /**
