@@ -34,6 +34,81 @@ const AIModule = (function() {
     
     // 模型失败记录（避免频繁重试同一个失败的模型）
     const modelFailureTime = {};
+    const MODEL_STATS_KEY = 'xjtu_ai_model_stats';
+    const modelStats = {};
+
+    function loadModelStats() {
+        try {
+            const raw = localStorage.getItem(MODEL_STATS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                Object.assign(modelStats, parsed);
+            }
+        } catch (e) {
+            console.warn('读取模型性能统计失败，已忽略:', e);
+        }
+    }
+
+    function saveModelStats() {
+        try {
+            localStorage.setItem(MODEL_STATS_KEY, JSON.stringify(modelStats));
+        } catch (e) {
+            console.warn('保存模型性能统计失败，已忽略:', e);
+        }
+    }
+
+    function getNowMs() {
+        return (typeof performance !== 'undefined' && performance.now)
+            ? performance.now()
+            : Date.now();
+    }
+
+    function recordModelLatency(model, latencyMs, success = true) {
+        if (!model || typeof latencyMs !== 'number' || !Number.isFinite(latencyMs)) return;
+
+        const prev = modelStats[model] || { avgLatency: latencyMs, count: 0, failCount: 0 };
+        const nextCount = (prev.count || 0) + (success ? 1 : 0);
+        const nextAvg = success
+            ? (((prev.avgLatency || latencyMs) * (prev.count || 0) + latencyMs) / Math.max(1, nextCount))
+            : (prev.avgLatency || latencyMs);
+
+        modelStats[model] = {
+            avgLatency: Math.round(nextAvg),
+            count: nextCount,
+            failCount: (prev.failCount || 0) + (success ? 0 : 1),
+            lastLatency: Math.round(latencyMs),
+            updatedAt: Date.now()
+        };
+
+        saveModelStats();
+    }
+
+    function getModelScore(model) {
+        const stats = modelStats[model];
+        const baseLatency = stats && typeof stats.avgLatency === 'number' ? stats.avgLatency : 2000;
+        const sampleBonus = stats && stats.count ? Math.max(0, 300 - stats.count * 10) : 400;
+        const failPenalty = stats && stats.failCount ? Math.min(1500, stats.failCount * 120) : 0;
+        return baseLatency + sampleBonus + failPenalty;
+    }
+
+    function pickFastestModel(excludeModel) {
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+
+        const selectable = AVAILABLE_MODELS.filter((model) => model !== excludeModel);
+        const healthyModels = selectable.filter((model) => {
+            return !modelFailureTime[model] || (now - modelFailureTime[model]) > oneHour;
+        });
+
+        const candidatePool = healthyModels.length > 0 ? healthyModels : selectable;
+        if (candidatePool.length === 0) {
+            return API_MODEL;
+        }
+
+        candidatePool.sort((a, b) => getModelScore(a) - getModelScore(b));
+        return candidatePool[0];
+    }
 
     // 尝试从全局配置加载
     function loadConfig() {
@@ -59,6 +134,7 @@ const AIModule = (function() {
 
     // 移除多余的 updateEndpointDefault，因为现在只有一个默认来源
     // 初始化加载
+    loadModelStats();
     loadConfig();
 
     /**
@@ -91,26 +167,19 @@ const AIModule = (function() {
      * 切换到下一个可用模型
      */
     function switchToNextModel() {
-        const now = Date.now();
-        const oneHour = 60 * 60 * 1000;
-        
-        // 找到下一个未在最近1小时内失败的模型
-        let attempts = 0;
-        while (attempts < AVAILABLE_MODELS.length) {
-            currentModelIndex = (currentModelIndex + 1) % AVAILABLE_MODELS.length;
-            const model = AVAILABLE_MODELS[currentModelIndex];
-            
-            // 如果这个模型最近1小时内没有失败，或者已经是最后一个选择了
-            if (!modelFailureTime[model] || (now - modelFailureTime[model]) > oneHour || attempts === AVAILABLE_MODELS.length - 1) {
-                API_MODEL = model;
-                console.log(`已切换到模型: ${API_MODEL}`);
-                return API_MODEL;
-            }
-            attempts++;
-        }
-        
-        // 如果所有模型都在1小时内失败过，使用当前索引的模型（重试）
-        API_MODEL = AVAILABLE_MODELS[currentModelIndex];
+        const fastestModel = pickFastestModel(API_MODEL);
+        const index = AVAILABLE_MODELS.indexOf(fastestModel);
+        if (index !== -1) currentModelIndex = index;
+        API_MODEL = fastestModel;
+        console.log(`已切换到更快模型: ${API_MODEL}`);
+        return API_MODEL;
+    }
+
+    function selectFastestModel() {
+        const fastestModel = pickFastestModel(null);
+        const index = AVAILABLE_MODELS.indexOf(fastestModel);
+        if (index !== -1) currentModelIndex = index;
+        API_MODEL = fastestModel;
         return API_MODEL;
     }
     
@@ -119,6 +188,7 @@ const AIModule = (function() {
      */
     function markModelFailure(model, error) {
         modelFailureTime[model] = Date.now();
+        recordModelLatency(model, 6000, false);
         console.warn(`模型 ${model} 失败:`, error);
     }
 
@@ -265,6 +335,10 @@ const AIModule = (function() {
             throw new Error("MISSING_API_KEY");
         }
 
+        if (retryCount === 0) {
+            selectFastestModel();
+        }
+
         const stateSummary = getGameStateSummary();
         const currentState = (window.game && window.game.state) ? window.game.state : null;
         const backgroundInfo = (window.GameData && window.GameData.backgrounds && currentState) ? window.GameData.backgrounds[currentState.background] : null;
@@ -280,6 +354,7 @@ const AIModule = (function() {
             let responseData;
             
             console.log(`正在使用模型 ${API_MODEL} 生成事件...`);
+            const startedAt = getNowMs();
             
             // 统一使用 OpenAI 格式 (DeepSeek 兼容)
             const response = await fetch(API_ENDPOINT, {
@@ -319,6 +394,7 @@ const AIModule = (function() {
                 throw new Error(`API Error: ${response.status} - ${errText}`);
             }
             const data = await response.json();
+            recordModelLatency(API_MODEL, getNowMs() - startedAt, true);
             const content = data.choices[0].message.content;
             
             // 清理内容：移除markdown标记和多余空白
@@ -449,6 +525,10 @@ const AIModule = (function() {
             throw new Error("MISSING_API_KEY");
         }
 
+        if (retryCount === 0) {
+            selectFastestModel();
+        }
+
         const userPrompt = buildEndingBiographyPrompt(input || {});
         const maxRetries = AVAILABLE_MODELS.length;
 
@@ -456,6 +536,7 @@ const AIModule = (function() {
             let responseData;
 
             console.log(`正在使用模型 ${API_MODEL} 生成结局小传...`);
+            const startedAt = getNowMs();
 
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
@@ -494,6 +575,7 @@ const AIModule = (function() {
             }
 
             const data = await response.json();
+            recordModelLatency(API_MODEL, getNowMs() - startedAt, true);
             const content = data.choices[0].message.content;
 
             let jsonStr = content.trim();
