@@ -15,18 +15,15 @@ const AIModule = (function() {
     // 多模型配置列表
     const AVAILABLE_MODELS = [
         'deepseek-ai/DeepSeek-V3.2',
-        'deepseek-ai/DeepSeek-R1-0528',
+        'inclusionAI/Ling-2.5-IT',
+        'inclusionAI/Ring-2.5-IT',
+        'MiniMax/MiniMax-M2.5',
         'THUDM/GLM-5',
         'THUDM/GLM-4.7-Flash',
         'Qwen/Qwen2.5-72B-Instruct',
         'Qwen/Qwen2.5-32B-Instruct',
         'Qwen/Qwen2.5-14B-Instruct',
-        'Qwen/Qwen2.5-7B-Instruct',
-        'Qwen/Qwen3-14B',
-        'MiniMax/MiniMax-M2.5',
-        'LocoMind/LocoOperator-4B',
-        'inclusionAI/Ling-2.5-IT',
-        'inclusionAI/Ring-2.5-IT'
+        'Qwen/Qwen3-14B'
     ];
     
     let currentModelIndex = 0;
@@ -34,8 +31,15 @@ const AIModule = (function() {
     
     // 模型失败记录（避免频繁重试同一个失败的模型）
     const modelFailureTime = {};
+    const modelBlockedUntil = {};
+    const permanentlyUnsupportedModels = new Set();
     const MODEL_STATS_KEY = 'xjtu_ai_model_stats';
+    const MODEL_FILTERS_KEY = 'xjtu_ai_model_filters';
+    const MAX_ATTEMPTS_PER_REQUEST = 10;
+    const RATE_LIMIT_COOLDOWN_MS = 10 * 60 * 1000;
+    const DAILY_QUOTA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
     const modelStats = {};
+    let endingBiographyInFlight = null;
 
     function loadModelStats() {
         try {
@@ -55,6 +59,36 @@ const AIModule = (function() {
             localStorage.setItem(MODEL_STATS_KEY, JSON.stringify(modelStats));
         } catch (e) {
             console.warn('保存模型性能统计失败，已忽略:', e);
+        }
+    }
+
+    function loadModelFilters() {
+        try {
+            const raw = localStorage.getItem(MODEL_FILTERS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return;
+
+            if (parsed.modelBlockedUntil && typeof parsed.modelBlockedUntil === 'object') {
+                Object.assign(modelBlockedUntil, parsed.modelBlockedUntil);
+            }
+
+            if (Array.isArray(parsed.permanentlyUnsupportedModels)) {
+                parsed.permanentlyUnsupportedModels.forEach((model) => permanentlyUnsupportedModels.add(model));
+            }
+        } catch (e) {
+            console.warn('读取模型过滤状态失败，已忽略:', e);
+        }
+    }
+
+    function saveModelFilters() {
+        try {
+            localStorage.setItem(MODEL_FILTERS_KEY, JSON.stringify({
+                modelBlockedUntil,
+                permanentlyUnsupportedModels: Array.from(permanentlyUnsupportedModels)
+            }));
+        } catch (e) {
+            console.warn('保存模型过滤状态失败，已忽略:', e);
         }
     }
 
@@ -101,7 +135,12 @@ const AIModule = (function() {
         const oneHour = 60 * 60 * 1000;
         const excludedSet = excludedModels instanceof Set ? excludedModels : new Set();
 
-        const candidates = AVAILABLE_MODELS.filter((model) => !excludedSet.has(model));
+        const candidates = AVAILABLE_MODELS.filter((model) => {
+            if (excludedSet.has(model)) return false;
+            if (permanentlyUnsupportedModels.has(model)) return false;
+            if (modelBlockedUntil[model] && now < modelBlockedUntil[model]) return false;
+            return true;
+        });
         candidates.sort((a, b) => {
             const aInCooldown = modelFailureTime[a] && (now - modelFailureTime[a]) <= oneHour ? 1 : 0;
             const bInCooldown = modelFailureTime[b] && (now - modelFailureTime[b]) <= oneHour ? 1 : 0;
@@ -154,6 +193,7 @@ const AIModule = (function() {
     // 移除多余的 updateEndpointDefault，因为现在只有一个默认来源
     // 初始化加载
     loadModelStats();
+    loadModelFilters();
     loadConfig();
 
     /**
@@ -224,6 +264,30 @@ const AIModule = (function() {
         console.warn(`模型 ${model} 失败:`, error);
     }
 
+    function handleModelError(model, statusCode, errText) {
+        const text = String(errText || '').toLowerCase();
+        let filterUpdated = false;
+
+        if (statusCode === 429) {
+            const isDailyQuotaExceeded = text.includes("today's quota") || text.includes('try again tomorrow');
+            modelBlockedUntil[model] = Date.now() + (isDailyQuotaExceeded ? DAILY_QUOTA_COOLDOWN_MS : RATE_LIMIT_COOLDOWN_MS);
+            filterUpdated = true;
+        }
+        if (
+            text.includes('invalid model id') ||
+            text.includes('no provider supported') ||
+            text.includes('has no provider supported') ||
+            text.includes('unsupported model')
+        ) {
+            permanentlyUnsupportedModels.add(model);
+            filterUpdated = true;
+        }
+
+        if (filterUpdated) {
+            saveModelFilters();
+        }
+    }
+
     /**
      * 获取当前配置
      */
@@ -286,6 +350,8 @@ const AIModule = (function() {
 - 采用古文碑帖风，夹少量白话，读起来庄重而不晦涩。
 - 故事中必须清晰出现玩家的真实名字和所在书院名称。
 - 结局描述要与玩家最终的GPA、SAN值、综测相符，不能虚构。
+- 小传正文禁止出现英文单词；仅允许缩写（如 GPA、SAN）。
+- 小传正文必须分段书写，采用文言叙事节奏（每段约2-3句）。
 
 【重要】必须严格返回 JSON，不要包含任何其他文本，且body必须包含玩家名字、书院、专业、时间和成绩。`;
 
@@ -380,7 +446,7 @@ const AIModule = (function() {
         const stateSignature = currentState ? `${backgroundName}|${collegeName}|year${currentState.year}|month${currentState.month}|total${currentState.totalMonths || 0}` : 'unknown';
 
         const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}\n【关联性提醒】当前角色：背景=${backgroundName}，书院=${collegeName}，存档签名=${stateSignature}。事件涉及的角色/元素必须与该角色强相关，严禁混入其他书院或旧存档角色。`;
-        const maxRetries = AVAILABLE_MODELS.length;
+        const maxRetries = Math.min(AVAILABLE_MODELS.length, MAX_ATTEMPTS_PER_REQUEST);
         const attemptedModels = new Set();
         let lastError = null;
 
@@ -413,6 +479,7 @@ const AIModule = (function() {
 
                 if (!response.ok) {
                     const errText = await response.text();
+                    handleModelError(selectedModel, response.status, errText);
                     markModelFailure(selectedModel, errText);
                     lastError = new Error(`API Error: ${response.status} - ${errText}`);
                     console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
@@ -527,13 +594,129 @@ const AIModule = (function() {
             `结局描述: ${input && input.endingDesc ? input.endingDesc : '无'}`
         ];
 
-        return `请基于以下信息为该玩家撰写古文风格的人物小传。\n${summaryLines.join('\n')}\n\n【重要提示】\n撰写时必须：\n1. 使用玩家真实姓名"${playerName}"，不能用代称\n2. 明确提及所在书院"${collegeName}"\n3. 反映真实的专业背景"${backgroundName}"\n4. 时间因果必须符（大一入学→${yearName}${monthName}毕业，共${totalMonths}月）\n5. 成绩数据要体现在叙事中（GPA ${toNumber(state.gpa, 2)}，综测${toNumber(state.social)}）`;
+        return `请基于以下信息为该玩家撰写古文风格的人物小传。\n${summaryLines.join('\n')}\n\n【重要提示】\n撰写时必须：\n1. 使用玩家真实姓名"${playerName}"，不能用代称\n2. 明确提及所在书院"${collegeName}"\n3. 反映真实的专业背景"${backgroundName}"\n4. 时间因果必须符（大一入学→${yearName}${monthName}毕业，共${totalMonths}月）\n5. 成绩数据要体现在叙事中（GPA ${toNumber(state.gpa, 2)}，综测${toNumber(state.social)}）\n6. 小传中禁止出现英文单词，仅允许缩写（如 GPA、SAN）\n7. 小传正文必须分段，采用文言文叙事节奏，每段2-3句`;
+    }
+
+    function safeParseJsonMaybe(text) {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function sanitizeEnglishWordsKeepAbbr(text) {
+        const source = String(text || '');
+        return source
+            .replace(/[A-Za-z][A-Za-z0-9'_-]*/g, (word) => {
+                const isAbbreviation = /^[A-Z0-9]{2,6}$/.test(word);
+                return isAbbreviation ? word : '';
+            })
+            .replace(/\[\s*\]/g, '')
+            .replace(/\[[^\]\n]{1,24}\]/g, (block) => {
+                const hasChinese = /[\u4e00-\u9fa5]/.test(block);
+                return hasChinese ? block : '';
+            })
+            .replace(/[\[\]]/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    function getDefaultClassicalBody() {
+        return [
+            '　　其人初入杏坛，怀志而行。虽历风雨，未改初心。',
+            '　　行年既进，得失互见；困而知返，学而后成。',
+            '　　及其回首来路，心有定见，亦足自立于世。'
+        ].join('\n');
+    }
+
+    function formatClassicalParagraphs(text, sentencePerParagraph = 2) {
+        const source = String(text || '').replace(/\r/g, '').trim();
+        if (!source) return source;
+
+        const sentenceRegex = /[^。！？；!?;\n]+[。！？；!?;]?/g;
+        const rawSentences = source.match(sentenceRegex) || [source];
+        const sentences = rawSentences
+            .map((item) => item.replace(/\n+/g, '').trim())
+            .filter(Boolean)
+            .map((item) => item.replace(/[!?;]/g, '。'));
+
+        if (sentences.length <= sentencePerParagraph) {
+            return `　　${sentences.join('')}`;
+        }
+
+        const paragraphs = [];
+        for (let index = 0; index < sentences.length; index += sentencePerParagraph) {
+            const chunk = sentences.slice(index, index + sentencePerParagraph).join('');
+            if (chunk.trim()) {
+                paragraphs.push(`　　${chunk}`);
+            }
+        }
+
+        return paragraphs.join('\n');
+    }
+
+    function sanitizeBiographyFields(bio) {
+        if (!bio || typeof bio !== 'object') return bio;
+        const sanitizedBody = formatClassicalParagraphs(sanitizeEnglishWordsKeepAbbr(bio.body), 2);
+        const bodyCore = String(sanitizedBody || '').replace(/[\s\n　。？！；、,:：]/g, '');
+        return {
+            ...bio,
+            title: sanitizeEnglishWordsKeepAbbr(bio.title),
+            body: bodyCore.length >= 12 ? sanitizedBody : getDefaultClassicalBody(),
+            quote: sanitizeEnglishWordsKeepAbbr(bio.quote),
+            preface: sanitizeEnglishWordsKeepAbbr(bio.preface),
+            epilogue_title: sanitizeEnglishWordsKeepAbbr(bio.epilogue_title),
+            epilogue: sanitizeEnglishWordsKeepAbbr(bio.epilogue),
+            signature: sanitizeEnglishWordsKeepAbbr(bio.signature)
+        };
+    }
+
+    function normalizeBiographyResponse(rawContent) {
+        const text = String(rawContent || '').trim();
+        if (!text) return null;
+
+        let parsed = null;
+        const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            parsed = safeParseJsonMaybe(jsonMatch[0]);
+        }
+
+        if (!parsed) {
+            return sanitizeBiographyFields({
+                title: '结局小传',
+                body: cleaned
+            });
+        }
+
+        const body = parsed.body || parsed.content || parsed.text || parsed.biography || parsed.story || '';
+        const title = parsed.title || parsed.heading || '结局小传';
+
+        if (!body || String(body).trim() === '') {
+            return null;
+        }
+
+        return sanitizeBiographyFields({
+            title,
+            body: String(body).trim(),
+            quote: parsed.quote,
+            preface: parsed.preface,
+            epilogue_title: parsed.epilogue_title,
+            epilogue: parsed.epilogue,
+            signature: parsed.signature
+        });
     }
 
     /**
      * 生成结局人物小传
      */
     async function fetchEndingBiography(input, retryCount = 0) {
+        if (endingBiographyInFlight) {
+            return await endingBiographyInFlight;
+        }
+
+        endingBiographyInFlight = (async () => {
         if (!API_KEY) loadConfig();
 
         if (!API_KEY) {
@@ -546,7 +729,7 @@ const AIModule = (function() {
         }
 
         const userPrompt = buildEndingBiographyPrompt(input || {});
-        const maxRetries = AVAILABLE_MODELS.length;
+        const maxRetries = Math.min(AVAILABLE_MODELS.length, MAX_ATTEMPTS_PER_REQUEST);
         const attemptedModels = new Set();
         let lastError = null;
 
@@ -573,12 +756,14 @@ const AIModule = (function() {
                             { role: "user", content: userPrompt }
                         ],
                         temperature: 0.9,
-                        stream: false
+                        stream: false,
+                        ...(selectedModel.includes('Qwen/Qwen3') ? { enable_thinking: false } : {})
                     })
                 });
 
                 if (!response.ok) {
                     const errText = await response.text();
+                    handleModelError(selectedModel, response.status, errText);
                     markModelFailure(selectedModel, errText);
                     lastError = new Error(`API Error: ${response.status} - ${errText}`);
                     console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
@@ -592,26 +777,12 @@ const AIModule = (function() {
                 recordModelLatency(selectedModel, getNowMs() - startedAt, true);
                 const content = data.choices[0].message.content;
 
-                let jsonStr = content.trim();
-                jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    jsonStr = jsonMatch[0];
-                }
+                responseData = normalizeBiographyResponse(content);
 
-                try {
-                    responseData = JSON.parse(jsonStr);
-                } catch (parseError) {
-                    console.error("JSON Parse Error. Raw content:", content);
-                    console.error("Cleaned JSON:", jsonStr);
-                    markModelFailure(selectedModel, parseError.message || 'JSON Parse Error');
-                    lastError = new Error(`Invalid JSON format from AI: ${parseError.message}`);
-                    continue;
-                }
-
-                if (!responseData || !responseData.title || !responseData.body) {
-                    markModelFailure(selectedModel, 'missing title/body');
-                    lastError = new Error("Invalid AI Response format: missing title/body");
+                if (!responseData || !responseData.body) {
+                    console.error("Biography Normalize Error. Raw content:", content);
+                    markModelFailure(selectedModel, 'missing body after normalization');
+                    lastError = new Error("Invalid AI Response format: missing body");
                     continue;
                 }
 
@@ -625,6 +796,13 @@ const AIModule = (function() {
 
         console.error("Fetch Ending Biography Failed:", lastError);
         throw (lastError || new Error('所有模型均调用失败'));
+        })();
+
+        try {
+            return await endingBiographyInFlight;
+        } finally {
+            endingBiographyInFlight = null;
+        }
     }
 
     /**
