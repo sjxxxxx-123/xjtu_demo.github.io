@@ -453,18 +453,29 @@ class XianjaoSimulator {
                     errorMsg = errText.substring(0, 100);
                 }
                 
-                // 检测配额限制错误
-                const isQuotaError = errText.includes('quota') || 
-                                   errText.includes('exceeded') || 
-                                   errText.includes('limit') ||
-                                   (errorData && errorData.errors && errorData.errors.message && 
-                                    errorData.errors.message.includes('quota'));
-                
-                if (isQuotaError && retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${currentModel} 配额已用完，尝试切换模型...`);
+                // 配额不足 / 模型不支持当前provider 时，自动切换模型重试
+                const mergedErrorText = `${(errText || '').toLowerCase()} ${(
+                    (errorData && errorData.errors && errorData.errors.message) ||
+                    (errorData && errorData.error && errorData.error.message) ||
+                    ''
+                ).toLowerCase()}`;
+                const canRetryBySwitchModel = mergedErrorText.includes('quota') ||
+                    mergedErrorText.includes('exceeded') ||
+                    mergedErrorText.includes('limit') ||
+                    mergedErrorText.includes('has no provider supported') ||
+                    mergedErrorText.includes('no provider supported') ||
+                    mergedErrorText.includes('model not found') ||
+                    mergedErrorText.includes('unsupported model');
+
+                if (canRetryBySwitchModel && retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${currentModel} 不可用，尝试切换模型...`);
                     AIModule.switchToNextModel();
                     // 递归重试
                     return await this.testAIConnection(retryCount + 1);
+                }
+
+                if (mergedErrorText.includes('has no provider supported') || mergedErrorText.includes('no provider supported')) {
+                    errorMsg = `${errorMsg}（当前模型与API供应商不匹配，已尝试自动切换）`;
                 }
                 
                 return { success: false, error: errorMsg };

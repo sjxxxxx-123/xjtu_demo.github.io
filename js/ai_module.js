@@ -115,6 +115,29 @@ const AIModule = (function() {
     }
 
     /**
+     * 判断是否属于可通过切换模型重试的错误
+     */
+    function isRetryableModelError(errText, errorData) {
+        const text = String(errText || '').toLowerCase();
+        const serverMsg = String(
+            (errorData && errorData.errors && errorData.errors.message) ||
+            (errorData && errorData.error && errorData.error.message) ||
+            ''
+        ).toLowerCase();
+        const merged = `${text} ${serverMsg}`;
+
+        return (
+            merged.includes('quota') ||
+            merged.includes('exceeded') ||
+            merged.includes('limit') ||
+            merged.includes('has no provider supported') ||
+            merged.includes('no provider supported') ||
+            merged.includes('model not found') ||
+            merged.includes('unsupported model')
+        );
+    }
+
+    /**
      * 获取当前配置
      */
     function getCurrentConfig() {
@@ -300,16 +323,11 @@ const AIModule = (function() {
                     errorData = { message: errText };
                 }
                 
-                // 检测配额限制错误
-                const isQuotaError = errText.includes('quota') || 
-                                   errText.includes('exceeded') || 
-                                   errText.includes('limit') ||
-                                   (errorData.errors && errorData.errors.message && 
-                                    errorData.errors.message.includes('quota'));
-                
-                if (isQuotaError && retryCount < maxRetries) {
-                    console.warn(`模型 ${API_MODEL} 配额已用完，尝试切换到其他模型...`);
-                    markModelFailure(API_MODEL, '配额限制');
+                const canRetryBySwitchModel = isRetryableModelError(errText, errorData);
+
+                if (canRetryBySwitchModel && retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 不可用，尝试切换到其他模型...`);
+                    markModelFailure(API_MODEL, errText);
                     switchToNextModel();
                     // 递归重试
                     return await fetchAIEvent(retryCount + 1);
@@ -470,15 +488,11 @@ const AIModule = (function() {
                     errorData = { message: errText };
                 }
 
-                const isQuotaError = errText.includes('quota') ||
-                                   errText.includes('exceeded') ||
-                                   errText.includes('limit') ||
-                                   (errorData.errors && errorData.errors.message &&
-                                    errorData.errors.message.includes('quota'));
+                const canRetryBySwitchModel = isRetryableModelError(errText, errorData);
 
-                if (isQuotaError && retryCount < maxRetries) {
-                    console.warn(`模型 ${API_MODEL} 配额已用完，尝试切换到其他模型...`);
-                    markModelFailure(API_MODEL, '配额限制');
+                if (canRetryBySwitchModel && retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 不可用，尝试切换到其他模型...`);
+                    markModelFailure(API_MODEL, errText);
                     switchToNextModel();
                     return await fetchEndingBiography(input, retryCount + 1);
                 }
