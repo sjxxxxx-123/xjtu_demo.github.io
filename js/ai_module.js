@@ -15,10 +15,18 @@ const AIModule = (function() {
     // 多模型配置列表
     const AVAILABLE_MODELS = [
         'deepseek-ai/DeepSeek-V3.2',
+        'deepseek-ai/DeepSeek-R1-0528',
+        'THUDM/GLM-5',
+        'THUDM/GLM-4.7-Flash',
         'Qwen/Qwen2.5-72B-Instruct',
         'Qwen/Qwen2.5-32B-Instruct',
         'Qwen/Qwen2.5-14B-Instruct',
-        'Qwen/Qwen2.5-7B-Instruct'
+        'Qwen/Qwen2.5-7B-Instruct',
+        'Qwen/Qwen3-14B',
+        'MiniMax/MiniMax-M2.5',
+        'LocoMind/LocoOperator-4B',
+        'inclusionAI/Ling-2.5-IT',
+        'inclusionAI/Ring-2.5-IT'
     ];
     
     let currentModelIndex = 0;
@@ -112,29 +120,6 @@ const AIModule = (function() {
     function markModelFailure(model, error) {
         modelFailureTime[model] = Date.now();
         console.warn(`模型 ${model} 失败:`, error);
-    }
-
-    /**
-     * 判断是否属于可通过切换模型重试的错误
-     */
-    function isRetryableModelError(errText, errorData) {
-        const text = String(errText || '').toLowerCase();
-        const serverMsg = String(
-            (errorData && errorData.errors && errorData.errors.message) ||
-            (errorData && errorData.error && errorData.error.message) ||
-            ''
-        ).toLowerCase();
-        const merged = `${text} ${serverMsg}`;
-
-        return (
-            merged.includes('quota') ||
-            merged.includes('exceeded') ||
-            merged.includes('limit') ||
-            merged.includes('has no provider supported') ||
-            merged.includes('no provider supported') ||
-            merged.includes('model not found') ||
-            merged.includes('unsupported model')
-        );
     }
 
     /**
@@ -323,10 +308,8 @@ const AIModule = (function() {
                     errorData = { message: errText };
                 }
                 
-                const canRetryBySwitchModel = isRetryableModelError(errText, errorData);
-
-                if (canRetryBySwitchModel && retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 不可用，尝试切换到其他模型...`);
+                if (retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 请求失败，自动切换到其他模型重试...`);
                     markModelFailure(API_MODEL, errText);
                     switchToNextModel();
                     // 递归重试
@@ -359,6 +342,12 @@ const AIModule = (function() {
             } catch (parseError) {
                 console.error("JSON Parse Error. Raw content:", content);
                 console.error("Cleaned JSON:", jsonStr);
+                if (retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 返回格式异常，自动切换模型重试...`);
+                    markModelFailure(API_MODEL, parseError.message || 'JSON Parse Error');
+                    switchToNextModel();
+                    return await fetchAIEvent(retryCount + 1);
+                }
                 throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
             }
 
@@ -370,6 +359,12 @@ const AIModule = (function() {
             return responseData;
 
         } catch (error) {
+            if (retryCount < maxRetries - 1) {
+                console.warn(`模型 ${API_MODEL} 调用异常，自动切换模型重试...`);
+                markModelFailure(API_MODEL, error && error.message ? error.message : error);
+                switchToNextModel();
+                return await fetchAIEvent(retryCount + 1);
+            }
             console.error("Fetch AI Event Failed:", error);
             // 抛出错误以便上层处理（显示设置弹窗等）
             throw error;
@@ -488,10 +483,8 @@ const AIModule = (function() {
                     errorData = { message: errText };
                 }
 
-                const canRetryBySwitchModel = isRetryableModelError(errText, errorData);
-
-                if (canRetryBySwitchModel && retryCount < maxRetries - 1) {
-                    console.warn(`模型 ${API_MODEL} 不可用，尝试切换到其他模型...`);
+                if (retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 请求失败，自动切换到其他模型重试...`);
                     markModelFailure(API_MODEL, errText);
                     switchToNextModel();
                     return await fetchEndingBiography(input, retryCount + 1);
@@ -516,6 +509,12 @@ const AIModule = (function() {
             } catch (parseError) {
                 console.error("JSON Parse Error. Raw content:", content);
                 console.error("Cleaned JSON:", jsonStr);
+                if (retryCount < maxRetries - 1) {
+                    console.warn(`模型 ${API_MODEL} 返回格式异常，自动切换模型重试...`);
+                    markModelFailure(API_MODEL, parseError.message || 'JSON Parse Error');
+                    switchToNextModel();
+                    return await fetchEndingBiography(input, retryCount + 1);
+                }
                 throw new Error(`Invalid JSON format from AI: ${parseError.message}`);
             }
 
@@ -525,6 +524,12 @@ const AIModule = (function() {
 
             return responseData;
         } catch (error) {
+            if (retryCount < maxRetries - 1) {
+                console.warn(`模型 ${API_MODEL} 调用异常，自动切换模型重试...`);
+                markModelFailure(API_MODEL, error && error.message ? error.message : error);
+                switchToNextModel();
+                return await fetchEndingBiography(input, retryCount + 1);
+            }
             console.error("Fetch Ending Biography Failed:", error);
             throw error;
         }
