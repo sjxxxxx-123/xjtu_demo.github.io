@@ -71,17 +71,30 @@
             });
 
             // Modal相关
+            const modalEl = document.getElementById('modal');
             document.getElementById('modal-close').addEventListener('click', hideModal);
             document.getElementById('modal-confirm').addEventListener('click', hideModal);
+
+            // ✅ 新增：点击遮罩关闭（点到 modal-content 不会关闭）
+            modalEl.addEventListener('click', function(e) {
+                if (e.target === modalEl) hideModal();
+            });
+
+            // ✅ 新增：ESC 键关闭
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modalEl.classList.contains('active')) {
+                    hideModal();
+                }
+            });
 
             function showModal(title, content) {
                 document.getElementById('modal-title').textContent = title;
                 document.getElementById('modal-body').innerHTML = '<p>' + content + '</p>';
-                document.getElementById('modal').classList.add('active');
+                modalEl.classList.add('active');
             }
 
             function hideModal() {
-                document.getElementById('modal').classList.remove('active');
+                modalEl.classList.remove('active');
             }
         });
     </script>
