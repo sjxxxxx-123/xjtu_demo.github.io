@@ -246,7 +246,16 @@ class XianjaoSimulator {
                 const keyElem = document.getElementById('setting-api-key');
                 const resultElem = document.getElementById('api-test-result');
                 
-                const key = keyElem ? keyElem.value.trim() : '';
+                const normalizeApiKey = (raw) => String(raw || '')
+                    .trim()
+                    .replace(/^['\"]+|['\"]+$/g, '')
+                    .replace(/^bearer\s+/i, '')
+                    .trim();
+
+                const key = keyElem ? normalizeApiKey(keyElem.value) : '';
+                if (keyElem) {
+                    keyElem.value = key;
+                }
                 
                 if (key === '') {
                     if (resultElem) {
@@ -418,11 +427,11 @@ class XianjaoSimulator {
             
             const maxRetries = AIModule.getAvailableModels().length;
             const currentModel = AIModule.getCurrentModel();
+            const requestTimeoutMs = 45000;
             
             console.log(`测试API连接 (尝试 ${retryCount + 1}/${maxRetries})，当前模型: ${currentModel}`);
-            
-            // 调用AI模块进行简单测试
-            const response = await fetch(config.endpoint, {
+
+            const requestOptions = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -435,7 +444,19 @@ class XianjaoSimulator {
                     ],
                     max_tokens: 5
                 })
-            });
+            };
+
+            const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const timeoutId = controller ? setTimeout(() => controller.abort(), requestTimeoutMs) : null;
+            if (controller) requestOptions.signal = controller.signal;
+            
+            // 调用AI模块进行简单测试
+            let response;
+            try {
+                response = await fetch(config.endpoint, requestOptions);
+            } finally {
+                if (timeoutId) clearTimeout(timeoutId);
+            }
             
             if (!response.ok) {
                 const errText = await response.text();
@@ -452,12 +473,11 @@ class XianjaoSimulator {
                 } catch (e) {
                     errorMsg = errText.substring(0, 100);
                 }
-                
-                // 任意错误都自动切换模型重试
+
+                // 极简策略：当前模型失败就切下一个，直到成功或耗尽
                 if (retryCount < maxRetries - 1) {
                     console.warn(`模型 ${currentModel} 请求失败，自动切换模型...`);
                     AIModule.switchToNextModel();
-                    // 递归重试
                     return await this.testAIConnection(retryCount + 1);
                 }
                 
@@ -466,6 +486,14 @@ class XianjaoSimulator {
             
             return { success: true, model: currentModel };
         } catch (error) {
+            const isTimeout = error && error.name === 'AbortError';
+            if (retryCount < AIModule.getAvailableModels().length - 1) {
+                AIModule.switchToNextModel();
+                return await this.testAIConnection(retryCount + 1);
+            }
+            if (isTimeout) {
+                return { success: false, error: '请求超时（45秒），请稍后重试' };
+            }
             return { success: false, error: error.message || '网络连接失败' };
         }
     }

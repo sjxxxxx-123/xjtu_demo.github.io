@@ -6,8 +6,10 @@
 
 const AIModule = (function() {
     // API 配置
-    const DEFAULT_API_KEY = 'ms-3befc017-9b78-432e-81a2-2c4859dc158d';
+    const DEFAULT_API_KEY = '';
     const DEFAULT_API_ENDPOINT = 'https://api-inference.modelscope.cn/v1/chat/completions';
+    const REQUEST_TIMEOUT_BASE_MS = 35000;
+    const REQUEST_TIMEOUT_MAX_MS = 90000;
     let API_KEY = DEFAULT_API_KEY;
     let API_PROVIDER = 'modelscope'; // 强制使用 modelscope
     let API_ENDPOINT = DEFAULT_API_ENDPOINT; // ModelScope API Inference
@@ -23,7 +25,10 @@ const AIModule = (function() {
         'Qwen/Qwen2.5-72B-Instruct',
         'Qwen/Qwen2.5-32B-Instruct',
         'Qwen/Qwen2.5-14B-Instruct',
-        'Qwen/Qwen3-14B'
+        'Qwen/Qwen3-14B',
+        'Qwen/QwQ-32B',
+        'Qwen/Qwen3-32B',
+        'ZhipuAI/GLM-4.7-Flash'
     ];
     
     let currentModelIndex = 0;
@@ -35,7 +40,7 @@ const AIModule = (function() {
     const permanentlyUnsupportedModels = new Set();
     const MODEL_STATS_KEY = 'xjtu_ai_model_stats';
     const MODEL_FILTERS_KEY = 'xjtu_ai_model_filters';
-    const MAX_ATTEMPTS_PER_REQUEST = 10;
+    const MAX_ATTEMPTS_PER_REQUEST = 6;
     const RATE_LIMIT_COOLDOWN_MS = 10 * 60 * 1000;
     const DAILY_QUOTA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
     const modelStats = {};
@@ -100,6 +105,59 @@ const AIModule = (function() {
 
     function sleep(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function normalizeApiKey(rawKey) {
+        const text = String(rawKey || '').trim();
+        if (!text) return '';
+
+        return text
+            .replace(/^['"]+|['"]+$/g, '')
+            .replace(/^bearer\s+/i, '')
+            .trim();
+    }
+
+    function normalizeApiEndpoint(rawEndpoint) {
+        let endpoint = String(rawEndpoint || '').trim();
+        if (!endpoint) return DEFAULT_API_ENDPOINT;
+
+        endpoint = endpoint.replace(/\s+/g, '').replace(/\/+$/, '');
+        if (/\/v1\/chat\/completions$/i.test(endpoint)) return endpoint;
+        if (/\/chat\/completions$/i.test(endpoint)) return endpoint;
+        if (/\/v1$/i.test(endpoint)) return `${endpoint}/chat/completions`;
+        if (/^https?:\/\/[^/]+$/i.test(endpoint)) return `${endpoint}/v1/chat/completions`;
+        return endpoint;
+    }
+
+    function createTaggedError(message, code, status) {
+        const error = new Error(message);
+        if (code) error.code = code;
+        if (typeof status === 'number') error.status = status;
+        return error;
+    }
+
+    async function fetchWithTimeout(url, options, timeoutMs) {
+        if (typeof AbortController === 'undefined' || !timeoutMs || timeoutMs <= 0) {
+            return await fetch(url, options);
+        }
+
+        const controller = new AbortController();
+        const timerId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+            if (error && error.name === 'AbortError') {
+                throw createTaggedError(`请求超时（>${Math.round(timeoutMs / 1000)}秒）`, 'REQUEST_TIMEOUT');
+            }
+            throw error;
+        } finally {
+            clearTimeout(timerId);
+        }
+    }
+
+    function isRequestTimeoutError(error) {
+        return !!error && (error.code === 'REQUEST_TIMEOUT' || error.name === 'AbortError');
     }
 
     function recordModelLatency(model, latencyMs, success = true) {
@@ -172,20 +230,24 @@ const AIModule = (function() {
     function loadConfig() {
         // 优先读取 localStorage (用户手动输入)
         const savedKey = localStorage.getItem('xjtu_ai_key');
+        const normalizedSavedKey = normalizeApiKey(savedKey);
         
         // 如果存储中有 Key，使用存储的 Key，其余使用默认值或存储值
-        if (savedKey) {
-            API_KEY = savedKey;
+        if (normalizedSavedKey) {
+            API_KEY = normalizedSavedKey;
+            if (savedKey !== normalizedSavedKey) {
+                localStorage.setItem('xjtu_ai_key', normalizedSavedKey);
+            }
             // 允许用户覆盖 Endpoint，否则使用默认的代理地址
             const savedEndpoint = localStorage.getItem('xjtu_ai_endpoint');
-            if (savedEndpoint) API_ENDPOINT = savedEndpoint;
+            API_ENDPOINT = normalizeApiEndpoint(savedEndpoint || DEFAULT_API_ENDPOINT);
             return;
         }
 
         // 其次读取 config.js (本地开发环境)
         if (typeof window !== 'undefined' && window.GAME_CONFIG) {
-            API_KEY = window.GAME_CONFIG.API_KEY || API_KEY;
-            API_ENDPOINT = window.GAME_CONFIG.API_ENDPOINT || API_ENDPOINT;
+            API_KEY = normalizeApiKey(window.GAME_CONFIG.API_KEY) || API_KEY;
+            API_ENDPOINT = normalizeApiEndpoint(window.GAME_CONFIG.API_ENDPOINT || API_ENDPOINT);
             API_MODEL = window.GAME_CONFIG.AI_MODEL || API_MODEL;
         }
     }
@@ -200,15 +262,16 @@ const AIModule = (function() {
      * 保存用户配置
      */
     function saveUserConfig(key, provider, endpoint) {
-        localStorage.setItem('xjtu_ai_key', key);
+        const normalizedKey = normalizeApiKey(key);
+        localStorage.setItem('xjtu_ai_key', normalizedKey);
         
         // 立即更新内存中的API_KEY
-        API_KEY = key;
+        API_KEY = normalizedKey;
         
         // 处理endpoint：如果用户提供了非空endpoint则使用，否则使用默认值
         if (endpoint && endpoint.trim() !== '') {
-            localStorage.setItem('xjtu_ai_endpoint', endpoint);
-            API_ENDPOINT = endpoint;
+            API_ENDPOINT = normalizeApiEndpoint(endpoint);
+            localStorage.setItem('xjtu_ai_endpoint', API_ENDPOINT);
         } else {
             localStorage.removeItem('xjtu_ai_endpoint');
             // 确保使用默认endpoint
@@ -226,35 +289,12 @@ const AIModule = (function() {
      * 切换到下一个可用模型
      */
     function switchToNextModel() {
-        const excluded = new Set([API_MODEL]);
-        const ranked = getRankedModels(excluded);
-        const nextModel = ranked.length > 0 ? ranked[0] : API_MODEL;
-        const index = AVAILABLE_MODELS.indexOf(nextModel);
-        if (index !== -1) currentModelIndex = index;
-        API_MODEL = nextModel;
-        console.log(`已切换到更快模型: ${API_MODEL}`);
+        currentModelIndex = (currentModelIndex + 1) % AVAILABLE_MODELS.length;
+        API_MODEL = AVAILABLE_MODELS[currentModelIndex];
+        console.log(`已切换到下一个模型: ${API_MODEL}`);
         return API_MODEL;
     }
 
-    function selectFastestModel() {
-        const ranked = getRankedModels(new Set());
-        const fastestModel = ranked.length > 0 ? ranked[0] : API_MODEL;
-        const index = AVAILABLE_MODELS.indexOf(fastestModel);
-        if (index !== -1) currentModelIndex = index;
-        API_MODEL = fastestModel;
-        return API_MODEL;
-    }
-
-    function selectBestModelForRequest(attemptedModels) {
-        const ranked = getRankedModels(attemptedModels || new Set());
-        const selected = ranked.length > 0 ? ranked[0] : null;
-        if (!selected) return null;
-        const index = AVAILABLE_MODELS.indexOf(selected);
-        if (index !== -1) currentModelIndex = index;
-        API_MODEL = selected;
-        return API_MODEL;
-    }
-    
     /**
      * 标记模型失败
      */
@@ -361,7 +401,7 @@ const AIModule = (function() {
      * @param {string} provider 'gemini' | 'openai'
      */
     function setApiKey(key, provider = 'gemini') {
-        API_KEY = key;
+        API_KEY = normalizeApiKey(key);
         API_PROVIDER = provider;
         if (provider === 'gemini') {
             API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
@@ -433,10 +473,6 @@ const AIModule = (function() {
             throw new Error("MISSING_API_KEY");
         }
 
-        if (retryCount === 0) {
-            selectFastestModel();
-        }
-
         const stateSummary = getGameStateSummary();
         const currentState = (window.game && window.game.state) ? window.game.state : null;
         const backgroundInfo = (window.GameData && window.GameData.backgrounds && currentState) ? window.GameData.backgrounds[currentState.background] : null;
@@ -447,20 +483,22 @@ const AIModule = (function() {
 
         const userPrompt = `基于以下玩家状态生成一个随机事件：\n${stateSummary}\n【关联性提醒】当前角色：背景=${backgroundName}，书院=${collegeName}，存档签名=${stateSignature}。事件涉及的角色/元素必须与该角色强相关，严禁混入其他书院或旧存档角色。`;
         const maxRetries = Math.min(AVAILABLE_MODELS.length, MAX_ATTEMPTS_PER_REQUEST);
-        const attemptedModels = new Set();
+        const startModelIndex = currentModelIndex;
         let lastError = null;
 
         for (let attempt = retryCount; attempt < maxRetries; attempt++) {
-            const selectedModel = selectBestModelForRequest(attemptedModels);
-            if (!selectedModel) break;
-            attemptedModels.add(selectedModel);
+            const modelIndex = (startModelIndex + attempt) % AVAILABLE_MODELS.length;
+            const selectedModel = AVAILABLE_MODELS[modelIndex];
+            currentModelIndex = modelIndex;
+            API_MODEL = selectedModel;
 
             try {
                 let responseData;
                 console.log(`正在使用模型 ${selectedModel} 生成事件...`);
                 const startedAt = getNowMs();
+                const timeoutMs = Math.min(REQUEST_TIMEOUT_MAX_MS, REQUEST_TIMEOUT_BASE_MS + attempt * 6000);
 
-                const response = await fetch(API_ENDPOINT, {
+                const response = await fetchWithTimeout(API_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -475,12 +513,11 @@ const AIModule = (function() {
                         temperature: 1.0,
                         stream: false
                     })
-                });
+                }, timeoutMs);
 
                 if (!response.ok) {
                     const errText = await response.text();
-                    handleModelError(selectedModel, response.status, errText);
-                    markModelFailure(selectedModel, errText);
+                    markModelFailure(selectedModel, `HTTP ${response.status}`);
                     lastError = new Error(`API Error: ${response.status} - ${errText}`);
                     console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
                     if (response.status === 429) {
@@ -522,7 +559,12 @@ const AIModule = (function() {
             } catch (error) {
                 markModelFailure(selectedModel, error && error.message ? error.message : error);
                 lastError = error;
-                console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
+                if (isRequestTimeoutError(error)) {
+                    console.warn(`模型 ${selectedModel} 响应超时，尝试切换其他模型...`);
+                    await sleep(400 + Math.floor(Math.random() * 600));
+                } else {
+                    console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
+                }
             }
         }
 
@@ -724,26 +766,24 @@ const AIModule = (function() {
             throw new Error("MISSING_API_KEY");
         }
 
-        if (retryCount === 0) {
-            selectFastestModel();
-        }
-
         const userPrompt = buildEndingBiographyPrompt(input || {});
         const maxRetries = Math.min(AVAILABLE_MODELS.length, MAX_ATTEMPTS_PER_REQUEST);
-        const attemptedModels = new Set();
+        const startModelIndex = currentModelIndex;
         let lastError = null;
 
         for (let attempt = retryCount; attempt < maxRetries; attempt++) {
-            const selectedModel = selectBestModelForRequest(attemptedModels);
-            if (!selectedModel) break;
-            attemptedModels.add(selectedModel);
+            const modelIndex = (startModelIndex + attempt) % AVAILABLE_MODELS.length;
+            const selectedModel = AVAILABLE_MODELS[modelIndex];
+            currentModelIndex = modelIndex;
+            API_MODEL = selectedModel;
 
             try {
                 let responseData;
                 console.log(`正在使用模型 ${selectedModel} 生成结局小传...`);
                 const startedAt = getNowMs();
+                const timeoutMs = Math.min(REQUEST_TIMEOUT_MAX_MS, REQUEST_TIMEOUT_BASE_MS + attempt * 6000);
 
-                const response = await fetch(API_ENDPOINT, {
+                const response = await fetchWithTimeout(API_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -759,12 +799,11 @@ const AIModule = (function() {
                         stream: false,
                         ...(selectedModel.includes('Qwen/Qwen3') ? { enable_thinking: false } : {})
                     })
-                });
+                }, timeoutMs);
 
                 if (!response.ok) {
                     const errText = await response.text();
-                    handleModelError(selectedModel, response.status, errText);
-                    markModelFailure(selectedModel, errText);
+                    markModelFailure(selectedModel, `HTTP ${response.status}`);
                     lastError = new Error(`API Error: ${response.status} - ${errText}`);
                     console.warn(`模型 ${selectedModel} 请求失败，尝试切换其他模型...`);
                     if (response.status === 429) {
@@ -790,7 +829,12 @@ const AIModule = (function() {
             } catch (error) {
                 markModelFailure(selectedModel, error && error.message ? error.message : error);
                 lastError = error;
-                console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
+                if (isRequestTimeoutError(error)) {
+                    console.warn(`模型 ${selectedModel} 响应超时，尝试切换其他模型...`);
+                    await sleep(400 + Math.floor(Math.random() * 600));
+                } else {
+                    console.warn(`模型 ${selectedModel} 调用异常，尝试切换其他模型...`);
+                }
             }
         }
 
