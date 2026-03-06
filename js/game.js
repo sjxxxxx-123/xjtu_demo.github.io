@@ -511,8 +511,8 @@ class XianjaoSimulator {
             // 基础属性
             gpa: 3.0 + bg.modifiers.gpa,
             san: 80 + bg.modifiers.san,
-            energy: 10,
-            maxEnergy: 10,
+            energy: 20,
+            maxEnergy: 20,
             social: 60 + bg.modifiers.social + (college.socialInit || 0), // 文治社交初始+10
             money: 1000 + bg.modifiers.money,
             charm: 50 + (college.charmInit || 0), // 崇实魅力初始+20
@@ -602,7 +602,6 @@ class XianjaoSimulator {
             
             // ========== 新增高阶系统状态 ==========
             // 体测系统
-            maxEnergy: 10, // 体力上限
             runCountThisMonth: 0, // 本月跑步次数
             physicalTestPassed: true, // 体测是否通过
             physicalTestFailedThisYear: false, // 本学年体测是否挂过
@@ -871,7 +870,7 @@ class XianjaoSimulator {
         const clamp = (val, min, max) => Math.min(max, Math.max(min, Math.round(val)));
 
         // 核心状态
-        this.state.maxEnergy = clamp(this.state.maxEnergy || 10, 1, 20);
+        this.state.maxEnergy = clamp(this.state.maxEnergy || 20, 1, 20);
         this.state.energy = clamp(this.state.energy || 0, 0, this.state.maxEnergy);
         this.state.san = clamp(this.state.san || 0, 0, 100);
         this.state.social = clamp(this.state.social || 0, 0, 100);
@@ -1534,7 +1533,7 @@ class XianjaoSimulator {
             if (Math.random() < 0.15) {
                 this.addLog('😵 画图太久，颈椎劳损！本回合体力上限-1', 'warning');
                 this.state.neckStrainDebuff = true;
-                this.state.maxEnergy = Math.max(5, (this.state.maxEnergy || 10) - 1);
+                this.state.maxEnergy = Math.max(5, (this.state.maxEnergy || 20) - 1);
             }
         }
         
@@ -2411,7 +2410,7 @@ class XianjaoSimulator {
                 break;
                 
             case 'pengkang': // 彭康 - 体力上限提升
-                this.state.maxEnergy = Math.min(15, this.state.maxEnergy + 1);
+                this.state.maxEnergy = Math.min(20, this.state.maxEnergy + 1);
                 this.addLog('🏃 运动伙伴让你身体更强健！', 'success');
                 break;
                 
@@ -2462,7 +2461,7 @@ class XianjaoSimulator {
                 
             case 'pengkang': // 彭康 - 体力上限微幅提升
                 if (Math.random() < 0.1) {
-                    this.state.maxEnergy = Math.min(15, this.state.maxEnergy + 1);
+                    this.state.maxEnergy = Math.min(20, this.state.maxEnergy + 1);
                 }
                 break;
                 
@@ -4681,7 +4680,7 @@ class XianjaoSimulator {
                 if (this.state.staminaProgress >= 1) {
                     const gain = Math.floor(this.state.staminaProgress);
                     this.state.staminaProgress -= gain;
-                    this.state.maxEnergy = Math.min(15, this.state.maxEnergy + gain);
+                    this.state.maxEnergy = Math.min(20, this.state.maxEnergy + gain);
                 }
                 if (this.state.maxEnergy > oldMax) {
                     this.addLog('💪 坚持锻炼，体力上限提升！', 'success');
@@ -4693,9 +4692,9 @@ class XianjaoSimulator {
         if (this.state.staminaProgress >= 1) {
             const gain = Math.floor(this.state.staminaProgress);
             this.state.staminaProgress -= gain;
-            this.state.maxEnergy = Math.min(15, this.state.maxEnergy + gain);
+            this.state.maxEnergy = Math.min(20, this.state.maxEnergy + gain);
         }
-        this.state.maxEnergy = Math.min(15, Math.round(this.state.maxEnergy));
+        this.state.maxEnergy = Math.min(20, Math.round(this.state.maxEnergy));
         
         // 检查跑步成就
         if (this.state.totalRunCount >= 100) {

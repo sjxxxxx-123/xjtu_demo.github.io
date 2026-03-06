@@ -524,7 +524,8 @@ const EventSystem = {
         }
         
         if (effects.energy) {
-            gameState.energy = Math.max(0, Math.min(10, gameState.energy + effects.energy));
+            const energyCap = gameState.maxEnergy || 20;
+            gameState.energy = Math.max(0, Math.min(energyCap, gameState.energy + effects.energy));
             changes.energy = effects.energy;
         }
         
@@ -1267,7 +1268,8 @@ const RandomEventManager = {
             gameState.san = Math.max(0, Math.min(100, gameState.san + changes.san));
         }
         if (changes.energy) {
-            gameState.energy = Math.max(0, Math.min(10, gameState.energy + changes.energy));
+            const energyCap = gameState.maxEnergy || 20;
+            gameState.energy = Math.max(0, Math.min(energyCap, gameState.energy + changes.energy));
         }
         if (changes.money) {
             gameState.money = Math.max(0, gameState.money + changes.money);
