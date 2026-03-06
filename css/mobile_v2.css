@@ -402,6 +402,8 @@
 
 .filtered-out { display: none !important; }
 
+.action-btn.hidden { display: none; }
+
 /* --- 声望按钮样式（全局，适用于所有屏幕） --- */
 .reputation-info-btn {
     background: none;
