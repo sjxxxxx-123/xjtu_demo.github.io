@@ -511,8 +511,8 @@ class XianjaoSimulator {
             // 基础属性
             gpa: 3.0 + bg.modifiers.gpa,
             san: 80 + bg.modifiers.san,
-            energy: 20,
-            maxEnergy: 20,
+            energy: 15,
+            maxEnergy: 15,
             social: 60 + bg.modifiers.social + (college.socialInit || 0), // 文治社交初始+10
             money: 1000 + bg.modifiers.money,
             charm: 50 + (college.charmInit || 0), // 崇实魅力初始+20
@@ -603,6 +603,7 @@ class XianjaoSimulator {
             // ========== 新增高阶系统状态 ==========
             // 体测系统
             runCountThisMonth: 0, // 本月跑步次数
+            runEnergyBoostCount: 0, // 累计有效跑操次数（用于15->20成长）
             physicalTestPassed: true, // 体测是否通过
             physicalTestFailedThisYear: false, // 本学年体测是否挂过
             
@@ -870,7 +871,7 @@ class XianjaoSimulator {
         const clamp = (val, min, max) => Math.min(max, Math.max(min, Math.round(val)));
 
         // 核心状态
-        this.state.maxEnergy = clamp(this.state.maxEnergy || 20, 1, 20);
+        this.state.maxEnergy = clamp(this.state.maxEnergy || 15, 1, 20);
         this.state.energy = clamp(this.state.energy || 0, 0, this.state.maxEnergy);
         this.state.san = clamp(this.state.san || 0, 0, 100);
         this.state.social = clamp(this.state.social || 0, 0, 100);
@@ -882,6 +883,7 @@ class XianjaoSimulator {
         const counterKeys = [
             'runCountThisMonth', 'totalRunCount', 'volunteerHoursThisYear', 'volunteerHoursThisSemester',
             'parttimeCount', 'competitionCount', 'competitionWins', 'researchExp', 'researchPapers',
+            'runEnergyBoostCount',
             'failedCourses', 'totalMonths'
         ];
         counterKeys.forEach(key => {
@@ -1533,7 +1535,7 @@ class XianjaoSimulator {
             if (Math.random() < 0.15) {
                 this.addLog('😵 画图太久，颈椎劳损！本回合体力上限-1', 'warning');
                 this.state.neckStrainDebuff = true;
-                this.state.maxEnergy = Math.max(5, (this.state.maxEnergy || 20) - 1);
+                this.state.maxEnergy = Math.max(5, (this.state.maxEnergy || 15) - 1);
             }
         }
         
@@ -4652,7 +4654,24 @@ class XianjaoSimulator {
         this.state.energy -= 1;
         this.state.runCountThisMonth = (this.state.runCountThisMonth || 0) + 1;
         this.state.totalRunCount = (this.state.totalRunCount || 0) + 1;
-        this.state.staminaProgress = this.state.staminaProgress || 0; // 累积小数进度，避免上限出现小数
+        this.state.runEnergyBoostCount = Math.max(0, Math.min(10, this.state.runEnergyBoostCount || 0));
+
+        const applyRunEnergyGrowth = () => {
+            if (this.state.runEnergyBoostCount >= 10) return;
+
+            this.state.runEnergyBoostCount += 1;
+            const oldMax = this.state.maxEnergy;
+            const targetMax = Math.min(20, 15 + Math.floor(this.state.runEnergyBoostCount / 2));
+
+            if (targetMax > oldMax) {
+                this.state.maxEnergy = targetMax;
+                this.addLog(`💪 跑操进度 ${this.state.runEnergyBoostCount}/10，体力上限提升至 ${this.state.maxEnergy}！`, 'success');
+            }
+
+            if (this.state.runEnergyBoostCount === 10) {
+                this.addLog('🏅 你已完成10次跑操，体力上限达到20！', 'success');
+            }
+        };
         
         // 随机事件
         const random = Math.random();
@@ -4665,35 +4684,17 @@ class XianjaoSimulator {
             this.addLog('💕 操场上有人求婚堵路，围观了一会儿', 'info');
             this.state.san += 2;
             this.addBBSEvent('求婚现场');
+            applyRunEnergyGrowth();
         } else if (random < 0.2) {
             // 偶遇明星跑者
             this.addLog('⭐ 偶遇学校运动明星，一起跑步！', 'success');
-            this.state.staminaProgress += 0.3;
+            applyRunEnergyGrowth();
         } else {
             // 正常跑步
             this.addLog('🏃 跑步打卡完成！身体变得更强健了');
-            
-            // 累计跑步提高体力上限
-            if (this.state.runCountThisMonth >= 3) {
-                const oldMax = this.state.maxEnergy;
-                this.state.staminaProgress += 0.2;
-                if (this.state.staminaProgress >= 1) {
-                    const gain = Math.floor(this.state.staminaProgress);
-                    this.state.staminaProgress -= gain;
-                    this.state.maxEnergy = Math.min(20, this.state.maxEnergy + gain);
-                }
-                if (this.state.maxEnergy > oldMax) {
-                    this.addLog('💪 坚持锻炼，体力上限提升！', 'success');
-                }
-            }
+            applyRunEnergyGrowth();
         }
 
-        // 任何来源的进度都只提升整数上限，清理小数
-        if (this.state.staminaProgress >= 1) {
-            const gain = Math.floor(this.state.staminaProgress);
-            this.state.staminaProgress -= gain;
-            this.state.maxEnergy = Math.min(20, this.state.maxEnergy + gain);
-        }
         this.state.maxEnergy = Math.min(20, Math.round(this.state.maxEnergy));
         
         // 检查跑步成就
