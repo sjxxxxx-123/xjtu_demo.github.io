@@ -960,6 +960,11 @@ class XianjaoSimulator {
         } else {
             dateBtn.style.display = 'none';
         }
+
+        const abroadPrepBtn = document.getElementById('btn-abroad-prep');
+        if (abroadPrepBtn) {
+            abroadPrepBtn.style.display = this.state.careerPath === 'abroad' ? 'flex' : 'none';
+        }
         
         // 更新BBS滚动条
         this.updateBBSScroll();
@@ -1139,6 +1144,9 @@ class XianjaoSimulator {
                 case 'career':
                     disabled = disabled || this.state.year < 3;
                     break;
+                case 'abroad-prep':
+                    disabled = disabled || this.state.careerPath !== 'abroad' || energy < 3 || money < 120;
+                    break;
             }
 
             btn.disabled = disabled;
@@ -1206,6 +1214,9 @@ class XianjaoSimulator {
                 break;
             case 'career':
                 this.showCareerChoice();
+                break;
+            case 'abroad-prep':
+                this.doAbroadPrep();
                 break;
             // 毕设相关
             case 'thesis-work':
@@ -2726,6 +2737,48 @@ class XianjaoSimulator {
         }
 
         this.state.actionsThisTurn.push('research');
+        AchievementSystem.checkAchievements(this.state);
+        this.updateCareerPanel();
+        this.updateUI();
+    }
+
+    // 出国路线：托福/GRE刷分
+    doAbroadPrep() {
+        if (this.state.careerPath !== 'abroad') {
+            this.showMessage('方向不匹配', '只有选择出国留学后才能进行语言备考。');
+            return;
+        }
+
+        if (this.state.energy < 3) {
+            this.showMessage('体力不足', '刷分备考需要充足精力。');
+            return;
+        }
+
+        if (this.state.money < 120) {
+            this.showMessage('金币不足', '报名模考和资料费需要 120 金币。');
+            return;
+        }
+
+        this.state.energy -= 3;
+        this.state.money -= 120;
+        this.state.san = Math.max(0, this.state.san - 2);
+
+        const progress = this.state.careerProgress.abroad;
+        const toeflGain = Math.floor(Math.random() * 6) + 8; // 8-13
+        const greGain = Math.floor(Math.random() * 5) + 6;   // 6-10
+        const appGain = Math.floor(Math.random() * 4) + 4;   // 4-7
+
+        progress.toefl = Math.min(100, (progress.toefl || 0) + toeflGain);
+        progress.gre = Math.min(100, (progress.gre || 0) + greGain);
+        progress.application = Math.min(100, (progress.application || 0) + appGain);
+
+        this.addLog(`✈️ 参加了语言模考训练：托福+${toeflGain}，GRE+${greGain}，申请进度+${appGain}%`, 'success');
+
+        if (progress.application >= 100) {
+            this.addLog('🎉 申请材料准备完成，已具备冲刺海外Offer条件！', 'important');
+        }
+
+        this.state.actionsThisTurn.push('abroad-prep');
         AchievementSystem.checkAchievements(this.state);
         this.updateCareerPanel();
         this.updateUI();
