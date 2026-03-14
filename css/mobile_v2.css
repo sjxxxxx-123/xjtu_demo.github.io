@@ -402,6 +402,23 @@
 
 .filtered-out { display: none !important; }
 
+/* 月度建议面板 - 移动端微调 */
+@media (max-width: 768px) {
+    #monthly-focus {
+        margin: 5px 10px 4px 10px;
+        font-size: 0.83rem;
+    }
+    .mf-item { padding: 5px 12px; }
+    .mf-actions { padding: 6px 12px; gap: 6px; }
+    .mf-btn { font-size: 0.75rem; padding: 5px 8px; }
+
+    /* action-info-icon 移动端加大点击区域 */
+    .action-info-icon {
+        font-size: 0.75rem;
+        padding: 4px;
+    }
+}
+
 .action-btn.hidden { display: none; }
 
 /* --- 声望按钮样式（全局，适用于所有屏幕） --- */

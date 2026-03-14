@@ -1134,6 +1134,147 @@ const AIModule = (function() {
         };
     }
 
+    // =====================================================================
+    // ===== 社团随机事件生成 =====
+    // =====================================================================
+
+    const CLUB_STORY_SYSTEM_PROMPT = `你是一个在鲜椒待了十年的老学长，现在要为玩家的社团活动生成一个随机小事件。
+
+【规则】
+- 事件必须与玩家所在社团强相关，体现该社团的独特场景、成员互动和文化。
+- 事件语气轻松自然，50-80字，像真实校园插曲。
+- 效果可以是正面、负面或中性，不要每次都是纯正面。
+
+【返回格式】仅返回JSON，不含其他文字：
+{
+  "event_text": "事件描述（50-80字）",
+  "effects": {
+    "san": 0,
+    "money": 0,
+    "energy": 0,
+    "social": 0,
+    "reputation": 0,
+    "mastery": 0
+  }
+}
+
+【属性范围】san: -15~+15；money: -100~+100；energy: -3~+3；social: -8~+8；reputation: -3~+3；mastery: -5~+5。大多数属性填0。`;
+
+    /**
+     * 通过 AI 生成社团随机事件
+     * @param {Object} club - 社团定义对象
+     * @param {Object} state - 当前游戏状态
+     */
+    async function fetchClubStory(club, state) {
+        if (!API_KEY) loadConfig();
+        if (!API_KEY) throw new Error('未配置 API Key');
+
+        const yearMap = { 1: '大一', 2: '大二', 3: '大三', 4: '大四' };
+        const userContext = `玩家当前是${yearMap[state.year] || '大二'}学生，${state.month}月份，就读于${state.college || ''}书院。
+参加的社团：${club.name}（${club.desc}）。
+SAN值 ${state.san}，金币 ${state.money}元，综测 ${state.social}。
+社团标签关键词：${(club.storyTags || []).join('、')}。
+请生成一个贴合该社团气质的随机小事件。`;
+
+        const selectedModel = getNextAvailableModel();
+        const timeout = REQUEST_TIMEOUT_BASE_MS;
+
+        const requestBody = {
+            model: selectedModel,
+            messages: [
+                { role: 'system', content: CLUB_STORY_SYSTEM_PROMPT },
+                { role: 'user', content: userContext }
+            ],
+            temperature: 0.85,
+            max_tokens: 300
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+
+            // 鲁棒 JSON 解析
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('No JSON in response');
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (!parsed.event_text) throw new Error('Missing event_text');
+
+            // 规范化 effects 字段
+            const effects = parsed.effects || {};
+            if (effects.social_score !== undefined && effects.social === undefined) {
+                effects.social = effects.social_score;
+            }
+            if (effects.stamina !== undefined && effects.energy === undefined) {
+                effects.energy = effects.stamina;
+            }
+            parsed.effects = effects;
+            return parsed;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
+        }
+    }
+
+    /**
+     * 本地社团事件 fallback（每个社团有3条备选）
+     * @param {Object} club
+     */
+    function getClubStoryFallback(club) {
+        const fallbackMap = {
+            acm: [
+                { event_text: '今天在OJ上做了道困难题，反复WA七次后终于AC，队友起立鼓掌，你获得了一种说不清道不明的快感。', effects: { san: 5, social: 2 } },
+                { event_text: '社团学长分享了一个卡常数技巧，你听得津津有味，感觉打开了新世界大门。', effects: { san: 3, mastery: 3 } },
+                { event_text: '今天队内模拟赛，你因为一个小细节罚时爆炸，输给了平时不如你的同学，有点郁闷。', effects: { san: -5, social: 1 } }
+            ],
+            art: [
+                { event_text: '话剧排练时你不小心忘词，导演叫停，全场鸦雀无声，你的脸烧得厉害，但大家都笑着鼓励你重来。', effects: { san: -3, social: 5 } },
+                { event_text: '今天合唱排练结束后，大家自发组了个小聚会，气氛极好，你的心情前所未有地放松。', effects: { san: 8, social: 4 } },
+                { event_text: '演出前一晚临时改了台词，你加班背到凌晨，总算熟悉了，但眼睛熬红了。', effects: { san: -5, energy: -2 } }
+            ],
+            volunteer: [
+                { event_text: '今天去社区陪小朋友做手工，孩子们叫你"大朋友"，你的心瞬间融化了，忘记了所有压力。', effects: { san: 8, reputation: 1 } },
+                { event_text: '组织了一场校内旧书募捐，收到了满满两箱书，你们合了张影发到朋友圈，点赞超多。', effects: { san: 4, social: 3, reputation: 2 } },
+                { event_text: '今天义卖摊位因为天气太热客流稀少，最后只售出了不到一半，有些沮丧，但也不后悔。', effects: { san: -2, social: 2 } }
+            ],
+            sports: [
+                { event_text: '今天下午训练时你发挥超常，连进三球，队友都围过来击掌，感觉浑身都在燃烧。', effects: { san: 8, social: 4, energy: 1 } },
+                { event_text: '比赛中对方球员撞了你一下，腿有点酸，但胜利了，值了！', effects: { san: 5, energy: -1, social: 3 } },
+                { event_text: '今天高强度训练后腿差点抬不起来，但教练说你进步很快，疲惫里有一丝甜。', effects: { san: 2, energy: -2 } }
+            ],
+            research: [
+                { event_text: '今天组会汇报你做的小调研，导师点名表扬你逻辑清晰，你第一次觉得科研并不可怕。', effects: { san: 6, reputation: 1, mastery: 3 } },
+                { event_text: '实验数据出来了但和预期完全不符，你坐在屏幕前发呆了半小时，最后决定从头再来。', effects: { san: -6, mastery: 2 } },
+                { event_text: '学长带你读了一篇顶刊论文，虽然看得云里雾里，但打开了对某个领域的好奇心。', effects: { san: 3, mastery: 2 } }
+            ],
+            startup: [
+                { event_text: '今天团队路演模拟，投资人角色扮演的学长连问了七个尖锐问题，你一个都没答上，压力巨大。', effects: { san: -5, social: 3 } },
+                { event_text: '你的商业计划书在社团内部评比中拿了第二，有位学姐说你的想法"有点东西"，成就感满满。', effects: { san: 7, reputation: 2, money: 50 } },
+                { event_text: '今天集体头脑风暴，气氛热烈，大家争论了两个小时，最后意外定下了一个绝妙的方向。', effects: { san: 5, social: 4 } }
+            ]
+        };
+
+        const list = fallbackMap[club.id] || [
+            { event_text: `参加${club.name}的日常活动，和队友们互相学习，收获满满。`, effects: { san: 4, social: 3 } }
+        ];
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
     // 暴露接口
     return {
         setApiKey,
@@ -1147,6 +1288,9 @@ const AIModule = (function() {
         // 恋爱系统 v2
         fetchLoveCandidates,
         fetchLoveStory,
+        // 社团随机事件
+        fetchClubStory,
+        getClubStoryFallback,
         getCurrentModel: () => API_MODEL,
         getAvailableModels: () => AVAILABLE_MODELS,
         setModel: (modelName) => {

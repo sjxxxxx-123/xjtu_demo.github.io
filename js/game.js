@@ -8,6 +8,25 @@ class XianjaoSimulator {
     /** 恋爱候选对象总数（统一修改此处即可调整全局生成数量）*/
     static get LOVE_CANDIDATE_COUNT() { return 6; }
 
+    /** 活动规则提示配置（action-btn data-action → 提示文字）*/
+    static get ACTION_RULE_HINTS() {
+        return {
+            'attend-class': '上课消耗体力，均衡学习所有课程。期末月（1月/6月）效果×2。掌握度高时收益递减。',
+            'self-study':   '自习消耗体力+SAN，可选专注某门课大幅提升。高掌握度阶段收益递减（防止轻松满分）。',
+            'run':          '跑步消耗体力，但可提升体力上限（最高20点）。每学期跑满10次有奖励。',
+            'club':         '社团活动提升SAN/综测，有35%概率触发随机剧情。不同社团效果差异较大。',
+            'volunteer':    '志愿服务提升综测分，仲英书院双倍效果。每10次志愿+1声望。',
+            'parttime':     '兼职获得60~140金币（启德书院+30%），消耗体力4，SAN-3。',
+            'competition':  '竞赛消耗体力4，概率获奖提升综测和声望。GPA越高获奖率越高。',
+            'rest':         '休息恢复SAN值，体力不会回复（体力在月末自动回满）。',
+            'bath':         '泡澡大幅恢复SAN，文治书院效果×2。',
+            'date':         '约会恋爱互动，需消耗体力和金币。好感度满60可以表白。',
+            'love':         '恋爱系统：追求或互动，体力/金币不足时无法进行部分互动。',
+            'research':     '科研积累经验，大一不可用。10次经验后有概率发表论文。',
+            'career':       '长远规划：大三下开启，选择保研/出国/就业路线。'
+        };
+    }
+
     /** 社团定义 */
     static get CLUB_DEFINITIONS() {
         return [
@@ -242,6 +261,9 @@ class XianjaoSimulator {
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', () => this.performAction(btn.dataset.action));
         });
+
+        // 注入规则说明 info 图标
+        this._injectActionRuleHints();
 
         // 菜单按钮
         const btnSave = document.getElementById('btn-save');
@@ -936,17 +958,18 @@ class XianjaoSimulator {
     }
 
     getAttendBaseGain() {
-        return 2.0 * this.state.studyEfficiency * this.getMonthMultiplier();
+        return 4.0 * this.state.studyEfficiency * this.getMonthMultiplier();
     }
 
     getStudyBaseGain(location) {
         const bonus = location ? (location.masteryBonus || 1) : 1;
-        return 3.5 * bonus * this.state.studyEfficiency * this.getMonthMultiplier();
+        return 6.0 * bonus * this.state.studyEfficiency * this.getMonthMultiplier();
     }
 
-    // 掌握度递减收益：mastery 越高，实际增量越小
+    // 掌握度递减收益：低掌握度区间收益更充足，高掌握度仍保留一定衰减
+    // factor = 1/(1+mastery/80)，最低保证 0.3 倍（避免卡死）
     _calcMasteryGain(baseGain, currentMastery) {
-        const factor = 1 / (1 + currentMastery / 50);
+        const factor = Math.max(0.3, 1 / (1 + currentMastery / 80));
         return baseGain * factor;
     }
 
@@ -1077,6 +1100,185 @@ class XianjaoSimulator {
         if (runBtn) {
             runBtn.style.display = 'flex';
         }
+
+        // 更新月度建议面板
+        this.renderMonthlyFocus();
+    }
+
+    // =====================================================================
+    // ===== 月度建议面板（本月重点 / 本月任务）=====
+    // =====================================================================
+
+    /**
+     * 生成本月建议列表（动态分析当前状态）
+     * @returns {Array<{icon, text, level}>} level: 'danger'|'warn'|'info'
+     */
+    getMonthlySuggestions() {
+        const s = this.state;
+        const tips = [];
+
+        // 危险提醒（level=danger）
+        if (s.san < 20) {
+            tips.push({ icon: '🆘', text: 'SAN值危急！建议先休息或泡澡', level: 'danger' });
+        }
+        if (s.money < 200) {
+            tips.push({ icon: '💸', text: '金币告急，考虑兼职补贴生活费', level: 'danger' });
+        }
+        if (s.energy <= 0) {
+            tips.push({ icon: '😴', text: '体力耗尽，好好休息后再行动', level: 'danger' });
+        }
+
+        // 课程风险（level=warn）
+        const dangerCourses = (s.currentCourses || []).filter(c => c.mastery < 40);
+        if (dangerCourses.length > 0) {
+            const names = dangerCourses.map(c => c.name).join('、');
+            const isExamSoon = (s.month === 5 || s.month === 11 || s.month === 12 || s.month === 6);
+            const prefix = isExamSoon ? '⚠️ 期末临近！' : '📉 ';
+            tips.push({ icon: '📉', text: `${prefix}${names} 掌握度偏低，尽快补习`, level: 'warn' });
+        }
+        if (s.san < 50 && s.san >= 20) {
+            tips.push({ icon: '😰', text: 'SAN值偏低，记得休息或社交恢复', level: 'warn' });
+        }
+
+        // 期末预警
+        if (s.month === 5 || s.month === 11) {
+            tips.push({ icon: '📝', text: '下月期末！重点复习掌握度低的课程', level: 'warn' });
+        }
+        if (s.month === 1 || s.month === 6) {
+            tips.push({ icon: '🎓', text: '期末考试月，本月上课/自习效果加倍！', level: 'info' });
+        }
+
+        // 恋爱提示
+        if (s.selectedLoveInterest && !s.inRelationship) {
+            const aff = (s.loveAffinity || {})[s.selectedLoveInterest] || 0;
+            if (aff >= 60) {
+                tips.push({ icon: '💌', text: '好感度已够，考虑向TA表白？', level: 'info' });
+            } else {
+                tips.push({ icon: '💕', text: `继续互动增加好感度（${aff}/100）`, level: 'info' });
+            }
+        }
+        if (s.inRelationship) {
+            const lastM = s.lastLoveInteractionMonth || 0;
+            const curM = s.year * 12 + s.month;
+            if (curM - lastM > 1) {
+                tips.push({ icon: '💔', text: '已有一段时间未与对象互动，好感度可能下降', level: 'warn' });
+            }
+        }
+
+        // 机会提示（level=info）
+        if (s.year >= 2 && s.reputation >= 60 && s.competitionCount === 0) {
+            tips.push({ icon: '🏆', text: '声望不错，可以尝试参加竞赛', level: 'info' });
+        }
+        if (s.year >= 2 && !s.careerPath) {
+            tips.push({ icon: '🎯', text: '大二了，可以考虑规划未来方向', level: 'info' });
+        }
+        if (s.social < 40) {
+            tips.push({ icon: '🤝', text: '综测偏低，多做志愿/社团活动', level: 'info' });
+        }
+        if (s.joinedClubs && s.joinedClubs.length === 0 && s.year === 1) {
+            tips.push({ icon: '🎭', text: '大一是加入社团的好时机', level: 'info' });
+        }
+
+        // 最多返回5条，优先级：danger > warn > info
+        const sorted = [
+            ...tips.filter(t => t.level === 'danger'),
+            ...tips.filter(t => t.level === 'warn'),
+            ...tips.filter(t => t.level === 'info')
+        ];
+        return sorted.slice(0, 5);
+    }
+
+    /**
+     * 在每个 .action-btn 上注入规则说明 info 图标（只执行一次）
+     */
+    _injectActionRuleHints() {
+        const hints = XianjaoSimulator.ACTION_RULE_HINTS;
+        // 创建全局唯一 tooltip 元素
+        let tip = document.getElementById('action-rule-tooltip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'action-rule-tooltip';
+            document.body.appendChild(tip);
+        }
+
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            const action = btn.dataset.action;
+            const hintText = hints[action];
+            if (!hintText || btn.querySelector('.action-info-icon')) return; // 避免重复注入
+
+            const icon = document.createElement('span');
+            icon.className = 'action-info-icon';
+            icon.textContent = 'ⓘ';
+            icon.title = hintText; // 桌面端 native tooltip 作为降级
+
+            // 桌面 hover 显示自定义 tooltip
+            icon.addEventListener('mouseenter', (e) => {
+                tip.textContent = hintText;
+                tip.classList.add('visible');
+                const rect = icon.getBoundingClientRect();
+                tip.style.left = `${Math.min(rect.left, window.innerWidth - 240)}px`;
+                tip.style.top = `${rect.top - tip.offsetHeight - 8 + window.scrollY}px`;
+                e.stopPropagation();
+            });
+            icon.addEventListener('mouseleave', () => tip.classList.remove('visible'));
+
+            // 移动端：点击 icon 切换显示
+            icon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (tip.classList.contains('visible') && tip._forBtn === btn) {
+                    tip.classList.remove('visible');
+                } else {
+                    tip.textContent = hintText;
+                    tip._forBtn = btn;
+                    tip.classList.add('visible');
+                    const rect = icon.getBoundingClientRect();
+                    tip.style.left = `${Math.min(rect.left, window.innerWidth - 240)}px`;
+                    tip.style.top = `${rect.top - 70 + window.scrollY}px`;
+                    // 3秒后自动隐藏
+                    clearTimeout(this._tipTimer);
+                    this._tipTimer = setTimeout(() => tip.classList.remove('visible'), 3000);
+                }
+            });
+
+            btn.appendChild(icon);
+        });
+
+        // 点击页面其他地方关闭 tooltip
+        document.addEventListener('click', () => tip.classList.remove('visible'), { passive: true });
+    }
+
+    /**
+     * 渲染月度建议面板
+     */
+    renderMonthlyFocus() {
+        const panel = document.getElementById('monthly-focus');
+        if (!panel) return;
+        const tips = this.getMonthlySuggestions();
+        if (tips.length === 0) {
+            panel.style.display = 'none';
+            return;
+        }
+        panel.style.display = 'block';
+        const colorMap = { danger: '#d32f2f', warn: '#e65100', info: '#1565c0' };
+        const bgMap = { danger: '#fff5f5', warn: '#fff8f0', info: '#f0f4ff' };
+        panel.innerHTML = `
+            <div class="mf-header">
+                <span class="mf-title">📌 本月重点</span>
+                <span class="mf-month">${GameData.yearNames[this.state.year-1]} ${this.state.month}月</span>
+            </div>
+            <ul class="mf-list">
+                ${tips.map(t => `
+                    <li class="mf-item" style="border-left-color:${colorMap[t.level]};background:${bgMap[t.level]};">
+                        <span class="mf-icon">${t.icon}</span>
+                        <span class="mf-text">${t.text}</span>
+                    </li>
+                `).join('')}
+            </ul>
+            <div class="mf-actions">
+                <button class="mf-btn" onclick="window.location.href='achievements.html?from=game'">🏆 查看成就</button>
+                <button class="mf-btn" onclick="window.game?.showProfileModal?.()">👤 个人经历</button>
+            </div>
+        `;
     }
 
     // 更新课程列表
@@ -1520,8 +1722,8 @@ class XianjaoSimulator {
 
         const focusedCourse = this.state.currentCourses[courseIndex];
         const monthMultiplier = this.getMonthMultiplier();
-        let focusedGain = 5 * this.state.studyEfficiency * monthMultiplier;
-        let otherGain = 1.2 * this.state.studyEfficiency * monthMultiplier;
+        let focusedGain = 8 * this.state.studyEfficiency * monthMultiplier;
+        let otherGain = 1.5 * this.state.studyEfficiency * monthMultiplier;
 
         // 文治书院迟到判定
         if (this.state.college === 'wenzhi' && Math.random() < 0.05) {
@@ -1778,8 +1980,8 @@ class XianjaoSimulator {
         this.state.studyLocation = location.id;
 
         const monthMultiplier = this.getMonthMultiplier();
-        let focusedGain = 7 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
-        let otherGain = 1.2 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
+        let focusedGain = 11 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
+        let otherGain = 1.5 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
 
         // 书院特殊加成
         this.applyStudyLocationBonus(location);
@@ -1962,6 +2164,49 @@ class XianjaoSimulator {
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
         this.showActionResult(snap);
+
+        // 35% 概率触发社团随机事件（AI优先，本地fallback）
+        if (Math.random() < 0.35) {
+            this._triggerClubRandomEvent(club);
+        }
+    }
+
+    /**
+     * 触发社团随机事件（AI生成或本地fallback）
+     */
+    async _triggerClubRandomEvent(club) {
+        const config = AIModule.getCurrentConfig();
+        let result = null;
+
+        if (config.key) {
+            try {
+                result = await AIModule.fetchClubStory(club, this.state);
+            } catch (e) {
+                console.warn('社团AI事件生成失败，使用本地fallback:', e);
+            }
+        }
+
+        // 本地fallback
+        if (!result) {
+            result = AIModule.getClubStoryFallback(club);
+        }
+
+        if (!result) return;
+
+        // 构造事件弹窗（复用 random-event-modal）
+        const aiEvent = {
+            id: `club_${club.id}_${Date.now()}`,
+            name: `${club.icon} ${club.name} · 随机事件`,
+            icon: club.icon,
+            description: result.event_text,
+            options: [{
+                text: '好的，继续！',
+                effects: result.effects || {},
+                icon: '👍'
+            }]
+        };
+        // 稍作延迟避免与 toast 叠加
+        setTimeout(() => this.showRandomEventModal(aiEvent), 600);
     }
 
     // 做志愿
@@ -3182,12 +3427,17 @@ class XianjaoSimulator {
         ];
 
         categories.forEach(cat => {
+            const canDo = this.state.energy >= cat.energyNeeded;
             const btn = document.createElement('button');
             btn.className = 'choice-btn love-category-btn';
-            btn.disabled = this.state.energy < cat.energyNeeded;
+            btn.disabled = !canDo;
+            const disabledNote = !canDo
+                ? `<div class="love-disabled-reason">⚠️ 体力不足（需 ${cat.energyNeeded}，当前 ${this.state.energy}）</div>`
+                : '';
             btn.innerHTML = `
                 <div class="choice-btn-name">${cat.name}</div>
                 <div class="choice-btn-desc">${cat.desc}（需体力 ${cat.energyNeeded}）</div>
+                ${disabledNote}
             `;
             btn.addEventListener('click', () => {
                 container.innerHTML = '';
@@ -3279,7 +3529,9 @@ class XianjaoSimulator {
         container.appendChild(backBtn);
 
         options.forEach(opt => {
-            const canAfford = this.state.money >= (opt.cost.money || 0) && this.state.energy >= (opt.cost.energy || 0);
+            const lackEnergy = this.state.energy < (opt.cost.energy || 0);
+            const lackMoney = this.state.money < (opt.cost.money || 0);
+            const canAfford = !lackEnergy && !lackMoney;
             const btn = document.createElement('button');
             btn.className = 'choice-btn love-option-btn';
             btn.disabled = !canAfford;
@@ -3294,6 +3546,15 @@ class XianjaoSimulator {
             if (opt.cost.energy) costParts.push(`体力 -${opt.cost.energy}`);
             if (opt.cost.money) costParts.push(`金币 -${opt.cost.money}`);
 
+            // 构建禁用原因提示
+            let disabledReasonHtml = '';
+            if (!canAfford) {
+                const reasons = [];
+                if (lackEnergy) reasons.push(`体力不足（需 ${opt.cost.energy}，当前 ${this.state.energy}）`);
+                if (lackMoney) reasons.push(`金币不足（需 ${opt.cost.money}，当前 ${this.state.money}）`);
+                disabledReasonHtml = `<div class="love-disabled-reason">⚠️ ${reasons.join('；')}</div>`;
+            }
+
             btn.innerHTML = `
                 <div class="choice-btn-name">${opt.icon} ${opt.name}</div>
                 <div class="choice-btn-desc">${opt.desc}</div>
@@ -3302,6 +3563,7 @@ class XianjaoSimulator {
                     <span class="love-gain">${gainParts.join(' · ')}</span>
                     ${opt.storyChance > 0 ? `<span class="story-chance">🎲 ${Math.round(opt.storyChance*100)}% 触发剧情</span>` : ''}
                 </div>
+                ${disabledReasonHtml}
             `;
             btn.addEventListener('click', () => {
                 this.hideModal('choice-modal');
@@ -4259,19 +4521,24 @@ class XianjaoSimulator {
         // 前进一个月
         this.advanceMonth();
 
+        // ── 发放每月生活费（修复bug：原来从未发放） ──
+        const monthlyAllow = this.state.monthlyMoney || 800;
+        this.state.money += monthlyAllow;
+        this.addLog(`💰 本月生活费到账 ${monthlyAllow}元`, 'success');
+
         // 自动扣除生活费 (经济系统优化)
         // 基础生活费 600 + 随机浮动
         const baseCost = 600;
         const randomCost = Math.floor(Math.random() * 200);
         const totalLivingCost = baseCost + randomCost;
         this.state.money -= totalLivingCost;
-        
-        let costMsg = `💸 扣除本月生活费 ${totalLivingCost}元 (食堂/水电/网费)`;
-        
+
+        let costMsg = `💸 扣除本月日常开支 ${totalLivingCost}元 (食堂/水电/网费)`;
+
         // 恋爱额外消费
         if (this.state.inRelationship) {
             this.state.san = Math.min(100, this.state.san + 1);
-            const dateCost = 300; // 恋爱固定开销增加
+            const dateCost = 200;
             this.state.money -= dateCost;
             costMsg += `，恋爱开销 ${dateCost}元`;
         }
