@@ -849,6 +849,201 @@ const AIModule = (function() {
         }
     }
 
+    // ===== 恋爱系统 v2 - AI 生成逻辑 =====
+
+    /** 恋爱候选对象生成 System Prompt */
+    const LOVE_CANDIDATE_SYSTEM_PROMPT = `你是鲜椒本科模拟器的恋爱系统策划。请根据玩家信息生成3个有档次差异的恋爱候选对象（A、B、C档）。
+
+【字段要求】
+- id: "candidate_a" / "candidate_b" / "candidate_c"
+- name: 中文姓名，符合大学生
+- college: 必须是西安交大9大书院之一（彭康/文治/仲英/南洋/崇实/励志/宗濂/启德/钱学森书院）
+- gender: "男" 或 "女"
+- money: 数字（A档2000-3500，B档3500-6000，C档7000-12000）
+- reputation: 数字（A档35-55，B档55-75，C档75-95）
+- personality: 2-4个性格标签，用"·"分隔
+- unlockTier: "A" / "B" / "C"
+- storySeed: 一句话描述相识场景
+- isSpecial: 布尔值（是否同性候选，仅允许1个）
+
+【重要】只返回JSON，不要包含其他文本：
+{"candidates":[{"id":"candidate_a","name":"...","college":"...","gender":"...","money":0,"reputation":0,"personality":"...","unlockTier":"A","storySeed":"...","isSpecial":false},...]}`;
+
+    /** 恋爱剧情生成 System Prompt */
+    const LOVE_STORY_SYSTEM_PROMPT = `你是鲜椒本科模拟器的恋爱剧情编剧。根据候选对象和互动场景生成一段自然真实的恋爱剧情。
+
+【要求】
+- summary：50-80字，用第二人称"你"，要有画面感
+- choices：2个选项，各有不同效果
+- effects字段可包含：affinity(好感度+数字), san(SAN+数字), gpa(GPA微量), reputation(声望)
+
+【重要】只返回JSON：
+{"title":"剧情标题(4-8字)","summary":"剧情描述...","choices":[{"id":"a","text":"选项文字","effects":{"affinity":8,"san":3}},{"id":"b","text":"选项文字","effects":{"affinity":12}}]}`;
+
+    /**
+     * 生成恋爱候选对象（恋爱系统v2）
+     * @param {Object} playerInfo - 玩家信息
+     * @param {Array} fallbackCandidates - 本地fallback候选对象（API失败时使用验证）
+     * @returns {Array|null} - 3个候选对象，或 null（失败时由调用方使用fallback）
+     */
+    async function fetchLoveCandidates(playerInfo, fallbackCandidates) {
+        if (!API_KEY) loadConfig();
+        if (!API_KEY) {
+            console.warn('AI API Key未设置，使用fallback候选对象');
+            return null;
+        }
+
+        const collegeNameMap = {
+            'pengkang': '彭康书院', 'wenzhi': '文治书院', 'zhongying': '仲英书院',
+            'nanyang': '南洋书院', 'chongshi': '崇实书院', 'lizhi': '励志书院',
+            'zonglian': '宗濂书院', 'qide': '启德书院', 'qianxuesen': '钱学森书院'
+        };
+        const collegeName = collegeNameMap[playerInfo.college] || playerInfo.college;
+        const playerGender = playerInfo.gender || '男';
+        const mainTargetGender = playerGender === '女' ? '男' : '女';
+
+        const userPrompt = `玩家信息：书院=${collegeName}，性别=${playerGender}，大${playerInfo.year}，GPA=${(playerInfo.gpa||3).toFixed(2)}，声望=${playerInfo.reputation||50}，综测=${playerInfo.social||60}，金币=${playerInfo.money||1000}。
+生成3个候选对象，主要性别为${mainTargetGender}，允许1个特殊同性候选对象（isSpecial:true）。A档容易解锁（低属性），B档中等，C档需要高声望+高GPA。`;
+
+        const maxRetries = 3;
+        const attemptedModels = new Set();
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const selectedModel = selectBestModelForRequest(attemptedModels);
+            if (!selectedModel) break;
+            attemptedModels.add(selectedModel);
+
+            try {
+                const startedAt = getNowMs();
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: 'system', content: LOVE_CANDIDATE_SYSTEM_PROMPT },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.9, stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    handleModelError(selectedModel, response.status, errText);
+                    markModelFailure(selectedModel, errText);
+                    continue;
+                }
+
+                const data = await response.json();
+                recordModelLatency(selectedModel, getNowMs() - startedAt, true);
+                const content = data.choices[0].message.content;
+
+                let jsonStr = content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) jsonStr = jsonMatch[0];
+
+                const parsed = JSON.parse(jsonStr);
+                if (parsed && Array.isArray(parsed.candidates) && parsed.candidates.length >= 3) {
+                    const tiers = ['A', 'B', 'C'];
+                    return parsed.candidates.slice(0, 3).map((c, i) => ({
+                        id: c.id || `candidate_${['a','b','c'][i]}`,
+                        name: c.name || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].name : '未知'),
+                        college: c.college || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].college : '南洋书院'),
+                        gender: c.gender || mainTargetGender,
+                        money: Number(c.money) || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].money : 3000),
+                        reputation: Number(c.reputation) || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].reputation : 50),
+                        personality: c.personality || '阳光开朗',
+                        unlockTier: tiers[i],
+                        storySeed: c.storySeed || '在校园中偶然相遇',
+                        isSpecial: Boolean(c.isSpecial)
+                    }));
+                }
+            } catch (e) {
+                markModelFailure(selectedModel, e && e.message ? e.message : e);
+                console.warn(`恋爱候选对象AI生成失败 (${selectedModel}):`, e);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 生成恋爱剧情事件（恋爱系统v2）
+     * @param {Object} candidate - 候选对象信息
+     * @param {Object} context - 互动上下文 {college, year, month, interactionType}
+     * @returns {Object|null} - {title, summary, choices} 或 null
+     */
+    async function fetchLoveStory(candidate, context) {
+        if (!API_KEY) loadConfig();
+        if (!API_KEY) return null;
+
+        const interactionNameMap = {
+            mainbuilding_e: '主楼E顶楼约会', tengfei: '腾飞塔下约会', dinner_out: '校外约饭',
+            library_together: '图书馆双人自习', classroom_empty: '主楼空教室自习',
+            college_discussion: '书院讨论区', qujiang_walk: '曲江散步',
+            city_wall_night: '城墙夜游', short_trip: '周边短途旅游'
+        };
+
+        const userPrompt = `候选对象：${candidate.name}（${candidate.college}，${candidate.gender}，性格：${candidate.personality}）。故事背景：${candidate.storySeed}。互动场景：${interactionNameMap[context.interactionType] || context.interactionType}。当前时间：大${context.year}，${context.month}月。请生成符合这个场景的恋爱剧情，要体现候选对象的性格特点。`;
+
+        const maxRetries = 3;
+        const attemptedModels = new Set();
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const selectedModel = selectBestModelForRequest(attemptedModels);
+            if (!selectedModel) break;
+            attemptedModels.add(selectedModel);
+
+            try {
+                const startedAt = getNowMs();
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: 'system', content: LOVE_STORY_SYSTEM_PROMPT },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 1.0, stream: false
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    handleModelError(selectedModel, response.status, errText);
+                    markModelFailure(selectedModel, errText);
+                    continue;
+                }
+
+                const data = await response.json();
+                recordModelLatency(selectedModel, getNowMs() - startedAt, true);
+                const content = data.choices[0].message.content;
+
+                let jsonStr = content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (jsonMatch) jsonStr = jsonMatch[0];
+
+                const parsed = JSON.parse(jsonStr);
+                if (parsed && parsed.title && parsed.summary && Array.isArray(parsed.choices)) {
+                    return {
+                        title: parsed.title,
+                        summary: parsed.summary,
+                        choices: parsed.choices.map(c => ({
+                            id: c.id || 'a',
+                            text: c.text || '…',
+                            effects: c.effects || {}
+                        }))
+                    };
+                }
+            } catch (e) {
+                markModelFailure(selectedModel, e && e.message ? e.message : e);
+                console.warn(`恋爱剧情AI生成失败 (${selectedModel}):`, e);
+            }
+        }
+        return null;
+    }
+
     /**
      * C. 结构化 JSON 处理逻辑
      * 应用 AI 生成的事件效果
@@ -912,6 +1107,9 @@ const AIModule = (function() {
         saveUserConfig,
         getCurrentConfig,
         switchToNextModel,
+        // 恋爱系统 v2
+        fetchLoveCandidates,
+        fetchLoveStory,
         getCurrentModel: () => API_MODEL,
         getAvailableModels: () => AVAILABLE_MODELS,
         setModel: (modelName) => {

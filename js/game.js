@@ -45,6 +45,7 @@ class XianjaoSimulator {
             // 继续游戏
             this.state = JSON.parse(savedState);
             this.normalizeStateIntegers();
+            this.ensureLoveStateFields(); // 兼容旧存档，补全恋爱v2字段
             this.selectedBackground = this.state.background;
             this.selectedCollege = this.state.college;
         } else if (characterData) {
@@ -628,7 +629,15 @@ class XianjaoSimulator {
             // 恋爱系统增强
             relationshipStage: 'single', // 'single' | 'crush' | 'confession' | 'dating' | 'breakup'
             relationshipMonth: 0, // 恋爱持续月数
-            
+
+            // ===== 恋爱系统 v2 - 多对象系统 =====
+            loveCandidates: null,        // 3个恋爱候选对象（持久化，避免重复生成）
+            selectedLoveInterest: null,  // 当前追求的候选对象 id
+            loveAffinity: {},            // 各候选对象好感度 { candidateId: 0~100 }
+            unlockedLoveStories: [],     // 已触发的剧情标题列表
+            loveEventHistory: [],        // 恋爱事件历史
+            loveInteractionCount: 0,     // 本月恋爱互动次数
+
             // 创新港debuff
             iHarbourDebuff: false // 创新港进城难debuff
         };
@@ -2321,36 +2330,9 @@ class XianjaoSimulator {
         }
     }
 
-    // 显示恋爱选择菜单
+    // 显示恋爱选择菜单（v2 入口，委托给新主菜单）
     showLoveChoice() {
-        if (!this.isLoveModuleUnlocked()) {
-            this.showDateLockMessage();
-            return;
-        }
-
-        // 如果已经有感情对象，显示约会选项
-        if (this.state.inRelationship) {
-            this.showDateChoice();
-        } else {
-            // 否则提示已解锁可以尝试脱单
-            const options = document.getElementById('choice-options');
-            options.innerHTML = '';
-
-            const btn = document.createElement('button');
-            btn.className = 'choice-btn';
-            btn.innerHTML = `
-                <div class="choice-btn-name">💕 开始约会</div>
-                <div class="choice-btn-desc">恭喜你！恋爱模块已解锁，点击此选项开始约会吧</div>
-            `;
-            btn.addEventListener('click', () => {
-                this.hideModal('choice-modal');
-                this.showDateChoice();
-            });
-            options.appendChild(btn);
-
-            document.getElementById('choice-title').textContent = '恋爱模块已解锁';
-            this.showModal('choice-modal');
-        }
+        this.showLoveMainMenu();
     }
 
     // 约会
@@ -2513,6 +2495,806 @@ class XianjaoSimulator {
         this.addLog('😴 好好休息了一下');
         this.updateUI();
     }
+
+    // =====================================================================
+    // ===== 恋爱系统 v2 - 多对象 / 多互动 / AI剧情 =====
+    // =====================================================================
+
+    /**
+     * 确保旧存档兼容新恋爱字段（添加缺失字段的默认值）
+     */
+    ensureLoveStateFields() {
+        if (!this.state) return;
+        if (!Array.isArray(this.state.loveCandidates)) {
+            this.state.loveCandidates = null; // null = 尚未生成
+        }
+        if (this.state.selectedLoveInterest === undefined) {
+            // 旧存档若已在恋爱中，创建 legacy_partner 作为兼容
+            this.state.selectedLoveInterest = this.state.inRelationship ? 'legacy_partner' : null;
+        }
+        if (!this.state.loveAffinity || typeof this.state.loveAffinity !== 'object') {
+            this.state.loveAffinity = {};
+            if (this.state.inRelationship) {
+                this.state.loveAffinity['legacy_partner'] = 80;
+            }
+        }
+        if (!Array.isArray(this.state.unlockedLoveStories)) {
+            this.state.unlockedLoveStories = [];
+        }
+        if (!Array.isArray(this.state.loveEventHistory)) {
+            this.state.loveEventHistory = [];
+        }
+        if (typeof this.state.loveInteractionCount !== 'number') {
+            this.state.loveInteractionCount = 0;
+        }
+    }
+
+    /**
+     * 获取本地 fallback 候选对象（根据玩家性别调整性别分布）
+     */
+    _getDefaultLoveCandidates() {
+        const playerGender = this.state.gender || '男';
+        const isFemalePl = playerGender === '女';
+        const mainOpp = isFemalePl ? '男' : '女';
+        // 10-15% 概率 A档为同性候选（隐藏特殊对象）
+        const hasSpecial = Math.random() < 0.13;
+
+        const randItem = arr => arr[Math.floor(Math.random() * arr.length)];
+        const nameA_opp = isFemalePl ? ['林晓阳','王子涵','张明轩','刘浩然','何宇诚'] : ['林晓雨','王思颖','张雨桐','刘欣然','何心怡'];
+        const nameA_same = isFemalePl ? ['陈艺琳','苏子涵','白晓童'] : ['周浩宇','李明远','肖子奕'];
+        const nameB_opp = isFemalePl ? ['陈思远','李浩宇','赵天朗','吴栋梁'] : ['陈思雨','李慕涵','赵婉仪','吴心怡'];
+        const nameC_opp = isFemalePl ? ['沈宇轩','江凌峰','叶辰远','顾北辰'] : ['沈宇婷','江凌月','叶知秋','顾晴岚'];
+
+        // B档对应书院：与玩家书院不同，制造"他者感"
+        const bCollegeMap = {
+            pengkang:'南洋书院', wenzhi:'仲英书院', zhongying:'崇实书院',
+            nanyang:'彭康书院', chongshi:'南洋书院', lizhi:'钱学森书院',
+            zonglian:'励志书院', qide:'南洋书院', qianxuesen:'文治书院'
+        };
+        const bCollege = bCollegeMap[this.state.college] || '南洋书院';
+
+        return [
+            {
+                id: 'candidate_a',
+                name: hasSpecial ? randItem(nameA_same) : randItem(nameA_opp),
+                college: '崇实书院',
+                gender: hasSpecial ? playerGender : mainOpp,
+                money: 2200 + Math.floor(Math.random() * 1200),
+                reputation: 38 + Math.floor(Math.random() * 18),
+                personality: '阳光开朗·热爱生活',
+                unlockTier: 'A',
+                storySeed: '在社团活动中相识，因共同的爱好慢慢走近',
+                isSpecial: hasSpecial
+            },
+            {
+                id: 'candidate_b',
+                name: randItem(nameB_opp),
+                college: bCollege,
+                gender: mainOpp,
+                money: 3800 + Math.floor(Math.random() * 2000),
+                reputation: 58 + Math.floor(Math.random() * 18),
+                personality: '踏实努力·技术达人',
+                unlockTier: 'B',
+                storySeed: '在一次竞赛备赛中相遇，技术上的默契让彼此走近',
+                isSpecial: false
+            },
+            {
+                id: 'candidate_c',
+                name: randItem(nameC_opp),
+                college: '钱学森书院',
+                gender: mainOpp,
+                money: 7500 + Math.floor(Math.random() * 3000),
+                reputation: 78 + Math.floor(Math.random() * 18),
+                personality: '冷静睿智·学院风云',
+                unlockTier: 'C',
+                storySeed: '在学术论坛上相识，被深厚的学识所折服',
+                isSpecial: false
+            }
+        ];
+    }
+
+    /**
+     * 统一获取候选对象解锁条件（返回 {description, check}）
+     * 封装在此处，避免条件判断散落在多处
+     */
+    getLoveCandidateUnlockCondition(candidate) {
+        switch (candidate.unlockTier) {
+            case 'A':
+                return {
+                    description: 'GPA ≥ 2.5 且综测 ≥ 50，或声望 ≥ 40',
+                    check: s => (s.gpa >= 2.5 && s.social >= 50) || s.reputation >= 40
+                };
+            case 'B':
+                return {
+                    description: 'GPA ≥ 3.2 且综测 ≥ 65，或声望 ≥ 65',
+                    check: s => (s.gpa >= 3.2 && s.social >= 65) || s.reputation >= 65
+                };
+            case 'C':
+                return {
+                    description: 'GPA ≥ 3.8 且综测 ≥ 80 且声望 ≥ 80，或金币 ≥ 8000',
+                    check: s => (s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80) || s.money >= 8000
+                };
+            default:
+                return { description: '无条件', check: () => true };
+        }
+    }
+
+    /** 检查单个候选对象是否已解锁 */
+    checkLoveCandidateUnlock(candidate) {
+        return this.getLoveCandidateUnlockCondition(candidate).check(this.state);
+    }
+
+    /**
+     * 生成恋爱候选对象（AI优先，fallback兜底）
+     * 已持久化到 state.loveCandidates 则直接返回
+     */
+    async generateLoveCandidates() {
+        if (Array.isArray(this.state.loveCandidates) && this.state.loveCandidates.length === 3) {
+            return this.state.loveCandidates; // 已生成，直接复用
+        }
+        const fallback = this._getDefaultLoveCandidates();
+        try {
+            const playerInfo = {
+                college: this.state.college,
+                gender: this.state.gender || '男',
+                year: this.state.year,
+                gpa: this.state.gpa,
+                reputation: this.state.reputation,
+                social: this.state.social,
+                money: this.state.money
+            };
+            const aiResult = await AIModule.fetchLoveCandidates(playerInfo, fallback);
+            if (aiResult && aiResult.length === 3) {
+                this.state.loveCandidates = aiResult;
+                return aiResult;
+            }
+        } catch (e) {
+            console.warn('AI生成候选对象失败，使用本地fallback：', e);
+        }
+        this.state.loveCandidates = fallback;
+        return fallback;
+    }
+
+    // =====================================================================
+    // ===== 恋爱主菜单（v2 入口）=====
+    // =====================================================================
+
+    /**
+     * 恋爱主菜单 - 根据当前状态自动路由：
+     * 1. 未解锁旧系统 → 显示锁定原因
+     * 2. 已在恋爱且有对象 → 直接进互动菜单
+     * 3. 其他 → 显示候选对象列表
+     */
+    showLoveMainMenu() {
+        // 沿用旧解锁条件（书院差异化解锁）作为入口门槛
+        if (!this.isLoveModuleUnlocked()) {
+            this.showDateLockMessage();
+            return;
+        }
+        this.ensureLoveStateFields();
+
+        // 如果已在恋爱中且有选定对象，直接进互动菜单
+        if (this.state.inRelationship && this.state.selectedLoveInterest &&
+            this.state.selectedLoveInterest !== 'legacy_partner') {
+            const candidate = (this.state.loveCandidates || []).find(
+                c => c.id === this.state.selectedLoveInterest
+            );
+            if (candidate) {
+                const opts = document.getElementById('choice-options');
+                opts.innerHTML = '';
+                this._showLoveInteractionMenu(opts, candidate);
+                document.getElementById('choice-title').textContent = `💕 与${candidate.name}互动`;
+                this.showModal('choice-modal');
+                return;
+            }
+        }
+
+        // 旧存档兼容：已在恋爱但没有候选对象信息，走旧约会流程
+        if (this.state.inRelationship && this.state.selectedLoveInterest === 'legacy_partner') {
+            this.showDateChoice();
+            return;
+        }
+
+        // 未在恋爱：显示候选对象列表
+        const opts = document.getElementById('choice-options');
+        opts.innerHTML = '<div class="love-loading">💕 正在加载心仪对象...</div>';
+        document.getElementById('choice-title').textContent = '💕 恋爱系统';
+        this.showModal('choice-modal');
+
+        this.generateLoveCandidates().then(candidates => {
+            opts.innerHTML = '';
+            this._renderCandidateList(opts, candidates);
+        });
+    }
+
+    /**
+     * 渲染候选对象列表
+     */
+    _renderCandidateList(container, candidates) {
+        const pursuing = this.state.selectedLoveInterest && !this.state.inRelationship;
+        const tierIcon = { A: '⭐', B: '⭐⭐', C: '⭐⭐⭐' };
+        const tierLabel = { A: '基础档', B: '优秀档', C: '顶级档' };
+
+        // 顶部提示
+        const hint = document.createElement('div');
+        hint.className = 'love-hint-banner';
+        if (pursuing) {
+            const cur = candidates.find(c => c.id === this.state.selectedLoveInterest);
+            const aff = (this.state.loveAffinity || {})[this.state.selectedLoveInterest] || 0;
+            hint.innerHTML = `<span>💌 正在追求：<strong>${cur ? cur.name : '对方'}</strong> · 好感度 ${aff}/100</span>`;
+        } else {
+            hint.innerHTML = '<span>选择心仪对象，满足解锁条件后可追求 ✨</span>';
+        }
+        container.appendChild(hint);
+
+        candidates.forEach(candidate => {
+            const unlocked = this.checkLoveCandidateUnlock(candidate);
+            const isPursuing = this.state.selectedLoveInterest === candidate.id;
+            const aff = (this.state.loveAffinity || {})[candidate.id] || 0;
+            const cond = this.getLoveCandidateUnlockCondition(candidate);
+
+            const card = document.createElement('button');
+            card.className = `choice-btn love-candidate-card ${unlocked ? 'lc-unlocked' : 'lc-locked'} ${isPursuing ? 'lc-pursuing' : ''}`;
+            card.disabled = !unlocked;
+
+            let badge = '';
+            if (isPursuing) badge = '<span class="lc-badge badge-pursuing">💌 追求中</span>';
+            else if (!unlocked) badge = '<span class="lc-badge badge-locked">🔒 未解锁</span>';
+            else badge = '<span class="lc-badge badge-available">💚 可追求</span>';
+
+            card.innerHTML = `
+                <div class="lc-header">
+                    <span class="lc-name">${candidate.name}</span>
+                    ${badge}
+                    ${candidate.isSpecial ? '<span class="lc-special">✨ 特别</span>' : ''}
+                </div>
+                <div class="lc-meta">
+                    <span>🏛️ ${candidate.college}</span>
+                    <span>${candidate.gender === '男' ? '👦' : '👧'} ${candidate.gender}</span>
+                    <span>${tierIcon[candidate.unlockTier] || ''} ${tierLabel[candidate.unlockTier] || ''}</span>
+                </div>
+                <div class="lc-stats">
+                    <span>💰 ${candidate.money}</span>
+                    <span>⭐ 声望${candidate.reputation}</span>
+                    <span>🏷️ ${candidate.personality}</span>
+                </div>
+                ${isPursuing ? `<div class="lc-affinity-bar"><div class="lc-affinity-fill" style="width:${aff}%"></div><span class="lc-affinity-text">好感度 ${aff}/100</span></div>` : ''}
+                ${!unlocked ? `<div class="lc-unlock-cond">🔒 解锁条件：${cond.description}</div>` : `<div class="lc-story">"${candidate.storySeed}"</div>`}
+            `;
+
+            card.addEventListener('click', () => {
+                this.hideModal('choice-modal');
+                this._selectOrInteractCandidate(candidate, candidates);
+            });
+            container.appendChild(card);
+        });
+
+        // 如有追求对象，额外显示互动入口
+        if (pursuing) {
+            const divider = document.createElement('div');
+            divider.className = 'lc-divider';
+            divider.innerHTML = '<hr><span>已选对象互动</span><hr>';
+            container.appendChild(divider);
+
+            const curCandidate = candidates.find(c => c.id === this.state.selectedLoveInterest);
+            if (curCandidate) {
+                const interactBtn = document.createElement('button');
+                interactBtn.className = 'choice-btn love-interact-entry';
+                interactBtn.innerHTML = `
+                    <div class="choice-btn-name">💕 和${curCandidate.name}互动</div>
+                    <div class="choice-btn-desc">约会 / 自习 / 旅游，增进感情</div>
+                `;
+                interactBtn.addEventListener('click', () => {
+                    const opts = document.getElementById('choice-options');
+                    opts.innerHTML = '';
+                    this._showLoveInteractionMenu(opts, curCandidate);
+                    document.getElementById('choice-title').textContent = `💕 与${curCandidate.name}互动`;
+                });
+                container.appendChild(interactBtn);
+            }
+        }
+    }
+
+    /**
+     * 选择追求对象 or 进入互动菜单
+     */
+    _selectOrInteractCandidate(candidate, allCandidates) {
+        this.ensureLoveStateFields();
+
+        if (!this.state.selectedLoveInterest) {
+            // 首次选择
+            this.state.selectedLoveInterest = candidate.id;
+            if (!this.state.loveAffinity[candidate.id]) {
+                this.state.loveAffinity[candidate.id] = 10;
+            }
+            this.addLog(`💌 你决定追求${candidate.name}，第一步，加油！`, 'success');
+            this.saveGame();
+            this.updateUI();
+        } else if (this.state.selectedLoveInterest === candidate.id) {
+            // 已选同一人，进互动菜单
+            const opts = document.getElementById('choice-options');
+            opts.innerHTML = '';
+            this._showLoveInteractionMenu(opts, candidate);
+            document.getElementById('choice-title').textContent = `💕 与${candidate.name}互动`;
+            this.showModal('choice-modal');
+        } else {
+            // 想换人：给提示
+            const prevName = (allCandidates || []).find(c => c.id === this.state.selectedLoveInterest)?.name || '对方';
+            this.showMessage('换追求对象？',
+                `<p>你目前正在追求 <strong>${prevName}</strong>。</p>
+                 <p>是否改为追求 <strong>${candidate.name}</strong>？（原好感度保留）</p>
+                 <button class="btn btn-danger" style="margin-top:10px;" onclick="
+                    game.state.selectedLoveInterest='${candidate.id}';
+                    if(!game.state.loveAffinity['${candidate.id}']) game.state.loveAffinity['${candidate.id}']=5;
+                    game.addLog('💔 换了追求对象...', 'info');
+                    game.saveGame();
+                    game.updateUI();
+                    document.getElementById('modal').classList.remove('active');
+                 ">确认换人</button>`
+            );
+        }
+    }
+
+    // =====================================================================
+    // ===== 恋爱互动菜单（二级菜单）=====
+    // =====================================================================
+
+    /**
+     * 渲染恋爱互动菜单（约会 / 自习 / 旅游）
+     */
+    _showLoveInteractionMenu(container, candidate) {
+        if (!candidate) {
+            candidate = (this.state.loveCandidates || []).find(c => c.id === this.state.selectedLoveInterest);
+        }
+        if (!candidate) { container.innerHTML = '<p>未找到恋爱对象信息</p>'; return; }
+
+        const aff = (this.state.loveAffinity || {})[candidate.id] || 0;
+        const affinityColor = aff >= 80 ? '#e91e63' : aff >= 50 ? '#ff9800' : '#9e9e9e';
+
+        // 顶部：好感度信息
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'love-partner-banner';
+        infoDiv.innerHTML = `
+            <div class="lp-name">${candidate.name} <span class="lp-college">${candidate.college}</span></div>
+            <div class="lp-aff-row">
+                <span style="color:${affinityColor};">💕 好感度 ${aff}/100</span>
+                <div class="lp-aff-bar"><div class="lp-aff-fill" style="width:${aff}%;background:${affinityColor};"></div></div>
+            </div>
+            ${!this.state.inRelationship && aff >= 60 ? '<div class="confession-hint">💡 好感度已足够，可以尝试表白！</div>' : ''}
+        `;
+        container.appendChild(infoDiv);
+
+        // 表白按钮（好感度 ≥ 60 且未在恋爱中）
+        if (!this.state.inRelationship && aff >= 60) {
+            const confessBtn = document.createElement('button');
+            confessBtn.className = 'choice-btn love-confess-btn';
+            confessBtn.innerHTML = `<div class="choice-btn-name">💌 向${candidate.name}表白！</div><div class="choice-btn-desc">好感度 ${aff}/100，勇敢迈出这一步！</div>`;
+            confessBtn.addEventListener('click', () => { this.hideModal('choice-modal'); this._doConfession(candidate); });
+            container.appendChild(confessBtn);
+        }
+
+        // 三大互动分类
+        const categories = [
+            { id: 'date',   name: '💑 约会',   desc: '一起出去约会，增进感情',   energyNeeded: 1, sub: () => this._showLoveDateSubMenu(candidate) },
+            { id: 'study',  name: '📚 一起自习', desc: '并肩学习，悄悄产生情愫', energyNeeded: 2, sub: () => this._showLoveStudySubMenu(candidate) },
+            { id: 'travel', name: '🗺️ 旅游出行', desc: '一起出游，创造美好回忆',   energyNeeded: 3, sub: () => this._showLoveTravelSubMenu(candidate) }
+        ];
+
+        categories.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn love-category-btn';
+            btn.disabled = this.state.energy < cat.energyNeeded;
+            btn.innerHTML = `
+                <div class="choice-btn-name">${cat.name}</div>
+                <div class="choice-btn-desc">${cat.desc}（需体力 ${cat.energyNeeded}）</div>
+            `;
+            btn.addEventListener('click', () => {
+                container.innerHTML = '';
+                cat.sub();
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    /**
+     * 约会子菜单
+     */
+    _showLoveDateSubMenu(candidate) {
+        const container = document.getElementById('choice-options');
+        document.getElementById('choice-title').textContent = '💑 约会 - 选择地点';
+        this._renderLoveSubMenu(container, candidate, [
+            { id:'mainbuilding_e', name:'主楼E顶楼', icon:'🌃', desc:'俯瞰校园夜景，浪漫满分',
+              cost:{energy:1,money:0}, gain:{san:20,affinity:8}, storyChance:0.2 },
+            { id:'tengfei', name:'腾飞塔下', icon:'🗼', desc:'交大地标约会打卡，留下合影',
+              cost:{energy:1,money:20}, gain:{san:15,affinity:10}, storyChance:0.25 },
+            { id:'dinner_out', name:'校外约饭', icon:'🍽️', desc:'去校外餐厅共进美餐',
+              cost:{energy:2,money:150}, gain:{san:18,affinity:15}, storyChance:0.3 }
+        ], '约会', candidate);
+    }
+
+    /**
+     * 自习子菜单
+     */
+    _showLoveStudySubMenu(candidate) {
+        const container = document.getElementById('choice-options');
+        document.getElementById('choice-title').textContent = '📚 一起自习 - 选择地点';
+        this._renderLoveSubMenu(container, candidate, [
+            { id:'library_together', name:'图书馆双人自习', icon:'📚', desc:'在图书馆并肩而坐',
+              cost:{energy:3,money:0}, gain:{san:5,affinity:5,gpa:0.02}, storyChance:0.2 },
+            { id:'classroom_empty', name:'主楼空教室', icon:'🏫', desc:'找间空教室，安静学习',
+              cost:{energy:2,money:0}, gain:{san:3,affinity:3,gpa:0.01}, storyChance:0.15 },
+            { id:'college_discussion', name:'书院讨论区', icon:'🤝', desc:'互相答疑解惑',
+              cost:{energy:2,money:0}, gain:{san:8,affinity:4,social:2}, storyChance:0.2 }
+        ], '自习', candidate);
+    }
+
+    /**
+     * 旅游子菜单
+     */
+    _showLoveTravelSubMenu(candidate) {
+        const container = document.getElementById('choice-options');
+        document.getElementById('choice-title').textContent = '🗺️ 旅游出行 - 选择目的地';
+        this._renderLoveSubMenu(container, candidate, [
+            { id:'qujiang_walk', name:'曲江散步', icon:'🌊', desc:'沿曲江湖边漫步享受微风',
+              cost:{energy:2,money:30}, gain:{san:25,affinity:12}, storyChance:0.25 },
+            { id:'city_wall_night', name:'城墙夜游', icon:'🏯', desc:'登上古城墙，俯瞰长安夜色',
+              cost:{energy:3,money:60}, gain:{san:30,affinity:15}, storyChance:0.35 },
+            { id:'short_trip', name:'周边短途', icon:'🚌', desc:'周末一起去终南山或周边景点',
+              cost:{energy:4,money:200}, gain:{san:38,affinity:20}, storyChance:0.4 }
+        ], '旅游', candidate);
+    }
+
+    /**
+     * 通用子菜单渲染
+     */
+    _renderLoveSubMenu(container, candidate, options, categoryName, candidateRef) {
+        container.innerHTML = '';
+        const cand = candidateRef || candidate;
+
+        // 返回按钮
+        const backBtn = document.createElement('button');
+        backBtn.className = 'choice-btn love-back-btn';
+        backBtn.innerHTML = '<div class="choice-btn-name">◀ 返回互动菜单</div>';
+        backBtn.addEventListener('click', () => {
+            container.innerHTML = '';
+            this._showLoveInteractionMenu(container, cand);
+            document.getElementById('choice-title').textContent = `💕 与${cand.name}互动`;
+        });
+        container.appendChild(backBtn);
+
+        options.forEach(opt => {
+            const canAfford = this.state.money >= (opt.cost.money || 0) && this.state.energy >= (opt.cost.energy || 0);
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn love-option-btn';
+            btn.disabled = !canAfford;
+
+            let gainParts = [];
+            if (opt.gain.san) gainParts.push(`SAN +${opt.gain.san}`);
+            if (opt.gain.affinity) gainParts.push(`好感 +${opt.gain.affinity}`);
+            if (opt.gain.gpa) gainParts.push(`GPA +${opt.gain.gpa.toFixed(2)}`);
+            if (opt.gain.social) gainParts.push(`综测 +${opt.gain.social}`);
+
+            let costParts = [];
+            if (opt.cost.energy) costParts.push(`体力 -${opt.cost.energy}`);
+            if (opt.cost.money) costParts.push(`金币 -${opt.cost.money}`);
+
+            btn.innerHTML = `
+                <div class="choice-btn-name">${opt.icon} ${opt.name}</div>
+                <div class="choice-btn-desc">${opt.desc}</div>
+                <div class="love-option-meta">
+                    <span class="love-cost">${costParts.join(' · ')}</span>
+                    <span class="love-gain">${gainParts.join(' · ')}</span>
+                    ${opt.storyChance > 0 ? `<span class="story-chance">🎲 ${Math.round(opt.storyChance*100)}% 触发剧情</span>` : ''}
+                </div>
+            `;
+            btn.addEventListener('click', () => {
+                this.hideModal('choice-modal');
+                this._doLoveInteraction(cand, opt, categoryName);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // =====================================================================
+    // ===== 恋爱互动执行逻辑 =====
+    // =====================================================================
+
+    /**
+     * 执行恋爱互动，应用效果并可能触发剧情
+     */
+    async _doLoveInteraction(candidate, interaction, categoryName) {
+        this.ensureLoveStateFields();
+        // 消耗资源
+        this.state.energy -= (interaction.cost.energy || 0);
+        this.state.money = Math.max(0, this.state.money - (interaction.cost.money || 0));
+
+        // 属性收益
+        const g = interaction.gain || {};
+        if (g.san) this.state.san = Math.min(100, this.state.san + g.san);
+        if (g.gpa) this.state.gpa = Math.min(4.3, this.state.gpa + g.gpa);
+        if (g.social) this.state.social = Math.min(100, this.state.social + g.social);
+
+        // 好感度（含对象偏好加成）
+        if (!this.state.loveAffinity) this.state.loveAffinity = {};
+        const baseAff = g.affinity || 0;
+        const bonusAff = this._applyCandidatePreference(candidate, interaction.id, baseAff);
+        const curAff = this.state.loveAffinity[candidate.id] || 0;
+        const newAff = Math.min(100, curAff + bonusAff);
+        this.state.loveAffinity[candidate.id] = newAff;
+
+        // 日志
+        const actionDesc = { '约会': `去${interaction.name}约会`, '自习': `和TA在${interaction.name}自习`, '旅游': `和TA去${interaction.name}` };
+        this.addLog(`${interaction.icon} ${actionDesc[categoryName] || interaction.name}，好感度 +${bonusAff}（现: ${newAff}/100）`, 'success');
+
+        // 声望：旅游有小幅加成
+        if (categoryName === '旅游') this.changeReputation(2, `和${candidate.name}出游`);
+
+        // 书院特效（已在恋爱中时触发）
+        if (this.state.inRelationship) this.applyCollegeLoveEffect();
+
+        // 记录历史
+        this.state.loveInteractionCount = (this.state.loveInteractionCount || 0) + 1;
+        this.state.loveEventHistory.push({
+            month: this.state.month, year: this.state.year,
+            type: categoryName, subType: interaction.id,
+            candidateId: candidate.id, affinityGained: bonusAff
+        });
+
+        this.state.actionsThisTurn.push('love');
+        AchievementSystem.checkAchievements(this.state);
+        this.updateUI();
+
+        // 检查是否触发剧情
+        if (Math.random() < interaction.storyChance) {
+            await this._triggerLoveStoryEvent(candidate, interaction);
+        }
+
+        // 自动保存
+        this.saveGame();
+    }
+
+    /**
+     * 候选对象对不同互动的偏好加成（+30%）
+     */
+    _applyCandidatePreference(candidate, interactionId, baseAffinity) {
+        const datePreferred  = ['mainbuilding_e','tengfei','qujiang_walk','city_wall_night'];
+        const studyPreferred = ['library_together','classroom_empty','college_discussion'];
+        const luxPreferred   = ['dinner_out','city_wall_night','short_trip'];
+
+        let multiplier = 1.0;
+        // A档（崇实/社交型）偏好约会
+        if (candidate.unlockTier === 'A' && datePreferred.includes(interactionId)) multiplier = 1.3;
+        // B档（工科型）偏好自习
+        if (candidate.unlockTier === 'B' && studyPreferred.includes(interactionId)) multiplier = 1.3;
+        // C档（学霸/精英型）偏好高消费互动
+        if (candidate.unlockTier === 'C' && luxPreferred.includes(interactionId)) multiplier = 1.3;
+
+        return Math.round(baseAffinity * multiplier);
+    }
+
+    /**
+     * 表白逻辑
+     */
+    _doConfession(candidate) {
+        const aff = (this.state.loveAffinity || {})[candidate.id] || 0;
+        let successChance = Math.min(0.9, aff / 100 + 0.1 + this.getCollegeLoveBonus());
+        successChance = Math.min(0.95, successChance);
+
+        if (Math.random() < successChance) {
+            // 表白成功
+            this.state.inRelationship = true;
+            this.state.selectedLoveInterest = candidate.id;
+            this.state.relationshipStage = 'dating';
+            this.state.relationshipMonth = 0;
+            AchievementSystem.stats.inRelationship = true;
+            AchievementSystem.unlock('cupid');
+            this.applyCollegeLoveSuccess();
+            this.addLog(`💕 向${candidate.name}表白成功！你们在一起了！`, 'success');
+            this.changeReputation(5, '脱单成功');
+            this.showMessage('💕 表白成功！',
+                `<div style="text-align:center;padding:10px;">
+                    <div style="font-size:2.5rem;margin-bottom:8px;">💕</div>
+                    <h3 style="color:#e91e63;margin-bottom:12px;">你和${candidate.name}在一起了！</h3>
+                    <div style="background:#fff5f7;border-radius:8px;padding:12px;text-align:left;">
+                        <p>📚 ${candidate.college} · ${candidate.gender === '男' ? '👦' : '👧'} ${candidate.gender}</p>
+                        <p>💰 ${candidate.money} · ⭐ 声望${candidate.reputation}</p>
+                        <p>🏷️ ${candidate.personality}</p>
+                        <p style="color:#666;margin-top:8px;font-style:italic;">💬 "${candidate.storySeed}"</p>
+                    </div>
+                </div>`
+            );
+        } else {
+            const loss = Math.floor(Math.random() * 10) + 5;
+            this.state.loveAffinity[candidate.id] = Math.max(0, aff - loss);
+            this.state.san = Math.max(0, this.state.san - 10);
+            this.addLog(`💔 向${candidate.name}表白...被拒绝了 SAN-10，好感-${loss}`, 'warning');
+            this.showMessage('💔 被拒绝了',
+                `<p>${candidate.name}婉拒了你的表白，时机也许还不够成熟？</p>
+                 <p>继续互动增进好感，再试一次吧！</p>`);
+        }
+        this.saveGame();
+        this.updateUI();
+    }
+
+    // =====================================================================
+    // ===== 恋爱剧情系统 =====
+    // =====================================================================
+
+    /**
+     * 触发恋爱剧情事件（AI优先，fallback兜底）
+     */
+    async _triggerLoveStoryEvent(candidate, interaction) {
+        let story = null;
+        try {
+            story = await AIModule.fetchLoveStory(candidate, {
+                college: this.state.college, year: this.state.year,
+                month: this.state.month, interactionType: interaction.id
+            });
+        } catch (e) {
+            console.warn('AI剧情生成失败，使用fallback：', e);
+        }
+        if (!story) story = this._getLoveStoryFallback(candidate, interaction);
+        if (story) {
+            if (!this.state.unlockedLoveStories) this.state.unlockedLoveStories = [];
+            this.state.unlockedLoveStories.push(story.title);
+            this._showLoveStory(story, candidate);
+        }
+    }
+
+    /**
+     * 本地 fallback 剧情库
+     */
+    _getLoveStoryFallback(candidate, interaction) {
+        const lib = {
+            mainbuilding_e: {
+                title: '顶楼的星空',
+                summary: `夜晚，你们爬上主楼E的顶层，看着脚下灯火通明的校园。${candidate.name}轻声说："你知道吗，我以前从来不知道这里这么美。"`,
+                choices: [
+                    { id:'a', text:'"因为以前没人带你来。"', effects:{affinity:5,san:3} },
+                    { id:'b', text:'默默靠近了一点', effects:{affinity:8,san:2} }
+                ]
+            },
+            tengfei: {
+                title: '腾飞塔下的合影',
+                summary: `腾飞塔在夜灯下显得格外雄伟。${candidate.name}把手机递给你："帮我拍一张？"你举起手机，镜头里TA的笑容比灯光还要暖。`,
+                choices: [
+                    { id:'a', text:'"我也想和你一起拍。"', effects:{affinity:10} },
+                    { id:'b', text:'拍完之后悄悄设成手机壁纸', effects:{affinity:6,san:5} }
+                ]
+            },
+            dinner_out: {
+                title: '意外的晚餐',
+                summary: `餐厅里，${candidate.name}不停地往你碗里夹菜，"多吃点，你最近学习太累了。"这句话让你心里莫名一暖。`,
+                choices: [
+                    { id:'a', text:'"谢谢你，一直这么照顾我。"', effects:{affinity:8} },
+                    { id:'b', text:'也给TA夹了菜，什么都没说', effects:{affinity:12,san:3} }
+                ]
+            },
+            library_together: {
+                title: '图书馆的便利贴',
+                summary: `你们并肩坐在图书馆，${candidate.name}悄悄推来一张便利贴："这题我做出来了，你看看～"阳光透过玻璃洒在那张纸上。`,
+                choices: [
+                    { id:'a', text:'认真看了，回了一个笑容', effects:{affinity:6,gpa:0.01} },
+                    { id:'b', text:'"你真厉害，能给我讲一下吗？"', effects:{affinity:10} }
+                ]
+            },
+            classroom_empty: {
+                title: '空教室里的插曲',
+                summary: `空荡荡的教室里只有你们两个人，${candidate.name}突然把笔放下，看了你很久，"我觉得和你学习挺有意思的。"`,
+                choices: [
+                    { id:'a', text:'"我也是。"', effects:{affinity:8,san:3} },
+                    { id:'b', text:'假装没听到，继续低头看书，耳朵却红了', effects:{affinity:5} }
+                ]
+            },
+            college_discussion: {
+                title: '书院角落的对话',
+                summary: `你们在书院讨论区坐了很久，从学业聊到未来，${candidate.name}说："你想象中的毕业后，是什么样的？"`,
+                choices: [
+                    { id:'a', text:'"希望身边还有认识的人一起。"', effects:{affinity:12} },
+                    { id:'b', text:'认真分享了自己的规划，TA认真地在听', effects:{affinity:7,social:2} }
+                ]
+            },
+            qujiang_walk: {
+                title: '曲江的傍晚',
+                summary: `夕阳下，你们沿着曲江湖边漫步。${candidate.name}突然停下来，指着水中的倒影："你看，两个影子好像连在一起了。"`,
+                choices: [
+                    { id:'a', text:'"那是个好兆头。"', effects:{affinity:8,san:5} },
+                    { id:'b', text:'轻轻握住了TA的手', effects:{affinity:15,san:3} }
+                ]
+            },
+            city_wall_night: {
+                title: '古城墙下的月光',
+                summary: `古城墙上，月光清冷，${candidate.name}说："站在这里，觉得自己很渺小，但身边有你，又觉得很踏实。"`,
+                choices: [
+                    { id:'a', text:'"我也是。"', effects:{affinity:10,san:5} },
+                    { id:'b', text:'没有说话，只是握紧了TA的手', effects:{affinity:15} }
+                ]
+            },
+            short_trip: {
+                title: '终南山的清晨',
+                summary: `清晨，你们站在终南山顶，云雾缭绕。${candidate.name}说："以前一个人不来这里，太孤独了。"`,
+                choices: [
+                    { id:'a', text:'"以后可以一起来。"', effects:{affinity:12,san:8} },
+                    { id:'b', text:'在山顶合影，留下这个瞬间', effects:{affinity:8,reputation:3} }
+                ]
+            }
+        };
+        const def = {
+            title: '偶然的瞬间',
+            summary: `你们在校园里漫步，${candidate.name}突然说："我很庆幸认识了你。"这句话，让你突然意识到，这段缘分来得刚刚好。`,
+            choices: [
+                { id:'a', text:'"我也是。"', effects:{affinity:8,san:5} },
+                { id:'b', text:'"接下来还有很多时间一起度过。"', effects:{affinity:10} }
+            ]
+        };
+        return lib[interaction.id] || def;
+    }
+
+    /**
+     * 展示恋爱剧情（复用 choice-modal）
+     */
+    _showLoveStory(story, candidate) {
+        const opts = document.getElementById('choice-options');
+        opts.innerHTML = '';
+
+        // 剧情文本
+        const textDiv = document.createElement('div');
+        textDiv.className = 'love-story-block';
+        textDiv.innerHTML = `
+            <div class="ls-header"><span class="ls-icon">💌</span> <span class="ls-partner">${candidate.name}的故事</span></div>
+            <p class="ls-summary">${story.summary}</p>
+            <div class="ls-divider">— 你会怎么做？ —</div>
+        `;
+        opts.appendChild(textDiv);
+
+        (story.choices || []).forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn love-story-choice-btn';
+            const effectParts = [];
+            if (choice.effects.affinity) effectParts.push(`好感 +${choice.effects.affinity}`);
+            if (choice.effects.san) effectParts.push(`SAN +${choice.effects.san}`);
+            if (choice.effects.gpa) effectParts.push(`GPA +${choice.effects.gpa?.toFixed(2)}`);
+            if (choice.effects.reputation) effectParts.push(`声望 +${choice.effects.reputation}`);
+            btn.innerHTML = `
+                <div class="choice-btn-name">${choice.text}</div>
+                <div class="choice-btn-desc" style="color:#4caf50;">${effectParts.join(' · ')}</div>
+            `;
+            btn.addEventListener('click', () => {
+                this._applyLoveStoryEffects(choice.effects, candidate);
+                this.hideModal('choice-modal');
+                this.updateUI();
+            });
+            opts.appendChild(btn);
+        });
+
+        document.getElementById('choice-title').textContent = `💕 ${story.title}`;
+        this.showModal('choice-modal');
+    }
+
+    /**
+     * 应用剧情选择效果
+     */
+    _applyLoveStoryEffects(effects, candidate) {
+        if (!this.state.loveAffinity) this.state.loveAffinity = {};
+        if (effects.affinity) {
+            const cur = this.state.loveAffinity[candidate.id] || 0;
+            this.state.loveAffinity[candidate.id] = Math.min(100, cur + effects.affinity);
+            this.addLog(`💕 剧情效果：好感度 +${effects.affinity}`, 'success');
+        }
+        if (effects.san) this.state.san = Math.min(100, this.state.san + effects.san);
+        if (effects.gpa) this.state.gpa = Math.min(4.3, this.state.gpa + effects.gpa);
+        if (effects.reputation) this.changeReputation(effects.reputation, '恋爱剧情加分');
+        if (effects.social) this.state.social = Math.min(100, this.state.social + effects.social);
+    }
+
+    /** 快速保存（复用现有存储键） */
+    saveGame() {
+        try {
+            localStorage.setItem('xjtu_game_state', JSON.stringify(this.state));
+        } catch(e) { console.warn('自动保存失败', e); }
+    }
+
+    // ===== 恋爱系统 v2 结束 ===================================================
 
 
     

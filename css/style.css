@@ -4074,4 +4074,458 @@ body {
 
 /* 旧样式已清理完毕 */
 
+/* ========================================
+   恋爱系统 v2 — Love Module
+   ======================================== */
+
+/* 加载提示 */
+.love-loading {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.love-hint-banner {
+    background: linear-gradient(135deg, rgba(201,162,39,0.12), rgba(0,62,126,0.08));
+    border: 1px solid rgba(201,162,39,0.3);
+    border-radius: var(--border-radius-sm);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+/* ---------- 候选人卡片 ---------- */
+.love-candidate-card {
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--bg-card);
+    margin-bottom: 10px;
+}
+
+.love-candidate-card:hover {
+    border-color: var(--xianjao-blue);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-1px);
+}
+
+.love-candidate-card.lc-locked {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: var(--bg-primary);
+}
+
+.love-candidate-card.lc-locked:hover {
+    border-color: var(--border-color);
+    box-shadow: none;
+    transform: none;
+}
+
+.love-candidate-card.lc-pursuing {
+    border-color: #e91e63;
+    background: linear-gradient(135deg, #fff0f5, #ffffff);
+}
+
+.lc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.lc-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.lc-badge {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-pursuing {
+    background: #fce4ec;
+    color: #c2185b;
+    border: 1px solid #f48fb1;
+}
+
+.badge-locked {
+    background: #f5f5f5;
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+}
+
+.badge-available {
+    background: #e8f5e9;
+    color: #388e3c;
+    border: 1px solid #a5d6a7;
+}
+
+.lc-special {
+    font-size: 0.72rem;
+    color: #9c27b0;
+    margin-left: 6px;
+    font-style: italic;
+}
+
+.lc-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.lc-stats {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-bottom: 6px;
+}
+
+/* 好感度进度条（候选人卡片中） */
+.lc-affinity-bar {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 6px 0 4px;
+}
+
+.lc-affinity-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f48fb1, #e91e63);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.lc-affinity-text {
+    font-size: 0.75rem;
+    color: #e91e63;
+    text-align: right;
+}
+
+.lc-unlock-cond {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.lc-story {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.5;
+    background: rgba(0,62,126,0.04);
+    border-radius: 6px;
+    padding: 6px 8px;
+}
+
+.lc-divider {
+    border: none;
+    border-top: 1px dashed var(--border-color);
+    margin: 10px 0;
+}
+
+.love-interact-entry {
+    width: 100%;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--xianjao-blue), var(--xianjao-blue-light));
+    color: #ffffff;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 8px;
+    text-align: center;
+}
+
+.love-interact-entry:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* ---------- 伴侣横幅 ---------- */
+.love-partner-banner {
+    background: linear-gradient(135deg, #fff0f5 0%, #fce4ec 100%);
+    border: 1px solid #f48fb1;
+    border-radius: var(--border-radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+
+.lp-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #c2185b;
+    margin-bottom: 2px;
+}
+
+.lp-college {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.lp-aff-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lp-aff-bar {
+    flex: 1;
+    height: 8px;
+    background: #f8bbd0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lp-aff-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f48fb1, #e91e63);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.confession-hint {
+    font-size: 0.8rem;
+    color: #9c27b0;
+    background: #f3e5f5;
+    border-radius: var(--border-radius-sm);
+    padding: 6px 10px;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* ---------- 交互菜单按钮 ---------- */
+.love-confess-btn {
+    width: 100%;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+}
+
+.love-confess-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.love-category-btn {
+    width: 100%;
+    padding: 13px 16px;
+    text-align: left;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.love-category-btn:hover {
+    border-color: #e91e63;
+    background: #fff0f5;
+    color: #c2185b;
+}
+
+.love-back-btn {
+    width: 100%;
+    padding: 9px 14px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 4px;
+}
+
+.love-back-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--text-secondary);
+}
+
+/* ---------- 子菜单选项 ---------- */
+.love-option-btn {
+    width: 100%;
+    padding: 12px 14px;
+    text-align: left;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.love-option-btn:hover {
+    border-color: var(--xianjao-blue);
+    background: rgba(0, 62, 126, 0.04);
+    transform: translateX(2px);
+}
+
+.love-option-btn strong {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.love-option-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+.love-cost {
+    font-size: 0.75rem;
+    color: #f44336;
+    background: #fff3f3;
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.love-gain {
+    font-size: 0.75rem;
+    color: #388e3c;
+    background: #f1f8e9;
+    border: 1px solid #c5e1a5;
+    border-radius: 4px;
+    padding: 1px 6px;
+}
+
+.story-chance {
+    font-size: 0.72rem;
+    color: #9c27b0;
+    background: #f3e5f5;
+    border: 1px solid #ce93d8;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: auto;
+}
+
+/* ---------- 剧情展示 ---------- */
+.love-story-block {
+    padding: 4px 0;
+}
+
+.ls-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ls-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.ls-partner {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.ls-partner strong {
+    color: #c2185b;
+}
+
+.ls-summary {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    line-height: 1.7;
+    margin-bottom: 14px;
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 10px 12px;
+    border-left: 3px solid #f48fb1;
+}
+
+.ls-divider {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    text-align: center;
+    margin: 12px 0 10px;
+    position: relative;
+}
+
+.ls-divider::before,
+.ls-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 35%;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.ls-divider::before { left: 0; }
+.ls-divider::after  { right: 0; }
+
+.love-story-choice-btn {
+    width: 100%;
+    padding: 11px 14px;
+    text-align: left;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+
+.love-story-choice-btn:hover {
+    border-color: #e91e63;
+    background: #fff0f5;
+    color: #c2185b;
+}
+
+.love-story-choice-btn .effect-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    margin-left: 6px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: #e8f5e9;
+    color: #388e3c;
+    border: 1px solid #c5e1a5;
+    vertical-align: middle;
+}
+
+.love-story-choice-btn .effect-tag.neg {
+    background: #fff3f3;
+    color: #d32f2f;
+    border-color: #ffcdd2;
+}
+
+
 

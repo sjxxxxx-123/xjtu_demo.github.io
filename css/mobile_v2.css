@@ -429,3 +429,140 @@
 .reputation-item:hover {
     background-color: #f5f5f5;
 }
+
+/* ========================================
+   恋爱系统 v2 — 移动端适配
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* 候选人卡片：减少内边距，更紧凑 */
+    .love-candidate-card {
+        padding: 11px 12px;
+        margin-bottom: 8px;
+    }
+
+    .lc-name {
+        font-size: 0.95rem;
+    }
+
+    .lc-badge {
+        font-size: 0.68rem;
+        padding: 2px 6px;
+    }
+
+    .lc-meta,
+    .lc-stats {
+        font-size: 0.75rem;
+    }
+
+    .lc-unlock-cond {
+        font-size: 0.72rem;
+    }
+
+    /* 交互按钮：全宽，更大点击区域 */
+    .love-category-btn {
+        padding: 14px 14px;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+    }
+
+    .love-option-btn {
+        padding: 12px 12px;
+    }
+
+    .love-option-btn strong {
+        font-size: 0.88rem;
+    }
+
+    .love-option-meta {
+        gap: 4px;
+    }
+
+    .love-cost,
+    .love-gain,
+    .story-chance {
+        font-size: 0.7rem;
+        padding: 1px 5px;
+    }
+
+    /* 伴侣横幅 */
+    .love-partner-banner {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+    }
+
+    .lp-name {
+        font-size: 0.95rem;
+    }
+
+    .lp-college {
+        font-size: 0.75rem;
+    }
+
+    /* 剧情弹窗 */
+    .ls-summary {
+        font-size: 0.85rem;
+        padding: 8px 10px;
+        line-height: 1.65;
+    }
+
+    .ls-icon {
+        font-size: 1.5rem;
+    }
+
+    .ls-partner {
+        font-size: 0.8rem;
+    }
+
+    .love-story-choice-btn {
+        padding: 10px 12px;
+        font-size: 0.84rem;
+    }
+
+    /* 提示横幅 */
+    .love-hint-banner {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+    }
+
+    /* 表白/返回按钮 */
+    .love-confess-btn {
+        padding: 11px 14px;
+    }
+
+    .love-back-btn {
+        padding: 10px 14px;
+        font-size: 0.82rem;
+    }
+
+    /* 进入互动按钮 */
+    .love-interact-entry {
+        padding: 13px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+/* 超小屏幕（ iPhone SE 等，< 375px） */
+@media (max-width: 374px) {
+    .love-candidate-card {
+        padding: 9px 10px;
+    }
+
+    .lc-header {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .love-option-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .story-chance {
+        margin-left: 0;
+    }
+
+    .ls-summary {
+        font-size: 0.82rem;
+    }
+}
