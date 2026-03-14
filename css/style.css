@@ -4216,6 +4216,14 @@ body {
     color: var(--text-light);
     margin-top: 4px;
     font-style: italic;
+    line-height: 1.6;
+}
+
+/* 解锁条件中高亮当前属性值 */
+.lc-unlock-cond b {
+    font-style: normal;
+    color: var(--text-secondary);
+    font-weight: 600;
 }
 
 .lc-story {
@@ -4364,6 +4372,18 @@ body {
 .love-back-btn:hover {
     background: var(--bg-primary);
     border-color: var(--text-secondary);
+}
+
+/* 分手按钮 */
+.love-breakup-btn {
+    margin-top: 12px;
+    color: #d32f2f !important;
+    border-color: #ffcdd2 !important;
+}
+
+.love-breakup-btn:hover {
+    background: #fff5f5 !important;
+    border-color: #d32f2f !important;
 }
 
 /* ---------- 子菜单选项 ---------- */

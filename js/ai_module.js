@@ -851,20 +851,23 @@ const AIModule = (function() {
 
     // ===== 恋爱系统 v2 - AI 生成逻辑 =====
 
-    /** 恋爱候选对象生成 System Prompt */
-    const LOVE_CANDIDATE_SYSTEM_PROMPT = `你是鲜椒本科模拟器的恋爱系统策划。请根据玩家信息生成3个有档次差异的恋爱候选对象（A、B、C档）。
+    // 候选对象数量与 game.js XianjaoSimulator.LOVE_CANDIDATE_COUNT 保持同步（当前 = 6）
+    const LOVE_CANDIDATE_COUNT_AI = 6;
+
+    /** 恋爱候选对象生成 System Prompt（支持 6 人，A/B/C 各 2 名）*/
+    const LOVE_CANDIDATE_SYSTEM_PROMPT = `你是鲜椒本科模拟器的恋爱系统策划。请根据玩家信息生成6个有档次差异的恋爱候选对象（A、B、C档各2人）。
 
 【字段要求】
-- id: "candidate_a" / "candidate_b" / "candidate_c"
-- name: 中文姓名，符合大学生
+- id: 按顺序填 "candidate_a" / "candidate_a2" / "candidate_b" / "candidate_b2" / "candidate_c" / "candidate_c2"
+- name: 中文姓名，符合大学生，6人各不相同
 - college: 必须是西安交大9大书院之一（彭康/文治/仲英/南洋/崇实/励志/宗濂/启德/钱学森书院）
-- gender: "男" 或 "女"
+- gender: "男" 或 "女"（默认与玩家异性，最多1个同性候选且 isSpecial=true）
 - money: 数字（A档2000-3500，B档3500-6000，C档7000-12000）
 - reputation: 数字（A档35-55，B档55-75，C档75-95）
-- personality: 2-4个性格标签，用"·"分隔
-- unlockTier: "A" / "B" / "C"
-- storySeed: 一句话描述相识场景
-- isSpecial: 布尔值（是否同性候选，仅允许1个）
+- personality: 2-4个性格标签，用"·"分隔，各人要有差异
+- unlockTier: A档填"A"，B档填"B"，C档填"C"
+- storySeed: 一句话描述相识场景，各人要不同
+- isSpecial: 布尔值（仅允许最多1个同性候选为true，其余全为false）
 
 【重要】只返回JSON，不要包含其他文本：
 {"candidates":[{"id":"candidate_a","name":"...","college":"...","gender":"...","money":0,"reputation":0,"personality":"...","unlockTier":"A","storySeed":"...","isSpecial":false},...]}`;
@@ -899,11 +902,13 @@ const AIModule = (function() {
             'zonglian': '宗濂书院', 'qide': '启德书院', 'qianxuesen': '钱学森书院'
         };
         const collegeName = collegeNameMap[playerInfo.college] || playerInfo.college;
-        const playerGender = playerInfo.gender || '男';
+        // 归一化：兼容 game.js 传来的 'male'/'female'/'男'/'女' 等各种形式
+        const _pg = playerInfo.gender || '';
+        const playerGender = (_pg === 'female' || _pg === '女') ? '女' : '男';
         const mainTargetGender = playerGender === '女' ? '男' : '女';
 
         const userPrompt = `玩家信息：书院=${collegeName}，性别=${playerGender}，大${playerInfo.year}，GPA=${(playerInfo.gpa||3).toFixed(2)}，声望=${playerInfo.reputation||50}，综测=${playerInfo.social||60}，金币=${playerInfo.money||1000}。
-生成3个候选对象，主要性别为${mainTargetGender}，允许1个特殊同性候选对象（isSpecial:true）。A档容易解锁（低属性），B档中等，C档需要高声望+高GPA。`;
+生成6个候选对象（A/B/C档各2人），主要性别为${mainTargetGender}，允许最多1个特殊同性候选对象（isSpecial:true）。A档容易解锁（低属性），B档中等，C档需要高声望+高GPA。每人性格、书院、故事各不相同。`;
 
         const maxRetries = 3;
         const attemptedModels = new Set();
@@ -945,19 +950,33 @@ const AIModule = (function() {
 
                 const parsed = JSON.parse(jsonStr);
                 if (parsed && Array.isArray(parsed.candidates) && parsed.candidates.length >= 3) {
-                    const tiers = ['A', 'B', 'C'];
-                    return parsed.candidates.slice(0, 3).map((c, i) => ({
-                        id: c.id || `candidate_${['a','b','c'][i]}`,
-                        name: c.name || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].name : '未知'),
-                        college: c.college || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].college : '南洋书院'),
-                        gender: c.gender || mainTargetGender,
-                        money: Number(c.money) || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].money : 3000),
-                        reputation: Number(c.reputation) || (fallbackCandidates && fallbackCandidates[i] ? fallbackCandidates[i].reputation : 50),
-                        personality: c.personality || '阳光开朗',
-                        unlockTier: tiers[i],
-                        storySeed: c.storySeed || '在校园中偶然相遇',
-                        isSpecial: Boolean(c.isSpecial)
-                    }));
+                    // id 顺序与 unlockTier 的对应关系（6 人版）
+                    const idList  = ['candidate_a','candidate_a2','candidate_b','candidate_b2','candidate_c','candidate_c2'];
+                    const tierMap = { candidate_a:'A', candidate_a2:'A', candidate_b:'B', candidate_b2:'B', candidate_c:'C', candidate_c2:'C' };
+
+                    // 取前 LOVE_CANDIDATE_COUNT_AI 个，不足则用 fallback 补齐
+                    const raw = parsed.candidates.slice(0, LOVE_CANDIDATE_COUNT_AI);
+                    while (raw.length < LOVE_CANDIDATE_COUNT_AI) {
+                        const fi = raw.length;
+                        raw.push(fallbackCandidates && fallbackCandidates[fi] ? fallbackCandidates[fi] : { id: idList[fi] });
+                    }
+
+                    return raw.map((c, i) => {
+                        const fb = fallbackCandidates && fallbackCandidates[i];
+                        const expectedId = idList[i];
+                        return {
+                            id: expectedId,                           // 强制使用预期 id，避免 AI 乱填
+                            name: c.name || (fb ? fb.name : '未知'),
+                            college: c.college || (fb ? fb.college : '南洋书院'),
+                            gender: c.gender || mainTargetGender,
+                            money: Number(c.money) || (fb ? fb.money : 3000),
+                            reputation: Number(c.reputation) || (fb ? fb.reputation : 50),
+                            personality: c.personality || (fb ? fb.personality : '阳光开朗'),
+                            unlockTier: tierMap[expectedId] || (fb ? fb.unlockTier : 'A'),
+                            storySeed: c.storySeed || (fb ? fb.storySeed : '在校园中偶然相遇'),
+                            isSpecial: Boolean(c.isSpecial)
+                        };
+                    });
                 }
             } catch (e) {
                 markModelFailure(selectedModel, e && e.message ? e.message : e);

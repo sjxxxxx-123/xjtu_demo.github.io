@@ -5,6 +5,9 @@
  */
 
 class XianjaoSimulator {
+    /** 恋爱候选对象总数（统一修改此处即可调整全局生成数量）*/
+    static get LOVE_CANDIDATE_COUNT() { return 6; }
+
     constructor() {
     // 游戏状态
     this.state = null;
@@ -631,12 +634,14 @@ class XianjaoSimulator {
             relationshipMonth: 0, // 恋爱持续月数
 
             // ===== 恋爱系统 v2 - 多对象系统 =====
-            loveCandidates: null,        // 3个恋爱候选对象（持久化，避免重复生成）
-            selectedLoveInterest: null,  // 当前追求的候选对象 id
-            loveAffinity: {},            // 各候选对象好感度 { candidateId: 0~100 }
-            unlockedLoveStories: [],     // 已触发的剧情标题列表
-            loveEventHistory: [],        // 恋爱事件历史
-            loveInteractionCount: 0,     // 本月恋爱互动次数
+            loveCandidates: null,              // 候选对象列表（持久化，避免重复生成）
+            selectedLoveInterest: null,        // 当前追求的候选对象 id
+            loveAffinity: {},                  // 各候选对象好感度 { candidateId: 0~100 }
+            unlockedLoveStories: [],           // 已触发的剧情标题列表
+            loveEventHistory: [],              // 恋爱事件历史
+            loveInteractionCount: 0,           // 本月恋爱互动次数
+            lastLoveInteractionMonth: 0,       // 最近一次恋爱互动的绝对月序（year*12+month），0=从未
+            loveNeglectMonths: 0,              // 连续忽视恋爱的月数（用于衰减计算）
 
             // 创新港debuff
             iHarbourDebuff: false // 创新港进城难debuff
@@ -2527,60 +2532,134 @@ class XianjaoSimulator {
         if (typeof this.state.loveInteractionCount !== 'number') {
             this.state.loveInteractionCount = 0;
         }
+        // 冷落衰减字段（新增，旧存档自动补默认值）
+        if (typeof this.state.lastLoveInteractionMonth !== 'number') {
+            this.state.lastLoveInteractionMonth = 0;
+        }
+        if (typeof this.state.loveNeglectMonths !== 'number') {
+            this.state.loveNeglectMonths = 0;
+        }
     }
 
     /**
-     * 获取本地 fallback 候选对象（根据玩家性别调整性别分布）
+     * 将 state.gender（可能是 'male'/'female'/'男'/'女'/'unknown'/''）
+     * 统一转换成中文 '男' / '女'，未知时默认 '男'
+     * @returns {'男'|'女'}
+     */
+    _resolvePlayerGenderCN() {
+        const g = this.state.gender || '';
+        if (g === '女' || g === 'female') return '女';
+        if (g === '男' || g === 'male')   return '男';
+        return '男'; // 未知 / 空：fallback 默认男
+    }
+
+    /**
+     * 根据玩家性别决定恋爱对象性别
+     * - 默认返回异性
+     * - allowSame=true 时，有 13% 概率触发同性特殊候选（仅 A 档）
+     * @param {'男'|'女'} playerGenderCN  已归一化的玩家中文性别
+     * @param {boolean} allowSame         是否允许同性（B/C 档传 false）
+     * @returns {{ gender: '男'|'女', isSpecial: boolean }}
+     */
+    _rollLoveInterestGender(playerGenderCN, allowSame = false) {
+        const opposite = playerGenderCN === '女' ? '男' : '女';
+        if (allowSame && Math.random() < 0.13) {
+            return { gender: playerGenderCN, isSpecial: true };
+        }
+        return { gender: opposite, isSpecial: false };
+    }
+
+    /**
+     * 获取本地 fallback 候选对象
+     * 数量由 XianjaoSimulator.LOVE_CANDIDATE_COUNT 控制（当前 = 6）
+     * 分布：2 个 A 档（含特殊）、2 个 B 档、2 个 C 档
      */
     _getDefaultLoveCandidates() {
-        const playerGender = this.state.gender || '男';
-        const isFemalePl = playerGender === '女';
-        const mainOpp = isFemalePl ? '男' : '女';
-        // 10-15% 概率 A档为同性候选（隐藏特殊对象）
-        const hasSpecial = Math.random() < 0.13;
+        const playerGenderCN = this._resolvePlayerGenderCN();
+        const isFemalePl = playerGenderCN === '女';
+        const mainOpp = playerGenderCN === '女' ? '男' : '女';
+        // A1 档：13% 概率同性特殊候选
+        const { gender: a1Gender, isSpecial: a1Special } = this._rollLoveInterestGender(playerGenderCN, true);
+        // A2 档：固定异性
+        const { gender: a2Gender } = this._rollLoveInterestGender(playerGenderCN, false);
 
         const randItem = arr => arr[Math.floor(Math.random() * arr.length)];
-        const nameA_opp = isFemalePl ? ['林晓阳','王子涵','张明轩','刘浩然','何宇诚'] : ['林晓雨','王思颖','张雨桐','刘欣然','何心怡'];
-        const nameA_same = isFemalePl ? ['陈艺琳','苏子涵','白晓童'] : ['周浩宇','李明远','肖子奕'];
-        const nameB_opp = isFemalePl ? ['陈思远','李浩宇','赵天朗','吴栋梁'] : ['陈思雨','李慕涵','赵婉仪','吴心怡'];
-        const nameC_opp = isFemalePl ? ['沈宇轩','江凌峰','叶辰远','顾北辰'] : ['沈宇婷','江凌月','叶知秋','顾晴岚'];
 
-        // B档对应书院：与玩家书院不同，制造"他者感"
+        // 各档男/女姓名池（根据玩家性别选异性 / 同性名字）
+        const names = {
+            A_opp:  isFemalePl ? ['林晓阳','王子涵','张明轩','刘浩然','何宇诚','陈宇轩'] : ['林晓雨','王思颖','张雨桐','刘欣然','何心怡','陈雨薇'],
+            A_same: isFemalePl ? ['陈艺琳','苏子涵','白晓童'] : ['周浩宇','李明远','肖子奕'],
+            A2_opp: isFemalePl ? ['许晨风','程子墨','余皓然','魏浩宇'] : ['许晨曦','程雨婷','余心悦','魏思琪'],
+            B_opp:  isFemalePl ? ['陈思远','李浩宇','赵天朗','吴栋梁'] : ['陈思雨','李慕涵','赵婉仪','吴心怡'],
+            B2_opp: isFemalePl ? ['方宇飞','罗俊豪','叶嘉平','庄浩然'] : ['方雨萱','罗心怡','叶佳慧','庄晓雯'],
+            C_opp:  isFemalePl ? ['沈宇轩','江凌峰','叶辰远','顾北辰'] : ['沈宇婷','江凌月','叶知秋','顾晴岚'],
+            C2_opp: isFemalePl ? ['裴子恒','谢云峰','纪承泽','穆星辰'] : ['裴子瑶','谢云汐','纪文婷','穆晴川']
+        };
+
+        // B 档书院：与玩家书院不同，制造"他者感"
         const bCollegeMap = {
             pengkang:'南洋书院', wenzhi:'仲英书院', zhongying:'崇实书院',
             nanyang:'彭康书院', chongshi:'南洋书院', lizhi:'钱学森书院',
             zonglian:'励志书院', qide:'南洋书院', qianxuesen:'文治书院'
         };
-        const bCollege = bCollegeMap[this.state.college] || '南洋书院';
+        const bCollege  = bCollegeMap[this.state.college] || '南洋书院';
+        const b2College = ['励志书院','仲英书院','彭康书院','文治书院'].filter(c => c !== bCollege)[0] || '励志书院';
 
         return [
+            // ── A 档（容易解锁，社交型）──
             {
                 id: 'candidate_a',
-                name: hasSpecial ? randItem(nameA_same) : randItem(nameA_opp),
+                name: a1Special ? randItem(names.A_same) : randItem(names.A_opp),
                 college: '崇实书院',
-                gender: hasSpecial ? playerGender : mainOpp,
+                gender: a1Gender,
                 money: 2200 + Math.floor(Math.random() * 1200),
                 reputation: 38 + Math.floor(Math.random() * 18),
                 personality: '阳光开朗·热爱生活',
                 unlockTier: 'A',
                 storySeed: '在社团活动中相识，因共同的爱好慢慢走近',
-                isSpecial: hasSpecial
+                isSpecial: a1Special
             },
             {
+                id: 'candidate_a2',
+                name: randItem(names.A2_opp),
+                college: '励志书院',
+                gender: a2Gender,
+                money: 2400 + Math.floor(Math.random() * 1000),
+                reputation: 35 + Math.floor(Math.random() * 20),
+                personality: '活泼可爱·文艺爱好者',
+                unlockTier: 'A',
+                storySeed: '在校园集市上偶然搭话，一见如故',
+                isSpecial: false
+            },
+            // ── B 档（中等解锁，技术/学术型）──
+            {
                 id: 'candidate_b',
-                name: randItem(nameB_opp),
+                name: randItem(names.B_opp),
                 college: bCollege,
                 gender: mainOpp,
                 money: 3800 + Math.floor(Math.random() * 2000),
                 reputation: 58 + Math.floor(Math.random() * 18),
                 personality: '踏实努力·技术达人',
                 unlockTier: 'B',
-                storySeed: '在一次竞赛备赛中相遇，技术上的默契让彼此走近',
+                storySeed: '在竞赛备赛中相遇，技术上的默契让彼此走近',
                 isSpecial: false
             },
             {
+                id: 'candidate_b2',
+                name: randItem(names.B2_opp),
+                college: b2College,
+                gender: mainOpp,
+                money: 4000 + Math.floor(Math.random() * 1800),
+                reputation: 55 + Math.floor(Math.random() * 20),
+                personality: '内敛稳重·书卷气息',
+                unlockTier: 'B',
+                storySeed: '图书馆里总是在同一角落刷题，后来开始互借笔记',
+                isSpecial: false
+            },
+            // ── C 档（高门槛解锁，精英型）──
+            {
                 id: 'candidate_c',
-                name: randItem(nameC_opp),
+                name: randItem(names.C_opp),
                 college: '钱学森书院',
                 gender: mainOpp,
                 money: 7500 + Math.floor(Math.random() * 3000),
@@ -2588,6 +2667,18 @@ class XianjaoSimulator {
                 personality: '冷静睿智·学院风云',
                 unlockTier: 'C',
                 storySeed: '在学术论坛上相识，被深厚的学识所折服',
+                isSpecial: false
+            },
+            {
+                id: 'candidate_c2',
+                name: randItem(names.C2_opp),
+                college: '文治书院',
+                gender: mainOpp,
+                money: 8000 + Math.floor(Math.random() * 4000),
+                reputation: 80 + Math.floor(Math.random() * 15),
+                personality: '博学多才·淡泊名利',
+                unlockTier: 'C',
+                storySeed: '一次国际交流活动上偶然搭档，被TA的从容深深吸引',
                 isSpecial: false
             }
         ];
@@ -2602,20 +2693,56 @@ class XianjaoSimulator {
             case 'A':
                 return {
                     description: 'GPA ≥ 2.5 且综测 ≥ 50，或声望 ≥ 40',
-                    check: s => (s.gpa >= 2.5 && s.social >= 50) || s.reputation >= 40
+                    check: s => (s.gpa >= 2.5 && s.social >= 50) || s.reputation >= 40,
+                    // 实时当前值描述——每次渲染时从 state 读取，确保同步
+                    getCurrentDesc: s => {
+                        const gpa = (s.gpa || 0).toFixed(2);
+                        const social = s.social || 0;
+                        const rep = s.reputation || 0;
+                        const cond1Met = s.gpa >= 2.5 && s.social >= 50;
+                        const cond2Met = s.reputation >= 40;
+                        return `GPA ≥ 2.5（当前 <b>${gpa}</b>）且 综测 ≥ 50（当前 <b>${social}</b>）` +
+                               `${cond1Met ? ' ✅' : ''}，` +
+                               `或 声望 ≥ 40（当前 <b>${rep}</b>）${cond2Met ? ' ✅' : ''}`;
+                    }
                 };
             case 'B':
                 return {
                     description: 'GPA ≥ 3.2 且综测 ≥ 65，或声望 ≥ 65',
-                    check: s => (s.gpa >= 3.2 && s.social >= 65) || s.reputation >= 65
+                    check: s => (s.gpa >= 3.2 && s.social >= 65) || s.reputation >= 65,
+                    getCurrentDesc: s => {
+                        const gpa = (s.gpa || 0).toFixed(2);
+                        const social = s.social || 0;
+                        const rep = s.reputation || 0;
+                        const cond1Met = s.gpa >= 3.2 && s.social >= 65;
+                        const cond2Met = s.reputation >= 65;
+                        return `GPA ≥ 3.2（当前 <b>${gpa}</b>）且 综测 ≥ 65（当前 <b>${social}</b>）` +
+                               `${cond1Met ? ' ✅' : ''}，` +
+                               `或 声望 ≥ 65（当前 <b>${rep}</b>）${cond2Met ? ' ✅' : ''}`;
+                    }
                 };
             case 'C':
                 return {
                     description: 'GPA ≥ 3.8 且综测 ≥ 80 且声望 ≥ 80，或金币 ≥ 8000',
-                    check: s => (s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80) || s.money >= 8000
+                    check: s => (s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80) || s.money >= 8000,
+                    getCurrentDesc: s => {
+                        const gpa = (s.gpa || 0).toFixed(2);
+                        const social = s.social || 0;
+                        const rep = s.reputation || 0;
+                        const money = s.money || 0;
+                        const cond1Met = s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80;
+                        const cond2Met = s.money >= 8000;
+                        return `GPA ≥ 3.8（当前 <b>${gpa}</b>）且 综测 ≥ 80（当前 <b>${social}</b>）` +
+                               `且 声望 ≥ 80（当前 <b>${rep}</b>）${cond1Met ? ' ✅' : ''}，` +
+                               `或 金币 ≥ 8000（当前 <b>${money}</b>）${cond2Met ? ' ✅' : ''}`;
+                    }
                 };
             default:
-                return { description: '无条件', check: () => true };
+                return {
+                    description: '无条件',
+                    check: () => true,
+                    getCurrentDesc: () => '无条件'
+                };
         }
     }
 
@@ -2629,14 +2756,15 @@ class XianjaoSimulator {
      * 已持久化到 state.loveCandidates 则直接返回
      */
     async generateLoveCandidates() {
-        if (Array.isArray(this.state.loveCandidates) && this.state.loveCandidates.length === 3) {
+        const targetCount = XianjaoSimulator.LOVE_CANDIDATE_COUNT;
+        if (Array.isArray(this.state.loveCandidates) && this.state.loveCandidates.length === targetCount) {
             return this.state.loveCandidates; // 已生成，直接复用
         }
         const fallback = this._getDefaultLoveCandidates();
         try {
             const playerInfo = {
                 college: this.state.college,
-                gender: this.state.gender || '男',
+                gender: this._resolvePlayerGenderCN(), // 归一化为 '男'/'女' 后传给 AI
                 year: this.state.year,
                 gpa: this.state.gpa,
                 reputation: this.state.reputation,
@@ -2644,7 +2772,7 @@ class XianjaoSimulator {
                 money: this.state.money
             };
             const aiResult = await AIModule.fetchLoveCandidates(playerInfo, fallback);
-            if (aiResult && aiResult.length === 3) {
+            if (aiResult && aiResult.length === targetCount) {
                 this.state.loveCandidates = aiResult;
                 return aiResult;
             }
@@ -2759,7 +2887,11 @@ class XianjaoSimulator {
                     <span>🏷️ ${candidate.personality}</span>
                 </div>
                 ${isPursuing ? `<div class="lc-affinity-bar"><div class="lc-affinity-fill" style="width:${aff}%"></div><span class="lc-affinity-text">好感度 ${aff}/100</span></div>` : ''}
-                ${!unlocked ? `<div class="lc-unlock-cond">🔒 解锁条件：${cond.description}</div>` : `<div class="lc-story">"${candidate.storySeed}"</div>`}
+                ${!unlocked
+                    // getCurrentDesc 带有实时 state 值，每次打开弹窗都重新读取，确保同步
+                    ? `<div class="lc-unlock-cond">🔒 ${cond.getCurrentDesc ? cond.getCurrentDesc(this.state) : cond.description}</div>`
+                    : `<div class="lc-story">"${candidate.storySeed}"</div>`
+                }
             `;
 
             card.addEventListener('click', () => {
@@ -2894,6 +3026,21 @@ class XianjaoSimulator {
             });
             container.appendChild(btn);
         });
+
+        // 分手按钮（仅在正式恋爱状态下显示）
+        if (this.state.inRelationship) {
+            const breakupBtn = document.createElement('button');
+            breakupBtn.className = 'choice-btn love-back-btn love-breakup-btn';
+            breakupBtn.innerHTML = `
+                <div class="choice-btn-name">💔 提出分手</div>
+                <div class="choice-btn-desc">结束这段恋爱关系，会影响声望</div>
+            `;
+            breakupBtn.addEventListener('click', () => {
+                this.hideModal('choice-modal');
+                this._confirmBreakup(candidate);
+            });
+            container.appendChild(breakupBtn);
+        }
     }
 
     /**
@@ -3034,6 +3181,9 @@ class XianjaoSimulator {
 
         // 记录历史
         this.state.loveInteractionCount = (this.state.loveInteractionCount || 0) + 1;
+        // 更新最近互动月份（用于冷落衰减检测），同时重置冷落计数
+        this.state.lastLoveInteractionMonth = this.state.year * 12 + this.state.month;
+        this.state.loveNeglectMonths = 0;
         this.state.loveEventHistory.push({
             month: this.state.month, year: this.state.year,
             type: categoryName, subType: interaction.id,
@@ -3112,6 +3262,86 @@ class XianjaoSimulator {
                 `<p>${candidate.name}婉拒了你的表白，时机也许还不够成熟？</p>
                  <p>继续互动增进好感，再试一次吧！</p>`);
         }
+        this.saveGame();
+        this.updateUI();
+    }
+
+    // =====================================================================
+    // ===== 分手系统 =====
+    // =====================================================================
+
+    /**
+     * 分手二次确认弹窗
+     * 用 showMessage 复用现有 modal，不新建弹窗
+     */
+    _confirmBreakup(candidate) {
+        const name = candidate ? candidate.name : 'TA';
+        this.showMessage('💔 提出分手',
+            `<div style="text-align:center;padding:8px 0;">
+                <p>你确定要和 <strong>${name}</strong> 分手吗？</p>
+                <p style="color:#999;font-size:0.85rem;margin-top:8px;">
+                    分手会影响你的声望，这段感情的回忆依然会保留。
+                </p>
+                <div style="display:flex;gap:10px;margin-top:16px;justify-content:center;">
+                    <button style="background:#f5f5f5;border:1px solid #ddd;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:0.9rem;"
+                        onclick="document.getElementById('modal').classList.remove('active');">
+                        再想想
+                    </button>
+                    <button style="background:#d32f2f;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:0.9rem;"
+                        onclick="document.getElementById('modal').classList.remove('active'); game.breakupWithLoveInterest();">
+                        确认分手
+                    </button>
+                </div>
+            </div>`
+        );
+    }
+
+    /**
+     * 执行分手逻辑
+     * - 保留 loveCandidates、loveAffinity（适当下调）、loveEventHistory
+     * - 清除当前恋爱关系字段
+     * - 通过 changeReputation 扣声望（让日志、BBS、成就走统一通道）
+     */
+    breakupWithLoveInterest() {
+        this.ensureLoveStateFields();
+        const partnerId = this.state.selectedLoveInterest;
+        const partner = (this.state.loveCandidates || []).find(c => c.id === partnerId);
+        const partnerName = partner ? partner.name : 'TA';
+
+        // 声望惩罚（走统一 changeReputation，自动触发 BBS 和日志）
+        this.changeReputation(-8, `和${partnerName}分手`);
+
+        // 好感度下调（保留历史，不归零，便于后续重新追求）
+        if (this.state.loveAffinity && partnerId) {
+            const curAff = this.state.loveAffinity[partnerId] || 0;
+            this.state.loveAffinity[partnerId] = Math.max(0, curAff - 20);
+        }
+
+        // 重置恋爱关系核心字段
+        this.state.inRelationship = false;
+        this.state.relationshipStage = 'breakup';
+        this.state.relationshipMonth = 0;
+        this.state.selectedLoveInterest = null;   // 分手后清空，允许重新追求
+        this.state.lastLoveInteractionMonth = 0;
+        this.state.loveNeglectMonths = 0;
+
+        // 同步成就系统标记
+        AchievementSystem.stats.inRelationship = false;
+
+        // 分手打击：SAN 小幅下降
+        this.state.san = Math.max(0, this.state.san - 8);
+        this.addLog(`💔 你和${partnerName}分手了，SAN -8。感情的事，多保重。`, 'warning');
+
+        this.showMessage('💔 分手了',
+            `<div style="text-align:center;padding:12px 0;">
+                <div style="font-size:2rem;margin-bottom:8px;">💔</div>
+                <p>你和${partnerName}的这段感情结束了。</p>
+                <p style="color:#999;font-size:0.85rem;margin-top:8px;">
+                    好好照顾自己，未来还有很多可能。
+                </p>
+            </div>`
+        );
+
         this.saveGame();
         this.updateUI();
     }
@@ -3891,7 +4121,10 @@ class XianjaoSimulator {
 
         // 更新SAN记录
         AchievementSystem.updateSanRecord(this.state.san);
-        
+
+        // 恋爱冷落衰减检查（月结算统一节点，避免分散处理）
+        this.applyLoveNeglectDecay();
+
         // 自动保存游戏状态 (静默保存，不弹窗)
         this.saveGame(true);
 
@@ -3910,6 +4143,60 @@ class XianjaoSimulator {
     applyMonthlyMasteryDecay() {
         // 关闭掌握度随时间衰减，避免无行动下降
         return;
+    }
+
+    /**
+     * 恋爱关系冷落衰减（每月结算时调用）
+     * 规则：
+     *   - 仅在已恋爱（inRelationship=true）且有新版选定对象时触发
+     *   - 若距上次互动超过 1 个月，每月扣好感度，连续越久扣越多（上限 15）
+     *   - 若已分手或未建立关系，跳过
+     */
+    applyLoveNeglectDecay() {
+        if (!this.state.inRelationship || !this.state.selectedLoveInterest) return;
+        if (this.state.selectedLoveInterest === 'legacy_partner') return; // 旧存档兼容
+
+        const currentAbsMonth = this.state.year * 12 + this.state.month;
+        const lastInteractAbsMonth = this.state.lastLoveInteractionMonth || 0;
+
+        // 旧存档没有记录时，本月宽容处理：初始化后跳过
+        if (lastInteractAbsMonth === 0) {
+            this.state.lastLoveInteractionMonth = currentAbsMonth;
+            return;
+        }
+
+        const monthsGap = currentAbsMonth - lastInteractAbsMonth;
+        if (monthsGap <= 1) {
+            // 1 个月内有过互动，不衰减，重置连续冷落计数
+            this.state.loveNeglectMonths = 0;
+            return;
+        }
+
+        // 超过 1 个月未互动：累计冷落月数并扣减好感
+        this.state.loveNeglectMonths = (this.state.loveNeglectMonths || 0) + 1;
+        const neglected = this.state.loveNeglectMonths;
+        // 第1次 -5，之后每月额外 -3，最多 -15
+        const decay = Math.min(15, 5 + Math.max(0, neglected - 1) * 3);
+
+        if (!this.state.loveAffinity) this.state.loveAffinity = {};
+        const partnerId = this.state.selectedLoveInterest;
+        const curAff = this.state.loveAffinity[partnerId] || 0;
+        const newAff = Math.max(0, curAff - decay);
+        this.state.loveAffinity[partnerId] = newAff;
+
+        const partner = (this.state.loveCandidates || []).find(c => c.id === partnerId);
+        const partnerName = partner ? partner.name : 'TA';
+
+        if (neglected === 1) {
+            this.addLog(`💔 你最近冷落了${partnerName}，好感度 -${decay}（现: ${newAff}/100）`, 'warning');
+        } else {
+            this.addLog(`💔 你已连续 ${neglected} 个月冷落${partnerName}，TA 很失落… 好感度 -${decay}（现: ${newAff}/100）`, 'warning');
+        }
+
+        // 好感跌破 20 额外警告
+        if (newAff <= 20 && curAff > 20) {
+            this.addLog(`⚠️ ${partnerName}对你的感情已岌岌可危，快去互动吧！`, 'warning');
+        }
     }
 
     // 推进月份
