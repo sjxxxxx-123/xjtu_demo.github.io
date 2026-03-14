@@ -8,6 +8,72 @@ class XianjaoSimulator {
     /** 恋爱候选对象总数（统一修改此处即可调整全局生成数量）*/
     static get LOVE_CANDIDATE_COUNT() { return 6; }
 
+    /** 社团定义 */
+    static get CLUB_DEFINITIONS() {
+        return [
+            {
+                id: 'acm',
+                name: 'ACM竞赛队',
+                icon: '💻',
+                desc: '练习算法题，打各类程序竞赛',
+                energyCost: 3,
+                effects: { san: -2, social: 3, gpa: 0.02 },
+                log: '💻 在ACM机房肝题，大脑飞速转动...',
+                storyTags: ['算法题', '比赛', 'OJ系统', '大神学长']
+            },
+            {
+                id: 'art',
+                name: '文艺社',
+                icon: '🎭',
+                desc: '音乐、话剧、舞蹈，陶冶情操',
+                energyCost: 2,
+                effects: { san: 5, social: 6, charm: 3 },
+                log: '🎭 参加文艺社排练，心情舒畅！',
+                storyTags: ['演出', '排练', '舞台', '表演']
+            },
+            {
+                id: 'volunteer',
+                name: '公益协会',
+                icon: '🤝',
+                desc: '组织校内外公益活动',
+                energyCost: 2,
+                effects: { san: 2, social: 8, reputation: 2 },
+                log: '🤝 参与公益活动，综测和声望双提升！',
+                storyTags: ['支教', '献血', '环保', '社区']
+            },
+            {
+                id: 'sports',
+                name: '体育协会',
+                icon: '⚽',
+                desc: '踢球、打球、跑步，锻炼身体',
+                energyCost: 2,
+                effects: { san: 6, social: 4, energy: 1 },
+                log: '⚽ 汗流浃背的运动，精神百倍！',
+                storyTags: ['球赛', '训练', '比赛', '队友']
+            },
+            {
+                id: 'research',
+                name: '学术科研社',
+                icon: '🔬',
+                desc: '参与课题讨论、科研入门',
+                energyCost: 3,
+                effects: { san: -3, gpa: 0.03, reputation: 1 },
+                log: '🔬 参加科研组讨论，收获满满...',
+                storyTags: ['论文', '实验', '导师', '课题']
+            },
+            {
+                id: 'startup',
+                name: '创业社',
+                icon: '🚀',
+                desc: '商业策划、创新创业',
+                energyCost: 2,
+                effects: { san: -1, social: 5, money: 50 },
+                log: '🚀 头脑风暴创业方案，思维碰撞！',
+                storyTags: ['路演', '商业计划', '投资人', '创业']
+            }
+        ];
+    }
+
     constructor() {
     // 游戏状态
     this.state = null;
@@ -49,6 +115,7 @@ class XianjaoSimulator {
             this.state = JSON.parse(savedState);
             this.normalizeStateIntegers();
             this.ensureLoveStateFields(); // 兼容旧存档，补全恋爱v2字段
+            this.ensureClubStateFields(); // 兼容旧存档，补全社团字段
             this.selectedBackground = this.state.background;
             this.selectedCollege = this.state.college;
         } else if (characterData) {
@@ -644,7 +711,10 @@ class XianjaoSimulator {
             loveNeglectMonths: 0,              // 连续忽视恋爱的月数（用于衰减计算）
 
             // 创新港debuff
-            iHarbourDebuff: false // 创新港进城难debuff
+            iHarbourDebuff: false, // 创新港进城难debuff
+
+            // ===== 社团系统 =====
+            joinedClubs: [] // 已加入的社团 id 列表
         };
 
         // 钱学森书院特殊初始化
@@ -866,12 +936,18 @@ class XianjaoSimulator {
     }
 
     getAttendBaseGain() {
-        return 3.0 * this.state.studyEfficiency * this.getMonthMultiplier();
+        return 2.0 * this.state.studyEfficiency * this.getMonthMultiplier();
     }
 
     getStudyBaseGain(location) {
         const bonus = location ? (location.masteryBonus || 1) : 1;
-        return 5.0 * bonus * this.state.studyEfficiency * this.getMonthMultiplier();
+        return 3.5 * bonus * this.state.studyEfficiency * this.getMonthMultiplier();
+    }
+
+    // 掌握度递减收益：mastery 越高，实际增量越小
+    _calcMasteryGain(baseGain, currentMastery) {
+        const factor = 1 / (1 + currentMastery / 50);
+        return baseGain * factor;
     }
 
     getSemesterKey() {
@@ -1382,32 +1458,35 @@ class XianjaoSimulator {
     
     // 全部课程上课（均衡学习）
     doAttendClassAll() {
+        const snap = this._snapshotState();
         const energyCost = this.getAttendClassEnergy();
         this.state.energy -= energyCost;
-        
+
         // 记录上课
         AchievementSystem.recordAttendClass();
         AchievementSystem.resetLateWakeup();
 
         // 文治书院迟到判定
-        let masteryGain = this.getAttendBaseGain();
+        let masteryGainBase = this.getAttendBaseGain();
         let lateToClass = false;
         if (this.state.college === 'wenzhi' && Math.random() < 0.05) {
             this.addLog('🏃 从西区赶到东区上课，迟到了！本次学习效果减半', 'warning');
-            masteryGain = masteryGain / 2;
+            masteryGainBase = masteryGainBase / 2;
             lateToClass = true;
         } else {
             this.addLog('📚 认真上了一天课，所有课程都有所进步');
         }
-        
+
         this.state.currentCourses.forEach(course => {
             // 根据难度调整掌握度增加
             let difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
-            let courseGain = masteryGain * difficultyFactor;
-            
+            let courseGain = masteryGainBase * difficultyFactor;
+
             // 应用书院课程特效
             courseGain = this.applyCollegeLearningEffects(course, courseGain, 'attend');
-            
+            // 递减收益
+            courseGain = this._calcMasteryGain(courseGain, course.mastery);
+
             course.mastery = Math.min(100, course.mastery + courseGain);
             course.attendCount++;
         });
@@ -1427,53 +1506,57 @@ class XianjaoSimulator {
         this.checkActionEvents('attend-class');
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
-    
+
     // 重点课程上课
     doAttendClassFocused(courseIndex) {
+        const snap = this._snapshotState();
         const energyCost = this.getAttendClassEnergy();
         this.state.energy -= energyCost;
-        
+
         AchievementSystem.recordAttendClass();
         AchievementSystem.resetLateWakeup();
-        
+
         const focusedCourse = this.state.currentCourses[courseIndex];
         const monthMultiplier = this.getMonthMultiplier();
-        let focusedGain = 8 * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 8.0
-        let otherGain = 1.5 * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 1.5
-        
+        let focusedGain = 5 * this.state.studyEfficiency * monthMultiplier;
+        let otherGain = 1.2 * this.state.studyEfficiency * monthMultiplier;
+
         // 文治书院迟到判定
         if (this.state.college === 'wenzhi' && Math.random() < 0.05) {
             this.addLog('🏃 从西区赶到东区上课，迟到了！', 'warning');
             focusedGain = focusedGain / 2;
             otherGain = otherGain / 2;
         }
-        
+
         this.state.currentCourses.forEach((course, idx) => {
             let difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
             let courseGain;
-            
+
             if (idx === courseIndex) {
                 courseGain = focusedGain * difficultyFactor;
                 courseGain = this.applyCollegeLearningEffects(course, courseGain, 'attend');
+                courseGain = this._calcMasteryGain(courseGain, course.mastery);
                 course.mastery = Math.min(100, course.mastery + courseGain);
             } else {
-                courseGain = otherGain * difficultyFactor;
+                courseGain = this._calcMasteryGain(otherGain * difficultyFactor, course.mastery);
                 course.mastery = Math.min(100, course.mastery + courseGain);
             }
             course.attendCount++;
         });
-        
+
         // 触发书院特殊事件
         this.checkCollegeCourseEvents('attend', focusedCourse);
-        
+
         this.addLog(`📚 重点听了『${focusedCourse.name}』的课，该课程掌握度大幅提升！`);
-        
+
         this.state.attendedClassThisTurn = true;
         this.state.actionsThisTurn.push('attend-class');
         this.checkActionEvents('attend-class');
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
     
     // 重修课程上课
@@ -1642,20 +1725,21 @@ class XianjaoSimulator {
 
     // 全部课程自习
     doSelfStudyAll() {
+        const snap = this._snapshotState();
         const location = this.pendingStudyLocation;
-        
+
         this.state.energy -= 3;
         this.state.san -= location.sanLoss;
         this.state.studyLocation = location.id;
 
-        let masteryGain = this.getStudyBaseGain(location);
+        let masteryGainBase = this.getStudyBaseGain(location);
 
         // 书院特殊加成
         this.applyStudyLocationBonus(location);
 
         // 主楼迷路判定
         if (location.id === 'mainBuilding' && Math.random() < (location.lostChance || 0)) {
-            masteryGain *= 0.5;
+            masteryGainBase *= 0.5;
             this.state.san -= 3;
             this.addLog('🌫️ 在主楼迷路了！浪费了不少时间...', 'warning');
             AchievementSystem.recordMainBuildingLost();
@@ -1663,13 +1747,15 @@ class XianjaoSimulator {
 
         this.state.currentCourses.forEach(course => {
             const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
-            course.mastery = Math.min(100, course.mastery + masteryGain * difficultyFactor);
+            const gain = this._calcMasteryGain(masteryGainBase * difficultyFactor, course.mastery);
+            course.mastery = Math.min(100, course.mastery + gain);
             course.studyCount++;
         });
 
         this.state.retakeCourses.forEach(course => {
             const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
-            course.mastery = Math.min(100, course.mastery + masteryGain * difficultyFactor);
+            const gain = this._calcMasteryGain(masteryGainBase * difficultyFactor, course.mastery);
+            course.mastery = Math.min(100, course.mastery + gain);
             course.studyCount = (course.studyCount || 0) + 1;
         });
 
@@ -1678,20 +1764,22 @@ class XianjaoSimulator {
         this.checkActionEvents('self-study');
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
     
     // 重点课程自习
     doSelfStudyFocused(courseIndex) {
+        const snap = this._snapshotState();
         const location = this.pendingStudyLocation;
         const focusedCourse = this.state.currentCourses[courseIndex];
-        
+
         this.state.energy -= 3;
         this.state.san -= location.sanLoss;
         this.state.studyLocation = location.id;
 
         const monthMultiplier = this.getMonthMultiplier();
-        let focusedGain = 11 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 11.0
-        let otherGain = 1.5 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;  // 进一步提高到 1.5
+        let focusedGain = 7 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
+        let otherGain = 1.2 * location.masteryBonus * this.state.studyEfficiency * monthMultiplier;
 
         // 书院特殊加成
         this.applyStudyLocationBonus(location);
@@ -1708,9 +1796,11 @@ class XianjaoSimulator {
         this.state.currentCourses.forEach((course, idx) => {
             const difficultyFactor = 1 - (course.difficulty - 0.5) * 0.3;
             if (idx === courseIndex) {
-                course.mastery = Math.min(100, course.mastery + focusedGain * difficultyFactor);
+                const gain = this._calcMasteryGain(focusedGain * difficultyFactor, course.mastery);
+                course.mastery = Math.min(100, course.mastery + gain);
             } else {
-                course.mastery = Math.min(100, course.mastery + otherGain * difficultyFactor);
+                const gain = this._calcMasteryGain(otherGain * difficultyFactor, course.mastery);
+                course.mastery = Math.min(100, course.mastery + gain);
             }
             course.studyCount++;
         });
@@ -1720,6 +1810,7 @@ class XianjaoSimulator {
         this.checkActionEvents('self-study');
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
     
     // 重修课程自习
@@ -1767,39 +1858,110 @@ class XianjaoSimulator {
         this.doSelfStudyAll();
     }
 
-    // 搞社团
+    // 搞社团 - 显示社团菜单
     doClub() {
+        this.ensureClubStateFields();
+        const opts = document.getElementById('choice-options');
+        opts.innerHTML = '';
+        document.getElementById('choice-title').textContent = '🎭 社团活动';
+        this._showClubMenu(opts);
+        this.showModal('choice-modal');
+    }
+
+    // 渲染社团菜单
+    _showClubMenu(container) {
+        this.ensureClubStateFields();
         const effects = this.state.collegeEffects || {};
-        let energyCost = 2;
-        
-        // 崇实书院社交体力消耗-1
-        if (effects.socialEnergyCost) {
-            energyCost += effects.socialEnergyCost;
-        }
-        energyCost = Math.max(1, energyCost);
-        
-        if (this.state.energy < energyCost) {
+        const clubs = XianjaoSimulator.CLUB_DEFINITIONS;
+        const joined = this.state.joinedClubs;
+
+        // 说明文字
+        const hint = document.createElement('div');
+        hint.className = 'love-hint-banner';
+        hint.innerHTML = '<span>选择社团参加活动，或加入新社团 ✨</span>';
+        container.appendChild(hint);
+
+        clubs.forEach(club => {
+            const isJoined = joined.includes(club.id);
+            const baseEnergy = club.energyCost + (effects.socialEnergyCost || 0);
+            const finalEnergy = Math.max(1, baseEnergy);
+
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.style.textAlign = 'left';
+            btn.disabled = this.state.energy < finalEnergy;
+
+            // 构建效果描述
+            const effParts = [];
+            if (club.effects.san) effParts.push(`SAN${club.effects.san > 0 ? '+' : ''}${club.effects.san}`);
+            if (club.effects.social) effParts.push(`综测+${club.effects.social}`);
+            if (club.effects.charm) effParts.push(`魅力+${club.effects.charm}`);
+            if (club.effects.reputation) effParts.push(`声望+${club.effects.reputation}`);
+            if (club.effects.gpa) effParts.push(`GPA+${club.effects.gpa}`);
+            if (club.effects.money) effParts.push(`金钱+${club.effects.money}`);
+            if (club.effects.energy) effParts.push(`体力+${club.effects.energy}`);
+
+            btn.innerHTML = `
+                <div class="choice-btn-name">
+                    ${club.icon} ${club.name}
+                    ${isJoined ? '<span class="lc-badge badge-pursuing" style="font-size:0.7rem;padding:2px 6px;margin-left:6px">已加入</span>' : ''}
+                </div>
+                <div class="choice-btn-desc">${club.desc}</div>
+                <div class="choice-btn-desc" style="color:#888;font-size:0.78rem;margin-top:3px">
+                    消耗 ⚡${finalEnergy} | ${effParts.join(' · ')}
+                </div>
+            `;
+            btn.addEventListener('click', () => {
+                this.hideModal('choice-modal');
+                this._doClubActivity(club);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    // 执行具体社团活动
+    _doClubActivity(club) {
+        this.ensureClubStateFields();
+        const effects = this.state.collegeEffects || {};
+        const baseEnergy = club.energyCost + (effects.socialEnergyCost || 0);
+        const finalEnergy = Math.max(1, baseEnergy);
+
+        if (this.state.energy < finalEnergy) {
             this.showMessage('体力不足', '你太累了，需要休息一下。');
             return;
         }
 
-        this.state.energy -= energyCost;
-        this.state.san += 3;
-        
-        let socialGain = 5 * this.state.socialEfficiency;
-        this.state.social = Math.min(100, this.state.social + socialGain);
+        const snap = this._snapshotState();
+        this.state.energy -= finalEnergy;
 
-        if (effects.socialEnergyCost < 0) {
-            this.addLog('🎭 崇实中楼沙龙加持，社团活动省力又愉快！');
-        } else {
-            this.addLog('🎭 参加社团活动，认识了新朋友');
+        // 加入记录
+        if (!this.state.joinedClubs.includes(club.id)) {
+            this.state.joinedClubs.push(club.id);
         }
-        
+
+        // 应用效果（社交效率加成）
+        if (club.effects.san) this.state.san = Math.max(0, Math.min(100, this.state.san + club.effects.san));
+        if (club.effects.social) {
+            const gain = club.effects.social * (this.state.socialEfficiency || 1);
+            this.state.social = Math.min(100, this.state.social + gain);
+        }
+        if (club.effects.charm) this.state.charm = Math.min(100, (this.state.charm || 50) + club.effects.charm);
+        if (club.effects.reputation) this.changeReputation(club.effects.reputation, `社团活动（${club.name}）`);
+        if (club.effects.gpa) this.state.gpa = Math.min(4.3, this.state.gpa + club.effects.gpa);
+        if (club.effects.money) this.state.money = Math.max(0, this.state.money + club.effects.money);
+        if (club.effects.energy) this.state.energy = Math.min(this.state.maxEnergy || 15, this.state.energy + club.effects.energy);
+
+        // 崇实书院特别提示
+        if (effects.socialEnergyCost < 0) {
+            this.addLog(`🎭 崇实中楼沙龙加持，${club.log.slice(2)}`);
+        } else {
+            this.addLog(club.log);
+        }
+
         this.state.actionsThisTurn.push('club');
-        
-        // 检查成就
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
 
     // 做志愿
@@ -1809,15 +1971,16 @@ class XianjaoSimulator {
             return;
         }
 
+        const snap = this._snapshotState();
         this.state.energy -= 2;
         const effects = this.state.collegeEffects || {};
-        
+
         // 仲英书院志愿效率加成 (2倍综测)
         let socialGain = 8 * this.state.socialEfficiency * (effects.volunteerEfficiency || 1);
         this.state.social = Math.min(100, this.state.social + socialGain);
         this.state.volunteerHoursThisYear++;
         this.state.volunteerHoursThisSemester = (this.state.volunteerHoursThisSemester || 0) + 1;
-        
+
         // 志愿服务增加声望（每10次志愿+1声望）
         if (this.state.volunteerHoursThisYear % 10 === 0) {
             this.changeReputation(2, '坚持志愿服务');
@@ -1825,20 +1988,18 @@ class XianjaoSimulator {
 
         if (effects.volunteerEfficiency > 1) {
             this.addLog('🤝 完成志愿服务，仲英品格加持，综测分大幅提升！');
-            // 仲英品阁成就检查
             if (this.state.volunteerHoursThisSemester >= 10) {
                 AchievementSystem.unlock('zhongyingPinge');
             }
         } else {
             this.addLog('🤝 完成志愿服务，综测分提升');
         }
-        
+
         this.state.actionsThisTurn.push('volunteer');
         this.checkActionEvents('volunteer');
-        
-        // 检查成就
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
     }
 
     // 显示吃饭选择 (改为改善伙食)
@@ -2538,6 +2699,14 @@ class XianjaoSimulator {
         }
         if (typeof this.state.loveNeglectMonths !== 'number') {
             this.state.loveNeglectMonths = 0;
+        }
+    }
+
+    // 确保旧存档兼容社团字段
+    ensureClubStateFields() {
+        if (!this.state) return;
+        if (!Array.isArray(this.state.joinedClubs)) {
+            this.state.joinedClubs = [];
         }
     }
 
@@ -3836,7 +4005,7 @@ class XianjaoSimulator {
             // 只要有 Key 每月必触发一次生成
             if (config.key) { 
                 console.log('开始AI事件生成，当前模型:', AIModule.getCurrentModel());
-                this.showMessage('命运的齿轮正在转动...', '等通知是鲜椒每个学子必备的技能');
+                this.showBlockingLoading();
                 const aiResult = await AIModule.fetchAIEvent();
                 console.log('AI生成结果:', aiResult);
                 
@@ -3860,7 +4029,7 @@ class XianjaoSimulator {
         } catch (e) {
             console.warn('AI通过API生成事件失败，回退到本地事件库:', e);
         } finally {
-            this.hideModal('modal');
+            this.hideBlockingLoading();
         }
 
         if (aiEvent) {
@@ -3891,7 +4060,7 @@ class XianjaoSimulator {
             const semesterName = this.state.month === 1 ? '秋季学期' : '春季学期';
             console.log(`学期结束：触发${semesterName}回顾事件`);
             // 通用加载提示（不暴露AI）
-            this.showMessage('命运的齿轮正在转动...', '等通知是鲜椒每个学子必备的技能');
+            this.showBlockingLoading();
             const aiResult = await AIModule.fetchAIEvent();
             console.log('学期结束事件结果:', aiResult);
             
@@ -3923,7 +4092,7 @@ class XianjaoSimulator {
         } catch (e) {
             console.warn('学期结束事件生成失败:', e);
         } finally {
-            this.hideModal('modal');
+            this.hideBlockingLoading();
         }
     }
     
@@ -5350,6 +5519,124 @@ class XianjaoSimulator {
         document.getElementById('modal-title').textContent = title;
         document.getElementById('modal-body').innerHTML = `<p>${content}</p>`;
         this.showModal('modal');
+    }
+
+    // 显示强制等待弹窗（无法关闭，AI生成结束后自动消失）
+    showBlockingLoading() {
+        let overlay = document.getElementById('blocking-loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'blocking-loading-overlay';
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 9999;
+                background: rgba(0,0,0,0.55);
+                display: flex; align-items: center; justify-content: center;
+            `;
+            overlay.innerHTML = `
+                <div style="
+                    background: #fff; border-radius: 16px;
+                    padding: 32px 36px; max-width: 340px; width: 88%;
+                    text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+                ">
+                    <div style="font-size: 2.4rem; margin-bottom: 10px;">⏳</div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: #003E7E; margin-bottom: 8px;">命运的齿轮正在转动...</div>
+                    <div style="font-size: 0.92rem; color: #555; margin-bottom: 10px;">等通知是鲜椒每个学子必备的技能</div>
+                    <div style="font-size: 0.85rem; color: #888; font-style: italic;">随机事件生成中……</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        overlay.style.display = 'flex';
+        // 拦截 ESC 键
+        this._blockingKeyHandler = (e) => { if (e.key === 'Escape') e.stopImmediatePropagation(); };
+        document.addEventListener('keydown', this._blockingKeyHandler, true);
+    }
+
+    // 隐藏强制等待弹窗
+    hideBlockingLoading() {
+        const overlay = document.getElementById('blocking-loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+        if (this._blockingKeyHandler) {
+            document.removeEventListener('keydown', this._blockingKeyHandler, true);
+            this._blockingKeyHandler = null;
+        }
+    }
+
+    // 行动结果 Toast（2.5s 后自动消失）
+    showActionResult(stateBefore) {
+        const s = this.state;
+        const diffs = [];
+        const fmt = (v, unit = '') => {
+            if (v === undefined || v === null || v === 0) return null;
+            return `${v > 0 ? '+' : ''}${typeof v === 'number' ? v.toFixed(v % 1 === 0 ? 0 : 1) : v}${unit}`;
+        };
+        const push = (label, key, unit = '') => {
+            const d = s[key] - (stateBefore[key] || 0);
+            if (Math.abs(d) >= 0.05) diffs.push({ label, val: fmt(d, unit), positive: d > 0 });
+        };
+        push('SAN', 'san');
+        push('体力', 'energy');
+        push('综测', 'social');
+        push('声望', 'reputation');
+        push('金钱', 'money', '元');
+        push('GPA', 'gpa');
+        // 掌握度：取平均变化
+        const beforeAvg = stateBefore._masteryAvg || 0;
+        const nowCourses = s.currentCourses || [];
+        const nowAvg = nowCourses.length
+            ? nowCourses.reduce((a, c) => a + c.mastery, 0) / nowCourses.length
+            : 0;
+        const masteryDiff = nowAvg - beforeAvg;
+        if (Math.abs(masteryDiff) >= 0.5) diffs.push({ label: '掌握度', val: fmt(masteryDiff, '%'), positive: masteryDiff > 0 });
+
+        if (diffs.length === 0) return;
+
+        // 移除旧 toast
+        const old = document.getElementById('action-result-toast');
+        if (old) old.remove();
+        if (this._toastTimer) { clearTimeout(this._toastTimer); this._toastTimer = null; }
+
+        const toast = document.createElement('div');
+        toast.id = 'action-result-toast';
+        toast.style.cssText = `
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            background: rgba(30,30,30,0.88); color: #fff;
+            border-radius: 12px; padding: 10px 18px;
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+            font-size: 0.88rem; z-index: 8000; pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            animation: toastFadeIn 0.25s ease;
+        `;
+        diffs.forEach(d => {
+            const span = document.createElement('span');
+            span.style.color = d.positive ? '#76ff76' : '#ff7676';
+            span.textContent = `${d.label} ${d.val}`;
+            toast.appendChild(span);
+        });
+        // 注入动画（只注一次）
+        if (!document.getElementById('toast-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'toast-keyframes';
+            style.textContent = `@keyframes toastFadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`;
+            document.head.appendChild(style);
+        }
+        document.body.appendChild(toast);
+        this._toastTimer = setTimeout(() => {
+            toast.style.transition = 'opacity 0.4s';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 400);
+        }, 2500);
+    }
+
+    // 快照当前状态用于 Toast 对比
+    _snapshotState() {
+        const s = this.state;
+        const courses = s.currentCourses || [];
+        return {
+            san: s.san, energy: s.energy, social: s.social,
+            reputation: s.reputation, money: s.money, gpa: s.gpa,
+            _masteryAvg: courses.length ? courses.reduce((a, c) => a + c.mastery, 0) / courses.length : 0
+        };
     }
 
     // 显示游戏菜单

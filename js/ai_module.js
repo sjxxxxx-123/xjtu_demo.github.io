@@ -343,7 +343,7 @@ const AIModule = (function() {
     const SYSTEM_PROMPT = `你是一个在鲜椒待了十年的老学长。你的任务是生成一个随机事件。
 
 【个性化要求】
-- 结合玩家的年级、月份、书院、GPA、SAN、金钱、精力等信息，生成贴合处境的事件。
+- 结合玩家的年级、月份、书院、GPA、SAN、金钱、精力、声望等信息，生成贴合处境的事件。
 - 大一偏萌新/社团拉新/迷路；高年级偏竞赛、实习、毕设、保研/出国/工作抉择。
 - 不同书院要体现气质：南洋(工科实验)、文治(人文)、仲英(志愿)、启德(经金)、钱学森(学霸科研)。
 - 语气自然像真实校园插曲，不要模板化重复句式。
@@ -359,9 +359,11 @@ const AIModule = (function() {
     "effects": {
         "gpa": 0,
         "san": 0,
-        "stamina": 0,
+        "energy": 0,
         "money": 0,
-        "social_score": 0
+        "social": 0,
+        "reputation": 0,
+        "mastery": 0
     },
     "achievement_id": null
 }
@@ -373,11 +375,15 @@ const AIModule = (function() {
 - 校园梗：电路之王、主楼迷宫、表白墙等
 
 【属性范围】
-- gpa: -0.5 到 +0.5
+- gpa: -0.5 到 +0.5（学业影响时使用）
 - san: -20 到 +20（精神值）
-- stamina: -20 到 +20（体力）
+- energy: -5 到 +5（体力，一般变动较小）
 - money: -500 到 +500（金钱）
-- social_score: -10 到 +10（社交分）`;
+- social: -10 到 +10（综测分）
+- reputation: -5 到 +5（校园声望，重大事件才变动）
+- mastery: -5 到 +5（课程掌握度，学业事件才变动）
+
+【注意】大多数事件只需改变1-3个属性，其他填0。`;
 
     const BIOGRAPHY_SYSTEM_PROMPT = `你是太史公，为鲜椒本科模拟器的结局撰写人物小传。
 
@@ -442,21 +448,33 @@ const AIModule = (function() {
         if (state.san < 20) sanDesc = "精神崩溃，在深夜网抑云";
         else if (state.san < 50) sanDesc = "压力山大，发际线后移中";
         
-        // 近期事件 (Mock logic, ideal to have a history log)
+        // 声望评价
+        const rep = state.reputation || 50;
+        let repDesc = '普通同学';
+        if (rep >= 80) repDesc = '校园名人';
+        else if (rep >= 60) repDesc = '小有名气';
+        else if (rep < 30) repDesc = '低调边缘';
+
+        // 恋爱状态
+        let loveDesc = '单身';
+        if (state.inRelationship) loveDesc = '恋爱中';
+        else if (state.selectedLoveInterest && state.selectedLoveInterest !== 'legacy_partner') loveDesc = '暗恋追求中';
+
+        // 近期行动
         const recentActionIdx = Math.floor(Math.random() * 3);
         const recentActions = [
             "刚从图书馆出来",
             "刚在宿舍睡了一整天",
             "正在去教二上课的路上"
         ];
-        
+
         // 组合描述
         return `玩家当前是${year}学生，就读于${college}（校区：${campusName}），背景：${backgroundName}。目前是${month}月。
-        学业状况：GPA ${state.gpa.toFixed(2)} (${gpaDesc})。
-        精神状态：SAN值 ${state.san} (${sanDesc})。
-        金钱：${state.money}元。
-        状态：${recentActions[recentActionIdx]}。
-        当前存档签名：${stateSignature}（仅围绕此角色生成事件，禁止引用其他角色或旧存档）。`;
+学业状况：GPA ${state.gpa.toFixed(2)} (${gpaDesc})。
+精神状态：SAN值 ${state.san} (${sanDesc})。
+金钱：${state.money}元。声望：${rep}（${repDesc}）。感情状态：${loveDesc}。
+状态：${recentActions[recentActionIdx]}。
+当前存档签名：${stateSignature}（仅围绕此角色生成事件，禁止引用其他角色或旧存档）。`;
     }
 
     /**

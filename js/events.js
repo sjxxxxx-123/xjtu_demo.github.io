@@ -1263,6 +1263,14 @@ const RandomEventManager = {
             }
         }
         
+        // 字段名兼容：AI 可能返回 stamina/social_score，统一转换
+        if (changes.stamina !== undefined && changes.energy === undefined) {
+            changes.energy = changes.stamina;
+        }
+        if (changes.social_score !== undefined && changes.social === undefined) {
+            changes.social = changes.social_score;
+        }
+
         // 应用基础效果
         if (changes.san) {
             gameState.san = Math.max(0, Math.min(100, gameState.san + changes.san));
@@ -1279,6 +1287,16 @@ const RandomEventManager = {
         }
         if (changes.charm) {
             gameState.charm = Math.max(0, Math.min(100, (gameState.charm || 50) + changes.charm));
+        }
+        if (changes.gpa) {
+            gameState.gpa = Math.max(0, Math.min(4.3, (gameState.gpa || 0) + changes.gpa));
+        }
+        if (changes.reputation) {
+            if (window.game && typeof window.game.changeReputation === 'function') {
+                window.game.changeReputation(changes.reputation, 'AI随机事件');
+            } else {
+                gameState.reputation = Math.max(0, Math.min(100, (gameState.reputation || 50) + changes.reputation));
+            }
         }
         if (changes.mastery && gameState.currentCourses) {
             gameState.currentCourses.forEach(course => {
