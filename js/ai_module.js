@@ -1138,12 +1138,14 @@ const AIModule = (function() {
     // ===== 社团随机事件生成 =====
     // =====================================================================
 
-    const CLUB_STORY_SYSTEM_PROMPT = `你是一个在鲜椒待了十年的老学长，现在要为玩家的社团活动生成一个随机小事件。
+    const CLUB_STORY_SYSTEM_PROMPT = `你是一个在西安交通大学待了十年的老学长，现在要为玩家的社团活动生成一个随机小事件。
 
 【规则】
 - 事件必须与玩家所在社团强相关，体现该社团的独特场景、成员互动和文化。
+- 必须符合玩家的性别、书院、年级等真实条件，不能与角色背景矛盾。
 - 事件语气轻松自然，50-80字，像真实校园插曲。
-- 效果可以是正面、负面或中性，不要每次都是纯正面。
+- 这些随机事件是纯故事性的，不改变任何属性值。
+- effects字段必须为空对象{}，禁止填写任何属性变化。
 
 【返回格式】仅返回JSON，不含其他文字：
 {
@@ -1170,11 +1172,18 @@ const AIModule = (function() {
         if (!API_KEY) throw new Error('未配置 API Key');
 
         const yearMap = { 1: '大一', 2: '大二', 3: '大三', 4: '大四' };
-        const userContext = `玩家当前是${yearMap[state.year] || '大二'}学生，${state.month}月份，就读于${state.college || ''}书院。
+        const collegeNameMap = {
+            pengkang: '彭康书院', wenzhi: '文治书院', zhongying: '仲英书院',
+            nanyang: '南洋书院', chongshi: '崇实书院', lizhi: '励志书院',
+            zonglian: '宗濂书院', qide: '启德书院', qianxuesen: '钱学森书院'
+        };
+        const genderStr = state.gender === '女' ? '女生' : '男生';
+        const collegeName = collegeNameMap[state.college] || (state.college || '未知书院');
+        const userContext = `玩家信息：${yearMap[state.year] || '大一'}${genderStr}，就读于${collegeName}，当前${state.month}月。
 参加的社团：${club.name}（${club.desc}）。
-SAN值 ${state.san}，金币 ${state.money}元，综测 ${state.social}。
+绩点 ${(state.gpa||3).toFixed(2)}，SAN值 ${Math.round(state.san)}，德育分 ${Math.round(state.social)}。
 社团标签关键词：${(club.storyTags || []).join('、')}。
-请生成一个贴合该社团气质的随机小事件。`;
+请生成一个贴合该社团气质的随机小事件，effects必须为{}。`;
 
         const selectedModel = getNextAvailableModel();
         const timeout = REQUEST_TIMEOUT_BASE_MS;
@@ -1232,45 +1241,241 @@ SAN值 ${state.san}，金币 ${state.money}元，综测 ${state.social}。
     }
 
     /**
-     * 本地社团事件 fallback（每个社团有3条备选）
+     * 本地社团事件 fallback（每个社团3-4条备选，effects 统一为 {} 不改属性）
      * @param {Object} club
      */
     function getClubStoryFallback(club) {
         const fallbackMap = {
+            // ── 旧社团（保留兼容旧存档）──
             acm: [
-                { event_text: '今天在OJ上做了道困难题，反复WA七次后终于AC，队友起立鼓掌，你获得了一种说不清道不明的快感。', effects: { san: 5, social: 2 } },
-                { event_text: '社团学长分享了一个卡常数技巧，你听得津津有味，感觉打开了新世界大门。', effects: { san: 3, mastery: 3 } },
-                { event_text: '今天队内模拟赛，你因为一个小细节罚时爆炸，输给了平时不如你的同学，有点郁闷。', effects: { san: -5, social: 1 } }
+                { event_text: '今天在OJ上做了道困难题，反复WA七次后终于AC，队友起立鼓掌，你获得了一种说不清道不明的快感。', effects: {} },
+                { event_text: '社团学长分享了一个卡常数技巧，你听得津津有味，感觉打开了新世界大门。', effects: {} },
+                { event_text: '今天队内模拟赛，你因为一个小细节罚时爆炸，输给了平时不如你的同学，有点郁闷，但队友没有多说什么。', effects: {} }
             ],
             art: [
-                { event_text: '话剧排练时你不小心忘词，导演叫停，全场鸦雀无声，你的脸烧得厉害，但大家都笑着鼓励你重来。', effects: { san: -3, social: 5 } },
-                { event_text: '今天合唱排练结束后，大家自发组了个小聚会，气氛极好，你的心情前所未有地放松。', effects: { san: 8, social: 4 } },
-                { event_text: '演出前一晚临时改了台词，你加班背到凌晨，总算熟悉了，但眼睛熬红了。', effects: { san: -5, energy: -2 } }
+                { event_text: '话剧排练时你不小心忘词，导演叫停，全场鸦雀无声，你的脸烧得厉害，但大家都笑着鼓励你重来。', effects: {} },
+                { event_text: '今天合唱排练结束后，大家自发组了个小聚会，气氛极好，你的心情前所未有地放松。', effects: {} },
+                { event_text: '演出前一晚临时改了台词，你背到凌晨，总算熟悉了，出来时窗外的空气格外清凉。', effects: {} }
             ],
             volunteer: [
-                { event_text: '今天去社区陪小朋友做手工，孩子们叫你"大朋友"，你的心瞬间融化了，忘记了所有压力。', effects: { san: 8, reputation: 1 } },
-                { event_text: '组织了一场校内旧书募捐，收到了满满两箱书，你们合了张影发到朋友圈，点赞超多。', effects: { san: 4, social: 3, reputation: 2 } },
-                { event_text: '今天义卖摊位因为天气太热客流稀少，最后只售出了不到一半，有些沮丧，但也不后悔。', effects: { san: -2, social: 2 } }
+                { event_text: '今天去社区陪小朋友做手工，孩子们叫你"大朋友"，你的心瞬间融化了，忘记了所有压力。', effects: {} },
+                { event_text: '组织了一场校内旧书募捐，收到了满满两箱书，你们合了张影，感觉做了一件很有意义的事。', effects: {} },
+                { event_text: '今天义卖摊位因为天气太热客流稀少，最后只售出了不到一半，有些沮丧，但也不后悔。', effects: {} }
             ],
             sports: [
-                { event_text: '今天下午训练时你发挥超常，连进三球，队友都围过来击掌，感觉浑身都在燃烧。', effects: { san: 8, social: 4, energy: 1 } },
-                { event_text: '比赛中对方球员撞了你一下，腿有点酸，但胜利了，值了！', effects: { san: 5, energy: -1, social: 3 } },
-                { event_text: '今天高强度训练后腿差点抬不起来，但教练说你进步很快，疲惫里有一丝甜。', effects: { san: 2, energy: -2 } }
+                { event_text: '今天下午训练时你发挥超常，连进三球，队友都围过来击掌，感觉浑身都在燃烧。', effects: {} },
+                { event_text: '比赛打得很激烈，胜负到最后一刻才见分晓，赢了的瞬间所有人都蹦了起来。', effects: {} },
+                { event_text: '今天高强度训练后腿差点抬不起来，但教练说你进步很快，疲惫里有一丝甜。', effects: {} }
             ],
             research: [
-                { event_text: '今天组会汇报你做的小调研，导师点名表扬你逻辑清晰，你第一次觉得科研并不可怕。', effects: { san: 6, reputation: 1, mastery: 3 } },
-                { event_text: '实验数据出来了但和预期完全不符，你坐在屏幕前发呆了半小时，最后决定从头再来。', effects: { san: -6, mastery: 2 } },
-                { event_text: '学长带你读了一篇顶刊论文，虽然看得云里雾里，但打开了对某个领域的好奇心。', effects: { san: 3, mastery: 2 } }
+                { event_text: '今天组会汇报你做的小调研，导师点名表扬你逻辑清晰，你第一次觉得科研并不可怕。', effects: {} },
+                { event_text: '实验数据出来了但和预期完全不符，你坐在屏幕前发呆了半小时，最后决定从头再来。', effects: {} },
+                { event_text: '学长带你读了一篇顶刊论文，虽然看得云里雾里，但打开了对某个领域的好奇心。', effects: {} }
             ],
             startup: [
-                { event_text: '今天团队路演模拟，投资人角色扮演的学长连问了七个尖锐问题，你一个都没答上，压力巨大。', effects: { san: -5, social: 3 } },
-                { event_text: '你的商业计划书在社团内部评比中拿了第二，有位学姐说你的想法"有点东西"，成就感满满。', effects: { san: 7, reputation: 2, money: 50 } },
-                { event_text: '今天集体头脑风暴，气氛热烈，大家争论了两个小时，最后意外定下了一个绝妙的方向。', effects: { san: 5, social: 4 } }
+                { event_text: '今天团队路演模拟，投资人角色扮演的学长连问了七个尖锐问题，你临场发挥，事后有很多反思。', effects: {} },
+                { event_text: '你的商业计划书在社团内部评比中拿了第二，有位学姐说你的想法"有点东西"，成就感满满。', effects: {} },
+                { event_text: '今天集体头脑风暴，气氛热烈，大家争论了两个小时，最后意外定下了一个绝妙的方向。', effects: {} }
+            ],
+            // ── 12个新社团 ──
+            sibianxueshe: [
+                { event_text: '今天辩论赛的题目争得热火朝天，双方都引经据典，会后大家一起喝奶茶，争论气氛一转成了朋友的闲聊。', effects: {} },
+                { event_text: '你临时顶替发言，拿着提前准备的提纲磕磕巴巴说完，没想到学长说"核心观点很清晰"，莫名地有了信心。', effects: {} },
+                { event_text: '思辨学社的月度议题讨论结束，围绕一个看似简单的问题聊了两个多小时，散场时发现窗外天都黑了。', effects: {} }
+            ],
+            shenyangshushe: [
+                { event_text: '书社分享会上有人推荐了一本冷门的历史书，你记下书名，打算趁下次去图书馆时找来翻翻。', effects: {} },
+                { event_text: '今天大家都带来了自己最近在读的书，桌上摆了一排，五花八门，你被封面吸引翻了翻，竟停不下来。', effects: {} },
+                { event_text: '沈杨书社的读书笔记交流让你意识到，同一本书里竟然藏着这么多你没发现的细节，有点惊喜。', effects: {} }
+            ],
+            pugongying: [
+                { event_text: '今天练习新歌时和弦总是按不准，学长耐心地手把手教了你半个小时，结束时你已经能弹出一个完整的小段落。', effects: {} },
+                { event_text: '蒲公英吉他社的排练室里满是木质温暖的声音，有人在角落轻声哼着，你觉得这就是音乐该有的样子。', effects: {} },
+                { event_text: '社团去校园里做了次快闪演出，吉他声飘出去，旁边的同学驻足，有人拍视频，有人跟着哼，感觉很棒。', effects: {} }
+            ],
+            ticao: [
+                { event_text: '练习翻滚时反复摔了好几次，垫子上的灰都拍得差不多了，最后一次终于完成动作，教练点了点头。', effects: {} },
+                { event_text: '今天和体操协会的老成员们一起训练，看着他们轻松完成的动作，你既佩服又暗暗下定决心。', effects: {} },
+                { event_text: '体操联合汇演的节目表出来了，你看到自己名字在上面，紧张又期待，练习的劲头更足了。', effects: {} }
+            ],
+            lunhua: [
+                { event_text: '在操场上练了半下午的刹车技巧，跌了好几跤，裤腿上蹭了泥，但轮滑鞋滑出去那种感觉真的太爽了。', effects: {} },
+                { event_text: '学长带你解锁了一个新动作，练了七八遍终于找到感觉，那一刻整个操场好像都在为你喝彩。', effects: {} },
+                { event_text: '今天轮滑俱乐部来了个新同学，你帮他系好护具、牵着走了几圈，想起了自己刚学时的样子。', effects: {} }
+            ],
+            wulong: [
+                { event_text: '舞龙排练时节奏跟不上鼓点，前后队员反复磨合，最后终于合上，那一刻齐声喊出来的感觉让人起了鸡皮疙瘩。', effects: {} },
+                { event_text: '彩排结束后大家分着吃了带来的零食，汗水还没干，笑声却已经满操场了。', effects: {} },
+                { event_text: '龙头师傅走位很有讲究，你跟着模仿了一遍，感受到了传统民俗技艺里藏着的功夫。', effects: {} }
+            ],
+            feeling: [
+                { event_text: '今天feeling音乐社的排练里，大家尝试加进了一段即兴的和声，出乎意料地和谐，所有人都楞了一下，随即鼓起掌来。', effects: {} },
+                { event_text: '社团的录音棚虽然简陋，但今天录出来的那段旋律反复听了三遍，越来越喜欢。', effects: {} },
+                { event_text: '音乐社年度演出的选曲会上，你力挺的那首歌被投票选中了，心里有种说不清的小满足。', effects: {} }
+            ],
+            tangzhongying: [
+                { event_text: '今天帮社区的孩子们做了一下午功课辅导，走的时候一个小孩追出来塞给你一颗糖，你接过来放进口袋，笑了一路。', effects: {} },
+                { event_text: '唐仲英爱心社的晨跑义卖筹款顺利结束，虽然辛苦，但看着善款记录上越来越大的数字，觉得一切都值了。', effects: {} },
+                { event_text: '今天探访了一位独居老人，聊了很久，快离开时老人说"下次再来"，那句话让你觉得自己该做的事还有很多。', effects: {} }
+            ],
+            moshu: [
+                { event_text: '学了个新的手法，反复练习了数十次，在寝室床上演给室友看，对方眼睛睁得大大的，然后要求"再来一遍"。', effects: {} },
+                { event_text: '魔术社今天去广场上做了次街头表演，一个孩子看得入迷，问你"你是不是会魔法"，你神秘一笑，不置可否。', effects: {} },
+                { event_text: '大家互相揭秘彼此的手法，发现原理其实很简单，但那种"揭开谜底"的感觉竟然比表演本身还过瘾。', effects: {} }
+            ],
+            xuanjiang: [
+                { event_text: '今天模拟宣讲时忘词卡壳了几秒，你深呼一口气即兴发挥，效果反而比背稿时更自然，老师给出了不错的评价。', effects: {} },
+                { event_text: '学生微宣讲团去班级做分享，台下有人认真做笔记，有人发呆，你选择对着认真的那拨人讲，感觉更有成就感。', effects: {} },
+                { event_text: '排练完收拾材料的时候，学姐说你的语速比刚进团时稳多了，你没有说话，但心里记住了这句话。', effects: {} }
+            ],
+            huaju: [
+                { event_text: '话剧排练走位时老出错，导演说了句"再来"，来了七遍终于对了，你累得靠在墙上，旁边的搭档递来一瓶水。', effects: {} },
+                { event_text: '今天第一次完整地走了一遍全剧，有的地方哭戏没出来，有的地方笑场了，但全剧通下来的感觉还是很好。', effects: {} },
+                { event_text: '演出当晚灯光亮起的瞬间，之前所有的排练焦虑都消散了，上台那一刻你只记得自己的角色。', effects: {} }
+            ],
+            longzhou: [
+                { event_text: '今天训练结束，桨放下来的那一刻手已经在抖，但旁边的队友喊"明天见"，你应了一声，感到一种踏实的疲惫。', effects: {} },
+                { event_text: '队长纠正了你的划桨姿势，调整之后果然省力许多，原来细节真的能差一大截。', effects: {} },
+                { event_text: '今天练的是出发节奏，口号喊了几十遍，声音都有点哑了，但几条船的节奏终于合上的那一刻，整队人都不约而同地松了口气。', effects: {} }
             ]
         };
 
         const list = fallbackMap[club.id] || [
-            { event_text: `参加${club.name}的日常活动，和队友们互相学习，收获满满。`, effects: { san: 4, social: 3 } }
+            { event_text: `参加${club.name}的日常活动，和队员们互相学习，收获了许多。`, effects: {} }
+        ];
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    // =====================================================================
+    // ===== 行动叙事随机事件（不改属性，纯故事沉浸） =====
+    // =====================================================================
+
+    /**
+     * 通过AI生成行动叙事事件（不改变任何属性值）
+     * @param {string} action - 'bath'|'rest'|'parttime'|'club'
+     * @param {Object} state - 游戏状态
+     */
+    async function fetchActionNarrative(action, state) {
+        if (!API_KEY) loadConfig();
+        if (!API_KEY) throw new Error('未配置 API Key');
+
+        const yearMap = { 1: '大一', 2: '大二', 3: '大三', 4: '大四' };
+        const collegeNameMap = {
+            pengkang: '彭康书院', wenzhi: '文治书院', zhongying: '仲英书院',
+            nanyang: '南洋书院', chongshi: '崇实书院', lizhi: '励志书院',
+            zonglian: '宗濂书院', qide: '启德书院', qianxuesen: '钱学森书院'
+        };
+        const genderStr = state.gender === '女' ? '女生' : '男生';
+        const collegeName = collegeNameMap[state.college] || (state.college || '未知书院');
+        const actionNameMap = { bath: '洗澡', rest: '休息放松', parttime: '兼职打工', club: '社团活动' };
+        const actionName = actionNameMap[action] || action;
+
+        const clubs = Array.isArray(state.joinedClubs) && state.joinedClubs.length > 0
+            ? `参加过的社团：${state.joinedClubs.join('、')}` : '';
+        const loveStr = state.inRelationship ? '，目前有恋人' : '';
+
+        const systemPrompt = `你是西安交通大学校园生活模拟器的叙事引擎。
+根据玩家当前状态，生成一个简短的校园生活小事件文字描述（2-4句话）。
+要求：
+1. 贴合角色性别(${genderStr})、书院(${collegeName})、年级(${yearMap[state.year] || '大一'})
+2. 与当前行动（${actionName}）直接相关，不偏题
+3. 语气轻松，充满校园气息，用第二人称"你"
+4. 严格返回JSON格式：{"event_text": "事件描述（纯文字）", "effects": {}}
+5. effects字段必须为空对象{}，禁止包含任何属性变化`;
+
+        const userContext = `玩家：${yearMap[state.year] || '大一'}${genderStr}，${collegeName}，${state.month}月份。
+当前行动：${actionName}。${clubs}${loveStr}
+绩点：${(state.gpa || 3).toFixed(2)}，SAN值：${Math.round(state.san)}，德育分：${Math.round(state.social)}。
+请生成一条与"${actionName}"相关的校园小事件，effects必须为{}。`;
+
+        const selectedModel = getNextAvailableModel();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userContext }
+                    ],
+                    temperature: 0.9,
+                    max_tokens: 200
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('No JSON in response');
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (!parsed.event_text) throw new Error('Missing event_text');
+            parsed.effects = {}; // 强制清空，确保不改属性
+            return parsed;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
+        }
+    }
+
+    /**
+     * 本地行动叙事事件 fallback（丰富事件池，effects 全部为 {}）
+     * @param {string} action
+     * @param {Object} state
+     */
+    function getActionNarrativeFallback(action, state) {
+        const college = state.college || '';
+        const gender = state.gender === '女' ? 'f' : 'm';
+
+        const pools = {
+            bath: [
+                { event_text: '洗澡的时候热水突然变凉，你一个激灵清醒了不少，顺便把脑子里模糊的问题也想清楚了几分。', effects: {} },
+                { event_text: '洗澡时耳机里循环播放着最近最爱的一首歌，蒸汽和旋律把一天的疲惫都稀释掉了。', effects: {} },
+                { event_text: '澡堂里有人在哼着不知名的歌，调子虽然跑偏，却莫名让人感到温馨。', effects: {} },
+                { event_text: '排了将近四十分钟的队，眼看马上要轮到你了，偏偏前面那位还在磨磨蹭蹭，你深呼一口气，决定以后早点来。', effects: {} },
+                { event_text: '洗澡时顺手搓了搓毛巾，发现已经硬得像砂纸，回寝室的第一件事就是记下要买新毛巾。', effects: {} },
+                { event_text: '热水冲在身上，你忽然想起明天还有个作业没交，心一紧，洗澡的心情瞬间打了折扣。', effects: {} },
+                { event_text: '今天澡堂难得没什么人，你悠哉地泡了个够，出来时头发还没干就被走廊里的穿堂风吹了个透心凉。', effects: {} },
+                { event_text: '换洗衣服放进兜里时，发现一张皱巴巴的图书馆借书小票，上面是上个月借的书，早就还掉了，但不知为何看着它心里有些暖。', effects: {} }
+            ],
+            rest: [
+                { event_text: '午后躺下来，本想睡一会儿，却在半梦半醒间把昨天课上没弄清楚的公式推导了一遍，醒来后竟隐约记得了。', effects: {} },
+                { event_text: '休息时随手刷了几条朋友圈，看到同学晒的学习打卡，忽然有些愧疚，不过很快又睡过去了。', effects: {} },
+                { event_text: '下午阳光斜斜地打在窗帘上，你窝在床上听着走廊里偶尔传来的说话声，迷迷糊糊地睡着了，醒来发现夕阳都快落了。', effects: {} },
+                { event_text: '室友小声地把门带上出去了，你有点感动，翻了个身继续睡。', effects: {} },
+                { event_text: '休息时脑子里乱七八糟地想事情，想了一圈发现都是烦恼，决定喝杯热水，然后该睡还是睡。', effects: {} },
+                { event_text: '躺下来刷手机刷着刷着，视频一个接着一个，等你意识到时已经过去了两个小时，手机也快没电了。', effects: {} },
+                { event_text: '今天终于给自己放了个假，什么都不想，什么都不做，只是发呆，却意外地觉得神清气爽。', effects: {} },
+                { event_text: '闹钟定了二十分钟，结果睡了一个半小时。室友叫你去打饭的时候，你才从梦里挣扎着爬起来。', effects: {} }
+            ],
+            parttime: [
+                { event_text: '兼职结束回来的路上，数了数今天赚的钱，发现刚好能请自己吃一顿好的，心情顿时明亮了许多。', effects: {} },
+                { event_text: '今天碰到了个特别难缠的客人，你深吸一口气，保持微笑，送走对方后在心里默默地给自己鼓了鼓掌。', effects: {} },
+                { event_text: '兼职时认识了一个同校的大三学长，聊了聊找工作的事，感觉自己对未来的规划又清晰了一点。', effects: {} },
+                { event_text: '今天的工作比预想的顺利，老板还表扬了你的效率，临走时多给了一点小费，感觉今天的体力花得很值。', effects: {} },
+                { event_text: '路上公交堵车，到达兼职地点时迟了五分钟，对方没说什么，你悄悄松了口气，下次一定早点出发。', effects: {} },
+                { event_text: '兼职的间隙你偷偷刷了几道题，发现脑子还挺灵光的，决定以后带本书去打发空档时间。', effects: {} },
+                { event_text: '拿到今天的薪酬时，你想起之前欠室友的饭钱，默默决定今晚回去就还上。', effects: {} },
+                { event_text: '兼职地点旁边新开了一家奶茶店，经过的时候香气扑鼻，但你想了想还是忍住了，毕竟今天的收入要存起来。', effects: {} }
+            ]
+        };
+
+        // 文治书院洗澡特殊事件
+        if (action === 'bath' && college === 'wenzhi') {
+            return { event_text: '文治小澡堂里热气腾腾的，你享受着别院同学羡慕不来的专属福利，惬意地泡了个够，出来时整个人都轻盈了。', effects: {} };
+        }
+
+        const list = pools[action] || [
+            { event_text: `完成了今天的活动，虽然有点累，但感觉踏实。`, effects: {} }
         ];
         return list[Math.floor(Math.random() * list.length)];
     }
@@ -1291,6 +1496,9 @@ SAN值 ${state.san}，金币 ${state.money}元，综测 ${state.social}。
         // 社团随机事件
         fetchClubStory,
         getClubStoryFallback,
+        // 行动叙事事件
+        fetchActionNarrative,
+        getActionNarrativeFallback,
         getCurrentModel: () => API_MODEL,
         getAvailableModels: () => AVAILABLE_MODELS,
         setModel: (modelName) => {

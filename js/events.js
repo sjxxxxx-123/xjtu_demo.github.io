@@ -581,7 +581,7 @@ const EventSystem = {
             changeTexts.push(`金币 ${changes.money > 0 ? '+' : ''}${changes.money}`);
         }
         if (changes.social) {
-            changeTexts.push(`综测 ${changes.social > 0 ? '+' : ''}${changes.social}`);
+            changeTexts.push(`德育分 ${changes.social > 0 ? '+' : ''}${changes.social}`);
         }
         if (changes.mastery) {
             changeTexts.push(`掌握度 +${changes.mastery}`);
@@ -706,7 +706,7 @@ const EventSystem = {
                     id: 'volunteerPenalty',
                     name: '义工时长不足',
                     icon: '⚠️',
-                    description: '仲英书院义工时长未达标，综测分受到严重影响！',
+                    description: '仲英书院义工时长未达标，德育分受到严重影响！',
                     effects: { social: -30 }
                 });
             }
@@ -973,7 +973,7 @@ const RandomEventManager = {
                         successEffects: { social: 5 },
                         successMessage: '学长帮你搞定了，感谢好人',
                         failEffects: { social: -50, san: -20 },
-                        failMessage: '被辅导员发现了！综测分大幅下降！'
+                        failMessage: '被辅导员发现了！德育分大幅下降！'
                     }
                 }
             ]
@@ -1342,7 +1342,7 @@ const RandomEventManager = {
             effectParts.push(`金币${result.changes.money > 0 ? '+' : ''}${result.changes.money}`);
         }
         if (result.changes.social) {
-            effectParts.push(`综测${result.changes.social > 0 ? '+' : ''}${result.changes.social}`);
+            effectParts.push(`德育分${result.changes.social > 0 ? '+' : ''}${result.changes.social}`);
         }
         if (result.changes.mastery) {
             effectParts.push(`掌握度${result.changes.mastery > 0 ? '+' : ''}${result.changes.mastery}`);

@@ -14,10 +14,10 @@ class XianjaoSimulator {
             'attend-class': '上课消耗体力，均衡学习所有课程。期末月（1月/6月）效果×2。掌握度高时收益递减。',
             'self-study':   '自习消耗体力+SAN，可选专注某门课大幅提升。高掌握度阶段收益递减（防止轻松满分）。',
             'run':          '跑步消耗体力，但可提升体力上限（最高20点）。每学期跑满10次有奖励。',
-            'club':         '社团活动提升SAN/综测，有35%概率触发随机剧情。不同社团效果差异较大。',
-            'volunteer':    '志愿服务提升综测分，仲英书院双倍效果。每10次志愿+1声望。',
+            'club':         '社团活动提升SAN/德育分，有35%概率触发随机剧情。不同社团效果差异较大。',
+            'volunteer':    '志愿服务提升德育分，仲英书院双倍效果。每10次志愿+1声望。',
             'parttime':     '兼职获得60~140金币（启德书院+30%），消耗体力4，SAN-3。',
-            'competition':  '竞赛消耗体力4，概率获奖提升综测和声望。GPA越高获奖率越高。',
+            'competition':  '竞赛消耗体力4，概率获奖提升德育分和声望。绩点越高获奖率越高。',
             'rest':         '休息恢复SAN值，体力不会回复（体力在月末自动回满）。',
             'bath':         '泡澡大幅恢复SAN，文治书院效果×2。',
             'date':         '约会恋爱互动，需消耗体力和金币。好感度满60可以表白。',
@@ -27,68 +27,128 @@ class XianjaoSimulator {
         };
     }
 
-    /** 社团定义 */
+    /** 社团定义（12个真实西安交大社团，集中配置） */
     static get CLUB_DEFINITIONS() {
         return [
             {
-                id: 'acm',
-                name: 'ACM竞赛队',
-                icon: '💻',
-                desc: '练习算法题，打各类程序竞赛',
-                energyCost: 3,
-                effects: { san: -2, social: 3, gpa: 0.02 },
-                log: '💻 在ACM机房肝题，大脑飞速转动...',
-                storyTags: ['算法题', '比赛', 'OJ系统', '大神学长']
+                id: 'sibianxueshe',
+                name: '思辨学社',
+                icon: '🗣️',
+                desc: '辩论赛、思维碰撞、社会议题讨论',
+                energyCost: 2,
+                effects: { san: -2, social: 5, reputation: 2 },
+                log: '🗣️ 思辨学社辩论赛，舌战群儒，逻辑飞转！',
+                storyTags: ['辩论', '立论', '思维碰撞', '表达能力']
             },
             {
-                id: 'art',
-                name: '文艺社',
+                id: 'shenyangshushe',
+                name: '沈杨书社',
+                icon: '📖',
+                desc: '读书分享、文学讨论、书单推荐',
+                energyCost: 2,
+                effects: { san: 6, social: 3, gpa: 0.01 },
+                log: '📖 在沈杨书社读了本好书，心境平和了许多',
+                storyTags: ['读书', '文学', '书单', '分享会']
+            },
+            {
+                id: 'pugongying',
+                name: '蒲公英吉他社',
+                icon: '🎸',
+                desc: '吉他教学、歌曲弹唱、社区演出',
+                energyCost: 2,
+                effects: { san: 7, social: 4, reputation: 1 },
+                log: '🎸 蒲公英吉他社排练，指尖流出的是青春',
+                storyTags: ['吉他', '弹唱', '演出', '音乐']
+            },
+            {
+                id: 'ticao',
+                name: '体操协会',
+                icon: '🤸',
+                desc: '体操训练、运动技能、联合表演',
+                energyCost: 3,
+                effects: { san: 3, social: 3, reputation: 1 },
+                log: '🤸 体操训练消耗了不少体力，但感觉整个人轻盈了许多',
+                storyTags: ['体操', '训练', '表演', '运动']
+            },
+            {
+                id: 'lunhua',
+                name: '轮滑俱乐部',
+                icon: '⛸️',
+                desc: '轮滑教学、花式技巧、校内滑行',
+                energyCost: 2,
+                effects: { san: 7, social: 5, reputation: 1 },
+                log: '⛸️ 在操场上练了一下午轮滑，摔了几跤，但很快乐！',
+                storyTags: ['轮滑', '技巧', '操场', '速度']
+            },
+            {
+                id: 'wulong',
+                name: '舞龙舞狮社团',
+                icon: '🐉',
+                desc: '传统民俗技艺，校庆演出主力',
+                energyCost: 3,
+                effects: { san: 2, social: 5, reputation: 3 },
+                log: '🐉 舞龙舞狮排练，锣鼓喧天，热血沸腾！',
+                storyTags: ['舞龙', '舞狮', '民俗', '演出', '校庆']
+            },
+            {
+                id: 'feeling',
+                name: 'feeling音乐社',
+                icon: '🎵',
+                desc: '声乐、乐器合奏、音乐分享',
+                energyCost: 2,
+                effects: { san: 8, social: 4, reputation: 1 },
+                log: '🎵 feeling音乐社排练，每个音符都让人心旷神怡',
+                storyTags: ['音乐', '声乐', '合奏', '演出', '分享']
+            },
+            {
+                id: 'tangzhongying',
+                name: '唐仲英爱心社',
+                icon: '❤️',
+                desc: '公益服务、社区帮扶、志愿关怀',
+                energyCost: 2,
+                effects: { san: 4, social: 7, reputation: 3 },
+                log: '❤️ 参与唐仲英爱心社公益活动，感受到了付出的温暖',
+                storyTags: ['公益', '爱心', '帮扶', '志愿', '社区']
+            },
+            {
+                id: 'moshu',
+                name: '魔术社',
+                icon: '🪄',
+                desc: '魔术技巧学习与表演，惊艳校园',
+                energyCost: 2,
+                effects: { san: 5, social: 6, reputation: 2 },
+                log: '🪄 魔术社学了个新手法，看学长表演简直瞠目结舌！',
+                storyTags: ['魔术', '技巧', '表演', '惊艳', '互动']
+            },
+            {
+                id: 'xuanjiang',
+                name: '学生微宣讲团',
+                icon: '📢',
+                desc: '政策宣讲、校园演讲、表达能力训练',
+                energyCost: 2,
+                effects: { san: -1, social: 5, reputation: 3 },
+                log: '📢 学生微宣讲团活动，在台上发言时有点紧张，但收获了掌声',
+                storyTags: ['宣讲', '演讲', '表达', '政策', '舞台']
+            },
+            {
+                id: 'huaju',
+                name: '学生艺术团话剧团',
                 icon: '🎭',
-                desc: '音乐、话剧、舞蹈，陶冶情操',
+                desc: '话剧排练、角色扮演、年度大型演出',
                 energyCost: 2,
-                effects: { san: 5, social: 6, charm: 3 },
-                log: '🎭 参加文艺社排练，心情舒畅！',
-                storyTags: ['演出', '排练', '舞台', '表演']
+                effects: { san: 6, social: 5, reputation: 2 },
+                log: '🎭 话剧团排练，投入角色让人暂时忘却了学业压力',
+                storyTags: ['话剧', '排练', '表演', '角色', '演出']
             },
             {
-                id: 'volunteer',
-                name: '公益协会',
-                icon: '🤝',
-                desc: '组织校内外公益活动',
-                energyCost: 2,
-                effects: { san: 2, social: 8, reputation: 2 },
-                log: '🤝 参与公益活动，综测和声望双提升！',
-                storyTags: ['支教', '献血', '环保', '社区']
-            },
-            {
-                id: 'sports',
-                name: '体育协会',
-                icon: '⚽',
-                desc: '踢球、打球、跑步，锻炼身体',
-                energyCost: 2,
-                effects: { san: 6, social: 4, energy: 1 },
-                log: '⚽ 汗流浃背的运动，精神百倍！',
-                storyTags: ['球赛', '训练', '比赛', '队友']
-            },
-            {
-                id: 'research',
-                name: '学术科研社',
-                icon: '🔬',
-                desc: '参与课题讨论、科研入门',
+                id: 'longzhou',
+                name: '龙舟俱乐部',
+                icon: '🚣',
+                desc: '龙舟训练、水上协作、赛季竞技',
                 energyCost: 3,
-                effects: { san: -3, gpa: 0.03, reputation: 1 },
-                log: '🔬 参加科研组讨论，收获满满...',
-                storyTags: ['论文', '实验', '导师', '课题']
-            },
-            {
-                id: 'startup',
-                name: '创业社',
-                icon: '🚀',
-                desc: '商业策划、创新创业',
-                energyCost: 2,
-                effects: { san: -1, social: 5, money: 50 },
-                log: '🚀 头脑风暴创业方案，思维碰撞！',
-                storyTags: ['路演', '商业计划', '投资人', '创业']
+                effects: { san: 4, social: 5, reputation: 2 },
+                log: '🚣 龙舟俱乐部训练，桨声铿锵，队友的呼号让人热血澎湃！',
+                storyTags: ['龙舟', '训练', '协作', '比赛', '水上']
             }
         ];
     }
@@ -736,7 +796,11 @@ class XianjaoSimulator {
             iHarbourDebuff: false, // 创新港进城难debuff
 
             // ===== 社团系统 =====
-            joinedClubs: [] // 已加入的社团 id 列表
+            joinedClubs: [], // 已加入的社团 id 列表
+
+            // ===== 每月一次行动限制 =====
+            bathUsedThisMonth: false,  // 本月是否已洗澡
+            restUsedThisMonth: false   // 本月是否已休息
         };
 
         // 钱学森书院特殊初始化
@@ -1173,7 +1237,7 @@ class XianjaoSimulator {
             tips.push({ icon: '🎯', text: '大二了，可以考虑规划未来方向', level: 'info' });
         }
         if (s.social < 40) {
-            tips.push({ icon: '🤝', text: '综测偏低，多做志愿/社团活动', level: 'info' });
+            tips.push({ icon: '🤝', text: '德育分偏低，多做志愿/社团活动', level: 'info' });
         }
         if (s.joinedClubs && s.joinedClubs.length === 0 && s.year === 1) {
             tips.push({ icon: '🎭', text: '大一是加入社团的好时机', level: 'info' });
@@ -2096,7 +2160,7 @@ class XianjaoSimulator {
             // 构建效果描述
             const effParts = [];
             if (club.effects.san) effParts.push(`SAN${club.effects.san > 0 ? '+' : ''}${club.effects.san}`);
-            if (club.effects.social) effParts.push(`综测+${club.effects.social}`);
+            if (club.effects.social) effParts.push(`德育分+${club.effects.social}`);
             if (club.effects.charm) effParts.push(`魅力+${club.effects.charm}`);
             if (club.effects.reputation) effParts.push(`声望+${club.effects.reputation}`);
             if (club.effects.gpa) effParts.push(`GPA+${club.effects.gpa}`);
@@ -2171,6 +2235,47 @@ class XianjaoSimulator {
         }
     }
 
+    // =====================================================================
+    // ===== 行动叙事随机事件（不改属性，仅增强沉浸感）=====
+    // =====================================================================
+
+    /**
+     * 触发行动叙事随机事件（不改变任何属性值，纯故事性）
+     * 适用于：bath / rest / parttime / club
+     * @param {string} action
+     */
+    async _triggerActionNarrativeEvent(action) {
+        const config = AIModule.getCurrentConfig();
+        let result = null;
+
+        if (config.key) {
+            try {
+                result = await AIModule.fetchActionNarrative(action, this.state);
+            } catch (e) {
+                console.warn(`[叙事事件] ${action} AI生成失败，使用本地fallback:`, e);
+            }
+        }
+
+        if (!result) {
+            result = AIModule.getActionNarrativeFallback(action, this.state);
+        }
+
+        if (!result) return;
+
+        const iconMap = { bath: '🚿', rest: '😴', parttime: '💼', club: '🎭' };
+        const nameMap = { bath: '洗澡小插曲', rest: '休息时光', parttime: '兼职小事', club: '社团瞬间' };
+
+        const aiEvent = {
+            id: `narrative_${action}_${Date.now()}`,
+            name: `${iconMap[action] || '✨'} ${nameMap[action] || '小事件'}`,
+            icon: iconMap[action] || '✨',
+            description: result.event_text,
+            options: [{ text: '继续', effects: {}, icon: '👍' }]
+        };
+        // 稍作延迟避免与 toast 叠加
+        setTimeout(() => this.showRandomEventModal(aiEvent), 800);
+    }
+
     /**
      * 触发社团随机事件（AI生成或本地fallback）
      */
@@ -2232,12 +2337,12 @@ class XianjaoSimulator {
         }
 
         if (effects.volunteerEfficiency > 1) {
-            this.addLog('🤝 完成志愿服务，仲英品格加持，综测分大幅提升！');
+            this.addLog('🤝 完成志愿服务，仲英品格加持，德育分大幅提升！');
             if (this.state.volunteerHoursThisSemester >= 10) {
                 AchievementSystem.unlock('zhongyingPinge');
             }
         } else {
-            this.addLog('🤝 完成志愿服务，综测分提升');
+            this.addLog('🤝 完成志愿服务，德育分提升');
         }
 
         this.state.actionsThisTurn.push('volunteer');
@@ -2359,8 +2464,16 @@ class XianjaoSimulator {
         return 'winter';
     }
 
-    // 洗澡
+    // 洗澡（每月限一次）
     doBath() {
+        // ── 每月一次限制 ──
+        this.ensureClubStateFields(); // 确保字段存在（兼容旧存档）
+        if (this.state.bathUsedThisMonth) {
+            this.showMessage('本月已洗过澡了', '本月已经洗过澡了，好好等到下个月再洗吧～');
+            return;
+        }
+
+        const snap = this._snapshotState();
         let sanGain = 8;
         const effects = this.state.collegeEffects || {};
 
@@ -2369,7 +2482,7 @@ class XianjaoSimulator {
             sanGain *= effects.bathSanMultiplier;
             AchievementSystem.recordWenzhiBath();
             this.addLog('🚿 去文治小澡堂洗澡，舒服极了！(SAN恢复翻倍)');
-            
+
             // 书院过客成就
             if (AchievementSystem.stats.wenzhiBathCount >= 1) {
                 AchievementSystem.unlock('collegeVisitor');
@@ -2391,12 +2504,19 @@ class XianjaoSimulator {
         }
 
         this.state.san = Math.min(100, this.state.san + sanGain);
+        this.state.bathUsedThisMonth = true; // 标记本月已用
         this.state.actionsThisTurn.push('bath');
         this.checkActionEvents('bath');
-        
+
         // 检查成就
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
+        this.showActionResult(snap);
+
+        // 30%概率触发叙事随机事件（不改属性）
+        if (Math.random() < 0.3) {
+            this._triggerActionNarrativeEvent('bath');
+        }
     }
 
     // 显示约会选择
@@ -2404,16 +2524,21 @@ class XianjaoSimulator {
     isLoveModuleUnlocked() {
         const college = this.state.college;
         const stats = AchievementSystem.stats || {};
-        
+
         // 如果已经在谈恋爱，直接返回true
         if (this.state.inRelationship) return true;
-        
+
         // 已解锁标记（避免重复检查）
         if (this.state.loveModuleUnlocked === true) return true;
-        
+
+        // ── Bug修复：最低进度保护 ──
+        // 至少需要经历2个月（totalMonths>=2），防止第一次做志愿就触发
+        // 原因：志愿活动给仲英2x社交增益，可能在极少次数内碰到解锁阈值
+        if ((this.state.totalMonths || 0) < 2) return false;
+
         let unlocked = false;
         let unlockedReason = '';
-        
+
         switch (college) {
             case 'qianxuesen': // 钱班 - GPA≥3.5 且竞赛获奖≥1 或研究经验≥10
                 if ((this.state.gpa >= 3.5 && this.state.competitionWins >= 1) || this.state.researchExp >= 10) {
@@ -2421,68 +2546,80 @@ class XianjaoSimulator {
                     unlockedReason = '🧪 科研才子相识在实验室...';
                 }
                 break;
-                
-            case 'nanyang': // 南洋 - 声望≥50 且兼职≥5 或综测≥70
-                if ((this.state.reputation >= 50 && this.state.parttimeCount >= 5) || this.state.social >= 70) {
+
+            case 'nanyang': // 南洋 - 声望≥55 且兼职≥5，或德育分≥70 且至少3个月游戏时间
+                // Bug修复：原条件 reputation>=50 从游戏开始就满足，+parttimeCount>=5
+                // 现改为 reputation>=55 且需要一定时间；社交阈值保留但增加时间要求
+                if ((this.state.reputation >= 55 && this.state.parttimeCount >= 5) ||
+                    (this.state.social >= 70 && (this.state.totalMonths || 0) >= 3)) {
                     unlocked = true;
                     unlockedReason = '⚙️ 工程师在创新中相遇...';
                 }
                 break;
-                
-            case 'pengkang': // 彭康 - 体力上限≥12 且本年跑步≥15 或声望≥60 且志愿≥3
-                const runCountThisYear = this.state.runCountThisMonth || 0; // 简化计算
-                if ((this.state.maxEnergy >= 12 && runCountThisYear >= 15) || (this.state.reputation >= 60 && this.state.volunteerHoursThisSemester >= 3)) {
+
+            case 'pengkang': // 彭康 - 体力上限≥14 且跑步≥15 或声望≥65 且志愿≥5
+                // Bug修复：原来用 runCountThisMonth 充当年跑步数不准确；志愿条件从3提高到5
+                const totalRunCount = this.state.totalRunCount || this.state.runCountThisMonth || 0;
+                if ((this.state.maxEnergy >= 14 && totalRunCount >= 15) ||
+                    (this.state.reputation >= 65 && this.state.volunteerHoursThisYear >= 5)) {
                     unlocked = true;
                     unlockedReason = '🏃 运动健儿在操场相遇...';
                 }
                 break;
-                
-            case 'wenzhi': // 文治 - 社团≥10 且声望≥55 或SAN≥85 且综测≥75
+
+            case 'wenzhi': // 文治 - 社团≥10 且声望≥55 或SAN≥85 且德育分≥78
                 const clubCount = stats.clubActivities || 0;
-                if ((clubCount >= 10 && this.state.reputation >= 55) || (this.state.san >= 85 && this.state.social >= 75)) {
+                if ((clubCount >= 10 && this.state.reputation >= 55) ||
+                    (this.state.san >= 85 && this.state.social >= 78)) {
                     unlocked = true;
                     unlockedReason = '🎨 艺术相伴，浪漫绽放...';
                 }
                 break;
-                
-            case 'zhongying': // 仲英 - 本年志愿≥20 且声望≥65 或综测≥80
-                if ((this.state.volunteerHoursThisYear >= 20 && this.state.reputation >= 65) || this.state.social >= 80) {
+
+            case 'zhongying': // 仲英 - 本年志愿≥20 且声望≥65，或德育分≥80 且志愿≥8
+                // Bug修复：原条件 social>=80 单独成立，仲英2x效率2-3次志愿就能到80
+                // 现在要求同时满足志愿>=8，防止纯刷志愿快速解锁
+                if ((this.state.volunteerHoursThisYear >= 20 && this.state.reputation >= 65) ||
+                    (this.state.social >= 80 && this.state.volunteerHoursThisYear >= 8)) {
                     unlocked = true;
                     unlockedReason = '🤝 志愿者在公益中相识...';
                 }
                 break;
-                
+
             case 'lizhi': // 励志 - 竞赛≥2 且GPA≥3.4 或论文≥1
                 if ((this.state.competitionWins >= 2 && this.state.gpa >= 3.4) || this.state.researchPapers >= 1) {
                     unlocked = true;
                     unlockedReason = '📐 数学天才的灵感碰撞...';
                 }
                 break;
-                
-            case 'chongshi': // 崇实 - 社团≥8 且声望≥50 或综测≥65 且活动≥15
+
+            case 'chongshi': // 崇实 - 社团≥8 且声望≥50 或德育分≥68 且各类活动≥15
                 const clubCount2 = stats.clubActivities || 0;
                 const totalActivities = (clubCount2 || 0) + (this.state.parttimeCount || 0) + (this.state.competitionCount || 0);
-                if ((clubCount2 >= 8 && this.state.reputation >= 50) || (this.state.social >= 65 && totalActivities >= 15)) {
+                if ((clubCount2 >= 8 && this.state.reputation >= 50) ||
+                    (this.state.social >= 68 && totalActivities >= 15)) {
                     unlocked = true;
                     unlockedReason = '💬 社交达人在聚会中相识...';
                 }
                 break;
-                
-            case 'zonglian': // 宗濂 - GPA≥3.3 且志愿≥5 或声望≥70 且综测≥70
-                if ((this.state.gpa >= 3.3 && this.state.volunteerHoursThisSemester >= 5) || (this.state.reputation >= 70 && this.state.social >= 70)) {
+
+            case 'zonglian': // 宗濂 - GPA≥3.3 且志愿≥5 或声望≥70 且德育分≥70
+                if ((this.state.gpa >= 3.3 && this.state.volunteerHoursThisSemester >= 5) ||
+                    (this.state.reputation >= 70 && this.state.social >= 70)) {
                     unlocked = true;
                     unlockedReason = '👼 医学天使的温柔相伴...';
                 }
                 break;
-                
-            case 'qide': // 启德 - 金币≥5000 且声望≥60 或兼职≥15 且综测≥70
-                if ((this.state.money >= 5000 && this.state.reputation >= 60) || (this.state.parttimeCount >= 15 && this.state.social >= 70)) {
+
+            case 'qide': // 启德 - 金币≥5000 且声望≥60 或兼职≥15 且德育分≥70
+                if ((this.state.money >= 5000 && this.state.reputation >= 60) ||
+                    (this.state.parttimeCount >= 15 && this.state.social >= 70)) {
                     unlocked = true;
                     unlockedReason = '💼 精英在高雅生活中相识...';
                 }
                 break;
         }
-        
+
         // 第一次解锁时显示提示
         if (unlocked && !this.state.loveModuleUnlocked) {
             this.state.loveModuleUnlocked = true;
@@ -2490,7 +2627,7 @@ class XianjaoSimulator {
                 this.addLog(`💕 ${unlockedReason}恋爱模块已解锁！`, 'success');
             }, 500);
         }
-        
+
         return unlocked;
     }
 
@@ -2538,28 +2675,28 @@ class XianjaoSimulator {
                 lockMsg += '• GPA ≥ 3.5 且竞赛获奖 ≥ 1 次\n• 或研究经验 ≥ 10';
                 break;
             case 'nanyang':
-                lockMsg += '• 声望 ≥ 50 且兼职工作 ≥ 5 次\n• 或综测 ≥ 70';
+                lockMsg += '• 声望 ≥ 50 且兼职工作 ≥ 5 次\n• 或德育分 ≥ 70';
                 break;
             case 'pengkang':
                 lockMsg += '• 体力上限 ≥ 12 且本年跑步 ≥ 15 次\n• 或声望 ≥ 60 且志愿 ≥ 3 次';
                 break;
             case 'wenzhi':
-                lockMsg += '• 社团活动 ≥ 10 次且声望 ≥ 55\n• 或 SAN值 ≥ 85 且综测 ≥ 75';
+                lockMsg += '• 社团活动 ≥ 10 次且声望 ≥ 55\n• 或 SAN值 ≥ 85 且德育分 ≥ 75';
                 break;
             case 'zhongying':
-                lockMsg += '• 本年志愿时数 ≥ 20 小时且声望 ≥ 65\n• 或综测 ≥ 80';
+                lockMsg += '• 本年志愿时数 ≥ 20 小时且声望 ≥ 65\n• 或德育分 ≥ 80';
                 break;
             case 'lizhi':
                 lockMsg += '• 竞赛获奖 ≥ 2 次且 GPA ≥ 3.4\n• 或发表论文 ≥ 1 篇';
                 break;
             case 'chongshi':
-                lockMsg += '• 社团活动 ≥ 8 次且声望 ≥ 50\n• 或综测 ≥ 65 且各类活动 ≥ 15 次';
+                lockMsg += '• 社团活动 ≥ 8 次且声望 ≥ 50\n• 或德育分 ≥ 65 且各类活动 ≥ 15 次';
                 break;
             case 'zonglian':
-                lockMsg += '• GPA ≥ 3.3 且志愿 ≥ 5 次\n• 或声望 ≥ 70 且综测 ≥ 70';
+                lockMsg += '• GPA ≥ 3.3 且志愿 ≥ 5 次\n• 或声望 ≥ 70 且德育分 ≥ 70';
                 break;
             case 'qide':
-                lockMsg += '• 金币 ≥ 5000 且声望 ≥ 60\n• 或兼职 ≥ 15 次且综测 ≥ 70';
+                lockMsg += '• 金币 ≥ 5000 且声望 ≥ 60\n• 或兼职 ≥ 15 次且德育分 ≥ 70';
                 break;
         }
         
@@ -2632,7 +2769,7 @@ class XianjaoSimulator {
                 {
                     nameA: `声望 ≥ 50 (现在: ${this.state.reputation})`,
                     nameB: `兼职工作 ≥ 5 (现在: ${this.state.parttimeCount})`,
-                    alternativeName: `综测 ≥ 70 (现在: ${this.state.social})`,
+                    alternativeName: `德育分 ≥ 70 (现在: ${this.state.social})`,
                     condA: { type: 'reputation', value: 50 },
                     condB: { type: 'parttimeCount', value: 5 }
                 }
@@ -2650,7 +2787,7 @@ class XianjaoSimulator {
                 {
                     nameA: `社团活动 ≥ 10 (现在: ${this.state.clubCount || 0})`,
                     nameB: `声望 ≥ 55 (现在: ${this.state.reputation})`,
-                    alternativeName: `SAN值 ≥ 85 且综测 ≥ 75`,
+                    alternativeName: `SAN值 ≥ 85 且德育分 ≥ 75`,
                     condA: { type: 'clubCount', value: 10 },
                     condB: { type: 'reputation', value: 55 }
                 }
@@ -2659,7 +2796,7 @@ class XianjaoSimulator {
                 {
                     nameA: `本年志愿 ≥ 20 (现在: ${this.state.volunteerHoursThisYear})`,
                     nameB: `声望 ≥ 65 (现在: ${this.state.reputation})`,
-                    alternativeName: `综测 ≥ 80 (现在: ${this.state.social})`,
+                    alternativeName: `德育分 ≥ 80 (现在: ${this.state.social})`,
                     condA: { type: 'volunteerHoursThisYear', value: 20 },
                     condB: { type: 'reputation', value: 65 }
                 }
@@ -2677,7 +2814,7 @@ class XianjaoSimulator {
                 {
                     nameA: `社团活动 ≥ 8 (现在: ${this.state.clubCount || 0})`,
                     nameB: `声望 ≥ 50 (现在: ${this.state.reputation})`,
-                    alternativeName: `综测 ≥ 65 且各类活动 ≥ 15`,
+                    alternativeName: `德育分 ≥ 65 且各类活动 ≥ 15`,
                     condA: { type: 'clubCount', value: 8 },
                     condB: { type: 'reputation', value: 50 }
                 }
@@ -2686,7 +2823,7 @@ class XianjaoSimulator {
                 {
                     nameA: `GPA ≥ 3.3 (现在: ${this.state.gpa.toFixed(2)})`,
                     nameB: `志愿 ≥ 5 (现在: ${this.state.volunteerHoursThisYear})`,
-                    alternativeName: `声望 ≥ 70 且综测 ≥ 70`,
+                    alternativeName: `声望 ≥ 70 且德育分 ≥ 70`,
                     condA: { type: 'gpa', value: 3.3 },
                     condB: { type: 'volunteerHoursThisYear', value: 5 }
                 }
@@ -2695,7 +2832,7 @@ class XianjaoSimulator {
                 {
                     nameA: `金币 ≥ 5000 (现在: ${this.state.money})`,
                     nameB: `声望 ≥ 60 (现在: ${this.state.reputation})`,
-                    alternativeName: `兼职 ≥ 15 且综测 ≥ 70`,
+                    alternativeName: `兼职 ≥ 15 且德育分 ≥ 70`,
                     condA: { type: 'money', value: 5000 },
                     condB: { type: 'reputation', value: 60 }
                 }
@@ -2900,11 +3037,26 @@ class XianjaoSimulator {
         }
     }
 
-    // 休息
+    // 休息（每月限一次）
     doRest() {
+        // ── 每月一次限制 ──
+        this.ensureClubStateFields(); // 确保字段存在（兼容旧存档）
+        if (this.state.restUsedThisMonth) {
+            this.showMessage('本月已休息过了', '本月已经好好休息过了，下个月再好好休整吧～');
+            return;
+        }
+
+        const snap = this._snapshotState();
+        this.state.restUsedThisMonth = true; // 标记本月已用
         this.state.san = Math.min(100, this.state.san + 5);
-        this.addLog('😴 好好休息了一下');
+        this.addLog('😴 好好休息了一下，精神好多了');
         this.updateUI();
+        this.showActionResult(snap);
+
+        // 25%概率触发叙事随机事件（不改属性）
+        if (Math.random() < 0.25) {
+            this._triggerActionNarrativeEvent('rest');
+        }
     }
 
     // =====================================================================
@@ -2947,11 +3099,18 @@ class XianjaoSimulator {
         }
     }
 
-    // 确保旧存档兼容社团字段
+    // 确保旧存档兼容社团字段 + 每月行动限制字段
     ensureClubStateFields() {
         if (!this.state) return;
         if (!Array.isArray(this.state.joinedClubs)) {
             this.state.joinedClubs = [];
+        }
+        // 兼容旧存档：补充每月一次行动限制字段
+        if (typeof this.state.bathUsedThisMonth !== 'boolean') {
+            this.state.bathUsedThisMonth = false;
+        }
+        if (typeof this.state.restUsedThisMonth !== 'boolean') {
+            this.state.restUsedThisMonth = false;
         }
     }
 
@@ -3106,7 +3265,7 @@ class XianjaoSimulator {
         switch (candidate.unlockTier) {
             case 'A':
                 return {
-                    description: 'GPA ≥ 2.5 且综测 ≥ 50，或声望 ≥ 40',
+                    description: '绩点 ≥ 2.5 且德育分 ≥ 50，或声望 ≥ 40',
                     check: s => (s.gpa >= 2.5 && s.social >= 50) || s.reputation >= 40,
                     // 实时当前值描述——每次渲染时从 state 读取，确保同步
                     getCurrentDesc: s => {
@@ -3115,14 +3274,14 @@ class XianjaoSimulator {
                         const rep = s.reputation || 0;
                         const cond1Met = s.gpa >= 2.5 && s.social >= 50;
                         const cond2Met = s.reputation >= 40;
-                        return `GPA ≥ 2.5（当前 <b>${gpa}</b>）且 综测 ≥ 50（当前 <b>${social}</b>）` +
+                        return `绩点 ≥ 2.5（当前 <b>${gpa}</b>）且 德育分 ≥ 50（当前 <b>${social}</b>）` +
                                `${cond1Met ? ' ✅' : ''}，` +
                                `或 声望 ≥ 40（当前 <b>${rep}</b>）${cond2Met ? ' ✅' : ''}`;
                     }
                 };
             case 'B':
                 return {
-                    description: 'GPA ≥ 3.2 且综测 ≥ 65，或声望 ≥ 65',
+                    description: '绩点 ≥ 3.2 且德育分 ≥ 65，或声望 ≥ 65',
                     check: s => (s.gpa >= 3.2 && s.social >= 65) || s.reputation >= 65,
                     getCurrentDesc: s => {
                         const gpa = (s.gpa || 0).toFixed(2);
@@ -3130,14 +3289,14 @@ class XianjaoSimulator {
                         const rep = s.reputation || 0;
                         const cond1Met = s.gpa >= 3.2 && s.social >= 65;
                         const cond2Met = s.reputation >= 65;
-                        return `GPA ≥ 3.2（当前 <b>${gpa}</b>）且 综测 ≥ 65（当前 <b>${social}</b>）` +
+                        return `绩点 ≥ 3.2（当前 <b>${gpa}</b>）且 德育分 ≥ 65（当前 <b>${social}</b>）` +
                                `${cond1Met ? ' ✅' : ''}，` +
                                `或 声望 ≥ 65（当前 <b>${rep}</b>）${cond2Met ? ' ✅' : ''}`;
                     }
                 };
             case 'C':
                 return {
-                    description: 'GPA ≥ 3.8 且综测 ≥ 80 且声望 ≥ 80，或金币 ≥ 8000',
+                    description: '绩点 ≥ 3.8 且德育分 ≥ 80 且声望 ≥ 80，或金币 ≥ 8000',
                     check: s => (s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80) || s.money >= 8000,
                     getCurrentDesc: s => {
                         const gpa = (s.gpa || 0).toFixed(2);
@@ -3146,7 +3305,7 @@ class XianjaoSimulator {
                         const money = s.money || 0;
                         const cond1Met = s.gpa >= 3.8 && s.social >= 80 && s.reputation >= 80;
                         const cond2Met = s.money >= 8000;
-                        return `GPA ≥ 3.8（当前 <b>${gpa}</b>）且 综测 ≥ 80（当前 <b>${social}</b>）` +
+                        return `绩点 ≥ 3.8（当前 <b>${gpa}</b>）且 德育分 ≥ 80（当前 <b>${social}</b>）` +
                                `且 声望 ≥ 80（当前 <b>${rep}</b>）${cond1Met ? ' ✅' : ''}，` +
                                `或 金币 ≥ 8000（当前 <b>${money}</b>）${cond2Met ? ' ✅' : ''}`;
                     }
@@ -3539,8 +3698,8 @@ class XianjaoSimulator {
             let gainParts = [];
             if (opt.gain.san) gainParts.push(`SAN +${opt.gain.san}`);
             if (opt.gain.affinity) gainParts.push(`好感 +${opt.gain.affinity}`);
-            if (opt.gain.gpa) gainParts.push(`GPA +${opt.gain.gpa.toFixed(2)}`);
-            if (opt.gain.social) gainParts.push(`综测 +${opt.gain.social}`);
+            if (opt.gain.gpa) gainParts.push(`绩点 +${opt.gain.gpa.toFixed(2)}`);
+            if (opt.gain.social) gainParts.push(`德育分 +${opt.gain.social}`);
 
             let costParts = [];
             if (opt.cost.energy) costParts.push(`体力 -${opt.cost.energy}`);
@@ -3991,6 +4150,7 @@ class XianjaoSimulator {
             return;
         }
 
+        const snap = this._snapshotState();
         this.state.energy -= 4;
         const effects = this.state.collegeEffects || {};
         
@@ -4037,6 +4197,12 @@ class XianjaoSimulator {
         AchievementSystem.checkAchievements(this.state);
         this.updateCareerPanel();
         this.updateUI();
+        this.showActionResult(snap);
+
+        // 25%概率触发叙事随机事件（不改属性）
+        if (Math.random() < 0.25) {
+            this._triggerActionNarrativeEvent('parttime');
+        }
     }
 
     // 显示竞赛选择
@@ -4058,7 +4224,7 @@ class XianjaoSimulator {
             btn.disabled = this.state.energy < 4;
             btn.innerHTML = `
                 <div class="choice-btn-name">${comp.icon} ${comp.name}</div>
-                <div class="choice-btn-desc">难度: ${comp.difficulty === 'hard' ? '困难' : comp.difficulty === 'medium' ? '中等' : '简单'}<br>SAN ${comp.san}，获奖可得综测+${comp.reward.social}</div>
+                <div class="choice-btn-desc">难度: ${comp.difficulty === 'hard' ? '困难' : comp.difficulty === 'medium' ? '中等' : '简单'}<br>SAN ${comp.san}，获奖可得德育分+${comp.reward.social}</div>
             `;
             btn.addEventListener('click', () => {
                 this.hideModal('choice-modal');
@@ -4103,7 +4269,7 @@ class XianjaoSimulator {
             if (competition.reward.charm) {
                 this.state.charm = Math.min(100, this.state.charm + competition.reward.charm);
             }
-            this.addLog(`🏆 ${competition.name}获奖！综测和能力都提升了！`, 'success');
+            this.addLog(`🏆 ${competition.name}获奖！德育分和能力都提升了！`, 'success');
             this.changeReputation(5, `${competition.name}获奖`);
             this.addBBSEvent('竞赛获奖');
             
@@ -4168,7 +4334,7 @@ class XianjaoSimulator {
         if (this.state.researchExp >= 10 && Math.random() < 0.2) {
             this.state.researchPapers = (this.state.researchPapers || 0) + 1;
             this.state.social = Math.min(100, this.state.social + 20);
-            this.addLog('📝 科研成果发表论文！综测分大幅提升！', 'success');
+            this.addLog('📝 科研成果发表论文！德育分大幅提升！', 'success');
             this.changeReputation(5, '发表学术论文');
             AchievementSystem.unlock('researcher');
             this.addBBSEvent('论文发表');
@@ -4389,7 +4555,7 @@ class XianjaoSimulator {
             if (effects.money) hints.push(`金币${effects.money > 0 ? '+' : ''}${effects.money}`);
             if (effects.san) hints.push(`SAN${effects.san > 0 ? '+' : ''}${effects.san}`);
             if (effects.energy) hints.push(`体力${effects.energy > 0 ? '+' : ''}${effects.energy}`);
-            if (effects.social) hints.push(`综测${effects.social > 0 ? '+' : ''}${effects.social}`);
+            if (effects.social) hints.push(`德育分${effects.social > 0 ? '+' : ''}${effects.social}`);
             
             btn.innerHTML = `
                 <div class="event-option-icon">${option.icon || '👉'}</div>
@@ -4483,7 +4649,7 @@ class XianjaoSimulator {
         }
         if (result.changes.social) {
             effectTags.push({
-                text: `综测 ${result.changes.social > 0 ? '+' : ''}${result.changes.social}`,
+                text: `德育分 ${result.changes.social > 0 ? '+' : ''}${result.changes.social}`,
                 type: result.changes.social > 0 ? 'positive' : 'negative'
             });
         }
@@ -4549,6 +4715,10 @@ class XianjaoSimulator {
         this.state.energy = this.state.maxEnergy;
         this.state.attendedClassThisTurn = false;
         this.state.actionsThisTurn = [];
+
+        // ── 重置每月一次行动限制 ──
+        this.state.bathUsedThisMonth = false;
+        this.state.restUsedThisMonth = false;
         
         // 清除临时加成
         if (this.state.tempStudyBoost) {
@@ -4999,7 +5169,7 @@ class XianjaoSimulator {
                     // 仲英：志愿综测加成
                     if (activity.id === 'volunteer') {
                         effects.social = (effects.social || 0) * 1.5;
-                        this.addLog('🤝 仲英志愿品德加持，综测提升显著！', 'success');
+                        this.addLog('🤝 仲英志愿品德加持，德育分提升显著！', 'success');
                     }
                     break;
             }
@@ -5156,7 +5326,13 @@ class XianjaoSimulator {
             if (effects.logicGrowth > 1 && (course.type === 'logic' || course.logicBased || course.name.includes('数学') || course.name.includes('代数') || course.name.includes('分析'))) {
                 finalScore = Math.min(100, finalScore * effects.logicGrowth);
             }
-            
+
+            // ── 掌握度保护：mastery >= 60 时不会挂科（底线保护，不影响高分计算） ──
+            // 需求7：掌握度60以上就不会挂科
+            if (course.mastery >= 60 && finalScore < this.state.failThreshold) {
+                finalScore = Math.max(60, this.state.failThreshold); // 保底通过线，不挂科
+            }
+
             const passed = finalScore >= this.state.failThreshold;
             const grade = GameData.scoreToGrade(finalScore);
             let gradePoint = GameData.gradeToGpa[grade];
@@ -5217,7 +5393,7 @@ class XianjaoSimulator {
                 // 书院核心课挂科额外惩罚
                 if (course.isCollegeCore || course.type === 'college_core') {
                     this.state.social = Math.max(0, this.state.social - 5);
-                    this.addLog(`😰 挂掉书院核心课『${course.name}』，综测分 -5`, 'warning');
+                    this.addLog(`😰 挂掉书院核心课『${course.name}』，德育分 -5`, 'warning');
                     
                     // 记录挂科核心课
                     this.state.failedCollegeCoreCourses = this.state.failedCollegeCoreCourses || [];
@@ -5843,10 +6019,10 @@ class XianjaoSimulator {
         };
         push('SAN', 'san');
         push('体力', 'energy');
-        push('综测', 'social');
+        push('德育分', 'social');   // 综测 → 德育分
         push('声望', 'reputation');
         push('金钱', 'money', '元');
-        push('GPA', 'gpa');
+        push('绩点', 'gpa');        // GPA → 绩点
         // 掌握度：取平均变化
         const beforeAvg = stateBefore._masteryAvg || 0;
         const nowCourses = s.currentCourses || [];
@@ -5855,8 +6031,6 @@ class XianjaoSimulator {
             : 0;
         const masteryDiff = nowAvg - beforeAvg;
         if (Math.abs(masteryDiff) >= 0.5) diffs.push({ label: '掌握度', val: fmt(masteryDiff, '%'), positive: masteryDiff > 0 });
-
-        if (diffs.length === 0) return;
 
         // 移除旧 toast
         const old = document.getElementById('action-result-toast');
@@ -5874,12 +6048,22 @@ class XianjaoSimulator {
             box-shadow: 0 4px 16px rgba(0,0,0,0.25);
             animation: toastFadeIn 0.25s ease;
         `;
-        diffs.forEach(d => {
+
+        if (diffs.length === 0) {
+            // 无属性变化时也显示提示
             const span = document.createElement('span');
-            span.style.color = d.positive ? '#76ff76' : '#ff7676';
-            span.textContent = `${d.label} ${d.val}`;
+            span.style.color = '#aaa';
+            span.textContent = '这次行动没有显著属性变化';
             toast.appendChild(span);
-        });
+        } else {
+            diffs.forEach(d => {
+                const span = document.createElement('span');
+                span.style.color = d.positive ? '#76ff76' : '#ff7676';
+                span.textContent = `${d.label} ${d.val}`;
+                toast.appendChild(span);
+            });
+        }
+
         // 注入动画（只注一次）
         if (!document.getElementById('toast-keyframes')) {
             const style = document.createElement('style');
@@ -6412,10 +6596,10 @@ class XianjaoSimulator {
             if (warning) warning.style.display = 'block';
             this.state.physicalTestFailedThisYear = true;
             
-            // 惩罚：综测-5，SAN-10
+            // 惩罚：德育分-5，SAN-10
             this.state.social = Math.max(0, this.state.social - 5);
             this.state.san = Math.max(0, this.state.san - 10);
-            this.addLog('😫 体测不达标！综测分-5，SAN-10', 'danger');
+            this.addLog('😫 体测不达标！德育分-5，SAN-10', 'danger');
             
             AchievementSystem.unlock('physicalTestFail');
         }
