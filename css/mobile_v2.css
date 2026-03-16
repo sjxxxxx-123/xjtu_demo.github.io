@@ -100,6 +100,41 @@
         margin-top: 5px;
     }
 
+    /* --- Mobile Floating Quick Panel --- */
+    .float-stats-panel {
+        right: 8px;
+        top: 64px;
+        width: min(52vw, 210px);
+        max-height: calc(100vh - 120px);
+        overflow: auto;
+        z-index: 700;
+    }
+
+    .float-stats-head {
+        padding: 6px 8px;
+    }
+
+    .float-title {
+        font-size: 0.74rem;
+    }
+
+    .float-stats-body {
+        padding: 6px 8px;
+    }
+
+    .float-stat-row {
+        font-size: 0.74rem;
+        padding: 3px 0;
+    }
+
+    .float-mf-title {
+        font-size: 0.72rem;
+    }
+
+    .float-mf-item {
+        font-size: 0.7rem;
+    }
+
     /* --- 3. Collapsible Course Panel --- */
     .course-panel {
         margin: 10px 10px 5px 10px;

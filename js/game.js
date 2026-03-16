@@ -241,6 +241,7 @@ class XianjaoSimulator {
         const floatToggleBtn = document.getElementById('float-toggle-btn');
         if (floatToggleBtn) {
             floatToggleBtn.addEventListener('click', () => {
+                if (Date.now() - (this._floatLastDragTs || 0) < 250) return;
                 const body = document.getElementById('float-stats-body');
                 if (!body) return;
                 const collapsed = body.classList.toggle('collapsed');
@@ -250,6 +251,7 @@ class XianjaoSimulator {
             // 属性浮窗：用 IntersectionObserver 监听原始状态栏和月度建议面板
             // 两者都不可见时才显示浮窗（仅在宽屏下生效）
             this._initFloatPanelObserver();
+            this._initFloatPanelDrag();
 
         const btnNextTurn = document.getElementById('btn-next-turn');
         if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
@@ -6146,7 +6148,7 @@ class XianjaoSimulator {
         };
     }
 
-    /** 更新属性浮窗面板（桌面端固定浮窗） */
+    /** 更新属性浮窗面板 */
     _updateFloatPanel() {
         const s = this.state;
         const setVal = (id, text) => {
@@ -6161,56 +6163,211 @@ class XianjaoSimulator {
         setVal('flt-reputation', Math.round(s.reputation || 50));
     }
 
-    // 显示游戏菜单
-        /** 初始化浮窗可见性监听：原始stats-panel或monthly-focus不可见时显示浮窗 */
-        _initFloatPanelObserver() {
-            const floatPanel = document.getElementById('float-stats-panel');
-            if (!floatPanel) return;
+    /**
+     * 初始化浮窗可见性监听：
+     * 当“状态栏 + 本月重点”都不可见时显示浮窗；任一可见则隐藏。
+     * 桌面端状态栏：.stats-panel；移动端状态栏：.mobile-status-card
+     */
+    _initFloatPanelObserver() {
+        const floatPanel = document.getElementById('float-stats-panel');
+        if (!floatPanel) return;
 
-            // 仅在宽屏（非移动端）下工作
-            const mediaQuery = window.matchMedia('(min-width: 900px)');
+        const statsDesktopEl = document.querySelector('.stats-panel');
+        const statsMobileEl = document.querySelector('.mobile-status-card');
+        const focusEl = document.getElementById('monthly-focus');
 
-            // 记录两个目标元素的可见状态
-            const visible = { stats: false, focus: false };
+        const visible = { statsDesktop: false, statsMobile: false, focus: false };
 
-            const updateFloatVisibility = () => {
-                if (!mediaQuery.matches) {
-                    floatPanel.style.display = 'none';
-                    return;
+        const isDisplayed = (el) => {
+            if (!el) return false;
+            const st = window.getComputedStyle(el);
+            return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
+        };
+
+        const updateFloatVisibility = () => {
+            const desktopMode = isDisplayed(statsDesktopEl);
+            const mobileMode = isDisplayed(statsMobileEl);
+
+            // 根据当前模式选取“状态栏是否在视口内”
+            const statusVisible = desktopMode
+                ? visible.statsDesktop
+                : (mobileMode ? visible.statsMobile : (visible.statsDesktop || visible.statsMobile));
+
+            const focusActive = isDisplayed(focusEl) && (focusEl.offsetHeight > 0);
+            const shouldShow = !statusVisible && (!focusActive || !visible.focus);
+            floatPanel.style.display = shouldShow ? 'block' : 'none';
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.target === statsDesktopEl) {
+                    visible.statsDesktop = entry.isIntersecting;
+                } else if (entry.target === statsMobileEl) {
+                    visible.statsMobile = entry.isIntersecting;
+                } else if (entry.target === focusEl) {
+                    visible.focus = entry.isIntersecting;
                 }
-                // stats-panel 不可见 且 monthly-focus 也不可见（或不存在/已隐藏）时显示浮窗
-                const focusEl = document.getElementById('monthly-focus');
-                const focusActive = focusEl && focusEl.style.display !== 'none' && focusEl.offsetHeight > 0;
-                const shouldShow = !visible.stats && (!focusActive || !visible.focus);
-                floatPanel.style.display = shouldShow ? 'block' : 'none';
-            };
+            });
+            updateFloatVisibility();
+        }, { threshold: 0.01 });
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.target.classList.contains('stats-panel')) {
-                        visible.stats = entry.isIntersecting;
-                    } else {
-                        visible.focus = entry.isIntersecting;
-                    }
-                });
-                updateFloatVisibility();
-            }, { threshold: 0.01 });
+        if (statsDesktopEl) observer.observe(statsDesktopEl);
+        if (statsMobileEl) observer.observe(statsMobileEl);
+        if (focusEl) observer.observe(focusEl);
 
-            const statsPanel = document.querySelector('.stats-panel');
-            if (statsPanel) observer.observe(statsPanel);
+        window.addEventListener('resize', updateFloatVisibility);
 
-            const focusPanel = document.getElementById('monthly-focus');
-            if (focusPanel) observer.observe(focusPanel);
+        this._floatObserver = observer;
+        this._floatUpdateVisibility = updateFloatVisibility;
 
-            // 屏幕宽度变化时重新判断
-            mediaQuery.addEventListener('change', updateFloatVisibility);
+        // 初始化立即判断一次
+        updateFloatVisibility();
+    }
 
-            // 存储引用以便后续更新monthly-focus可见状态
-            this._floatObserver = observer;
-            this._floatUpdateVisibility = updateFloatVisibility;
-        }
+    /** 初始化浮窗拖拽（自动贴边吸附 + 位置记忆） */
+    _initFloatPanelDrag() {
+        const panel = document.getElementById('float-stats-panel');
+        const head = panel ? panel.querySelector('.float-stats-head') : null;
+        if (!panel || !head) return;
 
-        // 显示游戏菜单
+        const STORAGE_KEY = 'xjtu_float_panel_position_v1';
+        const EDGE_MARGIN = 8;
+
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+        const getMaxTop = () => {
+            const h = panel.offsetHeight || 220;
+            return Math.max(EDGE_MARGIN, window.innerHeight - h - EDGE_MARGIN);
+        };
+
+        const restorePosition = () => {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const pos = JSON.parse(raw);
+                if (!pos || (pos.side !== 'left' && pos.side !== 'right')) return;
+
+                panel.style.top = `${clamp(Number(pos.top) || 70, EDGE_MARGIN, getMaxTop())}px`;
+                if (pos.side === 'left') {
+                    panel.style.left = `${EDGE_MARGIN}px`;
+                    panel.style.right = 'auto';
+                } else {
+                    panel.style.right = `${EDGE_MARGIN}px`;
+                    panel.style.left = 'auto';
+                }
+            } catch (e) {
+                console.warn('浮窗位置恢复失败:', e);
+            }
+        };
+
+        const persistPosition = () => {
+            const rect = panel.getBoundingClientRect();
+            const leftDist = rect.left;
+            const rightDist = window.innerWidth - rect.right;
+            const side = leftDist <= rightDist ? 'left' : 'right';
+            const top = clamp(Math.round(rect.top), EDGE_MARGIN, getMaxTop());
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ side, top }));
+        };
+
+        const snapToEdge = () => {
+            const rect = panel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const top = clamp(Math.round(rect.top), EDGE_MARGIN, getMaxTop());
+
+            if (centerX < window.innerWidth / 2) {
+                panel.style.left = `${EDGE_MARGIN}px`;
+                panel.style.right = 'auto';
+            } else {
+                panel.style.right = `${EDGE_MARGIN}px`;
+                panel.style.left = 'auto';
+            }
+            panel.style.top = `${top}px`;
+            persistPosition();
+        };
+
+        restorePosition();
+
+        let dragging = false;
+        let moved = false;
+        let startX = 0;
+        let startY = 0;
+        let baseLeft = 0;
+        let baseTop = 0;
+
+        const onPointerDown = (e) => {
+            if (e.button !== undefined && e.button !== 0) return;
+            if (e.target && e.target.closest('.float-toggle-btn')) return;
+
+            const rect = panel.getBoundingClientRect();
+            dragging = true;
+            moved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            baseLeft = rect.left;
+            baseTop = rect.top;
+
+            panel.classList.add('dragging');
+            panel.style.left = `${Math.round(rect.left)}px`;
+            panel.style.right = 'auto';
+            panel.style.top = `${Math.round(rect.top)}px`;
+
+            if (panel.setPointerCapture && e.pointerId !== undefined) {
+                panel.setPointerCapture(e.pointerId);
+            }
+            e.preventDefault();
+        };
+
+        const onPointerMove = (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+
+            const rect = panel.getBoundingClientRect();
+            const panelW = rect.width || 172;
+            const panelH = rect.height || 220;
+
+            const maxLeft = Math.max(EDGE_MARGIN, window.innerWidth - panelW - EDGE_MARGIN);
+            const maxTop = Math.max(EDGE_MARGIN, window.innerHeight - panelH - EDGE_MARGIN);
+
+            const nextLeft = clamp(baseLeft + dx, EDGE_MARGIN, maxLeft);
+            const nextTop = clamp(baseTop + dy, EDGE_MARGIN, maxTop);
+
+            panel.style.left = `${Math.round(nextLeft)}px`;
+            panel.style.top = `${Math.round(nextTop)}px`;
+        };
+
+        const onPointerUp = () => {
+            if (!dragging) return;
+            dragging = false;
+            panel.classList.remove('dragging');
+
+            if (moved) {
+                this._floatLastDragTs = Date.now();
+                snapToEdge();
+            } else {
+                persistPosition();
+            }
+
+            if (this._floatUpdateVisibility) {
+                this._floatUpdateVisibility();
+            }
+        };
+
+        head.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+
+        window.addEventListener('resize', () => {
+            // 窗口变化后保持贴边并更新记忆位置
+            if (!dragging && window.getComputedStyle(panel).display !== 'none') {
+                snapToEdge();
+            }
+        });
+    }
+
+    // 显示游戏菜单
     showGameMenu() {
         const menu = document.getElementById('game-menu');
         if (!menu) return;
