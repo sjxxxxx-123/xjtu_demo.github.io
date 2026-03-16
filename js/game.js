@@ -236,7 +236,21 @@ class XianjaoSimulator {
         // 游戏界面按钮
         const btnMenu = document.getElementById('btn-menu');
         if (btnMenu) btnMenu.addEventListener('click', () => this.showGameMenu());
-        
+
+        // 属性浮窗收起/展开
+        const floatToggleBtn = document.getElementById('float-toggle-btn');
+        if (floatToggleBtn) {
+            floatToggleBtn.addEventListener('click', () => {
+                const body = document.getElementById('float-stats-body');
+                if (!body) return;
+                const collapsed = body.classList.toggle('collapsed');
+                floatToggleBtn.textContent = collapsed ? '+' : '−';
+            });
+        }
+            // 属性浮窗：用 IntersectionObserver 监听原始状态栏和月度建议面板
+            // 两者都不可见时才显示浮窗（仅在宽屏下生效）
+            this._initFloatPanelObserver();
+
         const btnNextTurn = document.getElementById('btn-next-turn');
         if (btnNextTurn) btnNextTurn.addEventListener('click', () => this.nextTurn());
 
@@ -541,6 +555,10 @@ class XianjaoSimulator {
 
     // 隐藏Modal
     hideModal(modalId) {
+        // 防止移动端/触屏点击穿透：关闭行动选择弹窗后短暂屏蔽“结束本月”
+        if (modalId === 'choice-modal') {
+            this._suppressNextTurnUntil = Date.now() + 350;
+        }
         document.getElementById(modalId).classList.remove('active');
     }
 
@@ -735,6 +753,7 @@ class XianjaoSimulator {
             researchExp: 0,
             researchPapers: 0,
             parttimeCount: 0,
+            clubCount: 0,       // 累计社团活动次数
 
             // 毕设相关（大四用）
             thesisProgress: 0,
@@ -1116,6 +1135,9 @@ class XianjaoSimulator {
         const mRep = document.getElementById('m-val-reputation');
         if (mRep) mRep.textContent = Math.round(this.state.reputation || 50);
 
+        // 更新属性浮窗
+        this._updateFloatPanel();
+
         // 更新声望显示
         const repEl = document.getElementById('stat-reputation');
         const repBar = document.getElementById('bar-reputation');
@@ -1316,33 +1338,52 @@ class XianjaoSimulator {
      */
     renderMonthlyFocus() {
         const panel = document.getElementById('monthly-focus');
-        if (!panel) return;
         const tips = this.getMonthlySuggestions();
-        if (tips.length === 0) {
-            panel.style.display = 'none';
-            return;
+
+        // 主面板渲染
+        if (panel) {
+            if (tips.length === 0) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                const colorMap = { danger: '#d32f2f', warn: '#e65100', info: '#1565c0' };
+                const bgMap = { danger: '#fff5f5', warn: '#fff8f0', info: '#f0f4ff' };
+                panel.innerHTML = `
+                    <div class="mf-header">
+                        <span class="mf-title">📌 本月重点</span>
+                        <span class="mf-month">${GameData.yearNames[this.state.year-1]} ${this.state.month}月</span>
+                    </div>
+                    <ul class="mf-list">
+                        ${tips.map(t => `
+                            <li class="mf-item" style="border-left-color:${colorMap[t.level]};background:${bgMap[t.level]};">
+                                <span class="mf-icon">${t.icon}</span>
+                                <span class="mf-text">${t.text}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="mf-actions">
+                        <button class="mf-btn" onclick="window.location.href='achievements.html?from=game'">🏆 查看成就</button>
+                        <button class="mf-btn" onclick="window.game?.showProfileModal?.()">👤 个人经历</button>
+                    </div>
+                `;
+            }
         }
-        panel.style.display = 'block';
-        const colorMap = { danger: '#d32f2f', warn: '#e65100', info: '#1565c0' };
-        const bgMap = { danger: '#fff5f5', warn: '#fff8f0', info: '#f0f4ff' };
-        panel.innerHTML = `
-            <div class="mf-header">
-                <span class="mf-title">📌 本月重点</span>
-                <span class="mf-month">${GameData.yearNames[this.state.year-1]} ${this.state.month}月</span>
-            </div>
-            <ul class="mf-list">
-                ${tips.map(t => `
-                    <li class="mf-item" style="border-left-color:${colorMap[t.level]};background:${bgMap[t.level]};">
-                        <span class="mf-icon">${t.icon}</span>
-                        <span class="mf-text">${t.text}</span>
-                    </li>
-                `).join('')}
-            </ul>
-            <div class="mf-actions">
-                <button class="mf-btn" onclick="window.location.href='achievements.html?from=game'">🏆 查看成就</button>
-                <button class="mf-btn" onclick="window.game?.showProfileModal?.()">👤 个人经历</button>
-            </div>
-        `;
+
+        // 浮窗-月度重点同步
+        const floatFocus = document.getElementById('float-monthly-focus');
+        if (floatFocus) {
+            if (tips.length === 0) {
+                floatFocus.innerHTML = '';
+            } else {
+                const cls = { danger: 'float-mf-danger', warn: 'float-mf-warn', info: 'float-mf-info' };
+                floatFocus.innerHTML = `
+                    <div class="float-mf-title">📌 本月重点</div>
+                    ${tips.slice(0, 4).map(t => `
+                        <div class="float-mf-item ${cls[t.level]}">${t.icon} ${t.text}</div>
+                    `).join('')}
+                `;
+            }
+        }
     }
 
     // 更新课程列表
@@ -1410,6 +1451,11 @@ class XianjaoSimulator {
                 `;
                 courseList.appendChild(courseEl);
             });
+        }
+        // monthly-focus 的 display 状态可能刚刚变化，通知浮窗重新判断可见性
+        if (this._floatUpdateVisibility) {
+            // 延迟一帧确保 display 已生效
+            requestAnimationFrame(() => this._floatUpdateVisibility());
         }
     }
 
@@ -2225,6 +2271,7 @@ class XianjaoSimulator {
         }
 
         this.state.actionsThisTurn.push('club');
+        this.state.clubCount = (this.state.clubCount || 0) + 1;  // 累计社团次数
         AchievementSystem.checkAchievements(this.state);
         this.updateUI();
         this.showActionResult(snap);
@@ -2568,7 +2615,7 @@ class XianjaoSimulator {
                 break;
 
             case 'wenzhi': // 文治 - 社团≥10 且声望≥55 或SAN≥85 且德育分≥78
-                const clubCount = stats.clubActivities || 0;
+                const clubCount = this.state.clubCount || 0;
                 if ((clubCount >= 10 && this.state.reputation >= 55) ||
                     (this.state.san >= 85 && this.state.social >= 78)) {
                     unlocked = true;
@@ -2594,7 +2641,7 @@ class XianjaoSimulator {
                 break;
 
             case 'chongshi': // 崇实 - 社团≥8 且声望≥50 或德育分≥68 且各类活动≥15
-                const clubCount2 = stats.clubActivities || 0;
+                const clubCount2 = this.state.clubCount || 0;
                 const totalActivities = (clubCount2 || 0) + (this.state.parttimeCount || 0) + (this.state.competitionCount || 0);
                 if ((clubCount2 >= 8 && this.state.reputation >= 50) ||
                     (this.state.social >= 68 && totalActivities >= 15)) {
@@ -3104,6 +3151,10 @@ class XianjaoSimulator {
         if (!this.state) return;
         if (!Array.isArray(this.state.joinedClubs)) {
             this.state.joinedClubs = [];
+        }
+        // 兼容旧存档：补全社团活动计数
+        if (typeof this.state.clubCount !== 'number') {
+            this.state.clubCount = 0;
         }
         // 兼容旧存档：补充每月一次行动限制字段
         if (typeof this.state.bathUsedThisMonth !== 'boolean') {
@@ -4412,6 +4463,11 @@ class XianjaoSimulator {
 
     // 下一回合
     async nextTurn() {
+        // 防止从选择弹窗点击穿透到“结束本月”导致误跳月
+        if ((this._suppressNextTurnUntil || 0) > Date.now()) {
+            return;
+        }
+
         // 检查体力是否耗尽
         if (this.state.energy <= 0) {
             AchievementSystem.recordExhaustion();
@@ -5946,14 +6002,14 @@ class XianjaoSimulator {
             }
         }
 
-        // 移动端反馈：仅在移动模式下更新 Mini-Log
-        const miniLog = document.getElementById('mobile-feedback-text');
-        if (miniLog) {
-            miniLog.textContent = message;
-            // 短暂高亮文字
-            miniLog.classList.remove('highlight');
-            void miniLog.offsetWidth; // 触发重绘
-            miniLog.classList.add('highlight');
+        // 移动端反馈：更新日志预览文字
+        const mLogText = document.getElementById('m-log-text');
+        if (mLogText) {
+            mLogText.textContent = message;
+            // 短暂高亮闪烁
+            mLogText.classList.remove('log-flash');
+            void mLogText.offsetWidth; // 触发重绘
+            mLogText.classList.add('log-flash');
         }
     }
 
@@ -6090,7 +6146,71 @@ class XianjaoSimulator {
         };
     }
 
+    /** 更新属性浮窗面板（桌面端固定浮窗） */
+    _updateFloatPanel() {
+        const s = this.state;
+        const setVal = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
+        setVal('flt-money', Math.round(s.money));
+        setVal('flt-gpa', s.gpa.toFixed(2));
+        setVal('flt-san', Math.round(s.san));
+        setVal('flt-energy', `${s.energy}/${s.maxEnergy}`);
+        setVal('flt-social', Math.round(s.social));
+        setVal('flt-reputation', Math.round(s.reputation || 50));
+    }
+
     // 显示游戏菜单
+        /** 初始化浮窗可见性监听：原始stats-panel或monthly-focus不可见时显示浮窗 */
+        _initFloatPanelObserver() {
+            const floatPanel = document.getElementById('float-stats-panel');
+            if (!floatPanel) return;
+
+            // 仅在宽屏（非移动端）下工作
+            const mediaQuery = window.matchMedia('(min-width: 900px)');
+
+            // 记录两个目标元素的可见状态
+            const visible = { stats: false, focus: false };
+
+            const updateFloatVisibility = () => {
+                if (!mediaQuery.matches) {
+                    floatPanel.style.display = 'none';
+                    return;
+                }
+                // stats-panel 不可见 且 monthly-focus 也不可见（或不存在/已隐藏）时显示浮窗
+                const focusEl = document.getElementById('monthly-focus');
+                const focusActive = focusEl && focusEl.style.display !== 'none' && focusEl.offsetHeight > 0;
+                const shouldShow = !visible.stats && (!focusActive || !visible.focus);
+                floatPanel.style.display = shouldShow ? 'block' : 'none';
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.target.classList.contains('stats-panel')) {
+                        visible.stats = entry.isIntersecting;
+                    } else {
+                        visible.focus = entry.isIntersecting;
+                    }
+                });
+                updateFloatVisibility();
+            }, { threshold: 0.01 });
+
+            const statsPanel = document.querySelector('.stats-panel');
+            if (statsPanel) observer.observe(statsPanel);
+
+            const focusPanel = document.getElementById('monthly-focus');
+            if (focusPanel) observer.observe(focusPanel);
+
+            // 屏幕宽度变化时重新判断
+            mediaQuery.addEventListener('change', updateFloatVisibility);
+
+            // 存储引用以便后续更新monthly-focus可见状态
+            this._floatObserver = observer;
+            this._floatUpdateVisibility = updateFloatVisibility;
+        }
+
+        // 显示游戏菜单
     showGameMenu() {
         const menu = document.getElementById('game-menu');
         if (!menu) return;

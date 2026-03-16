@@ -741,9 +741,9 @@ const GameData = {
             id: 'game',
             name: '打游戏',
             icon: '🎮',
-            cost: 0,
+            cost: 30,
             sanGain: 10,
-            description: '在宿舍打一晚上游戏'
+            description: '在宿舍打一晚上游戏（网费/皮肤开销）'
         },
         movie: {
             id: 'movie',

@@ -4613,8 +4613,111 @@ body {
 .mf-btn:hover { background: #e8f0fe; }
 
 /* ========================================
-   活动规则 info 图标 & tooltip
+   属性浮窗（桌面端固定显示，右侧悬浮）
    ======================================== */
+.float-stats-panel {
+    position: fixed;
+    right: 16px;
+    top: 70px;
+    width: 172px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    z-index: 200;
+    border: 1px solid #d4e0f0;
+    overflow: hidden;
+    display: none; /* 默认隐藏，桌面媒体查询中显示 */
+}
+
+.float-stats-head {
+    background: linear-gradient(135deg, #003E7E, #1565C0);
+    color: #fff;
+    padding: 7px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.float-title {
+    font-size: 0.82rem;
+}
+
+.float-toggle-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color 0.2s;
+}
+.float-toggle-btn:hover { color: #fff; }
+
+.float-stats-body {
+    padding: 8px 10px 6px;
+}
+.float-stats-body.collapsed {
+    display: none;
+}
+
+.float-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #f2f4f8;
+    font-size: 0.82rem;
+}
+.float-stat-row:last-of-type {
+    border-bottom: none;
+}
+
+.float-lbl {
+    color: #555;
+}
+
+.float-val {
+    font-weight: 700;
+    color: #003E7E;
+}
+
+/* 浮窗-月度重点 */
+.float-monthly-focus {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #d0d8e8;
+}
+
+.float-mf-title {
+    font-weight: 700;
+    font-size: 0.79rem;
+    color: #003E7E;
+    margin-bottom: 4px;
+}
+
+.float-mf-item {
+    font-size: 0.76rem;
+    padding: 2px 0;
+    line-height: 1.4;
+}
+.float-mf-danger { color: #c62828; }
+.float-mf-warn   { color: #e65100; }
+.float-mf-info   { color: #1565c0; }
+
+/* 手机端日志闪烁动画 */
+@keyframes logFlash {
+    0%   { background: rgba(21, 101, 192, 0.12); }
+    100% { background: transparent; }
+}
+.log-flash {
+    animation: logFlash 0.8s ease forwards;
+    border-radius: 4px;
+}
+
+
 .action-info-icon {
     position: absolute;
     top: 4px;

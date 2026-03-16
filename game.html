@@ -91,6 +91,41 @@
         <!-- 月度建议面板（桌面+移动端通用） -->
         <div id="monthly-focus" style="display:none;"></div>
 
+        <!-- 属性浮窗（桌面端固定显示，随滚动保持可见） -->
+        <div id="float-stats-panel" class="float-stats-panel">
+            <div class="float-stats-head">
+                <span class="float-title">📊 状态速览</span>
+                <button id="float-toggle-btn" class="float-toggle-btn" title="收起/展开">−</button>
+            </div>
+            <div id="float-stats-body" class="float-stats-body">
+                <div class="float-stat-row">
+                    <span class="float-lbl">💰 金币</span>
+                    <span class="float-val" id="flt-money">1000</span>
+                </div>
+                <div class="float-stat-row">
+                    <span class="float-lbl">📊 绩点</span>
+                    <span class="float-val" id="flt-gpa">3.00</span>
+                </div>
+                <div class="float-stat-row">
+                    <span class="float-lbl">🧠 SAN值</span>
+                    <span class="float-val" id="flt-san">80</span>
+                </div>
+                <div class="float-stat-row">
+                    <span class="float-lbl">⚡ 体力</span>
+                    <span class="float-val" id="flt-energy">15/15</span>
+                </div>
+                <div class="float-stat-row">
+                    <span class="float-lbl">🎓 德育分</span>
+                    <span class="float-val" id="flt-social">60</span>
+                </div>
+                <div class="float-stat-row">
+                    <span class="float-lbl">⭐ 声望</span>
+                    <span class="float-val" id="flt-reputation">50</span>
+                </div>
+                <div id="float-monthly-focus" class="float-monthly-focus"></div>
+            </div>
+        </div>
+
         <!-- 属性面板 -->
         <div class="stats-panel desktop-only">
             <div class="stat-item">
