@@ -1,7 +1,7 @@
 // author: sjxxxx
 window.GAME_CONFIG = {
-    AI_PROVIDER: 'modelscope',
-    API_KEY: 'ms-3befc017-9b78-432e-81a2-2c4859dc158d',
-    API_ENDPOINT: 'https://api-inference.modelscope.cn/v1/chat/completions',
-    AI_MODEL: 'deepseek-ai/DeepSeek-V3.2'
+    AI_PROVIDER: 'alibaiyun',
+    API_KEY: 'sk-5d4011c650c24cf097cf095db7bc8827',
+    API_ENDPOINT: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    AI_MODEL: 'qwen-plus'
 };
